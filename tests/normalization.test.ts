@@ -50,6 +50,16 @@ describe("status / FC detection", () => {
     const score = { ...referenceFixtureScore, is_perfect_combo: false };
     expect(detectStatus(score).kind).toBe("unknown");
   });
+
+  it("counts only large tick misses as slider breaks", () => {
+    const score: ApiScore = {
+      ...referenceFixtureScore,
+      is_perfect_combo: undefined,
+      statistics: { great: 10, large_tick_miss: 2, small_tick_miss: 4 },
+    };
+    expect(detectStatus(score).kind).toBe("unknown");
+    expect(normalizeScore(score).sbCount).toBe(2);
+  });
 });
 
 describe("background fallbacks", () => {

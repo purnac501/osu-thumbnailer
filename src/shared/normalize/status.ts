@@ -13,8 +13,13 @@ export function detectStatus(score: ApiScore): PlayStatus {
     return { kind: "miss", count: miss };
   }
 
-  // No misses: only trust an explicit false for perfect combo.
-  if (score.is_perfect_combo === false) {
+  // A large tick miss is a slider break even when the API omits the combo flag.
+  if (
+    score.is_perfect_combo === false ||
+    (stats.large_tick_miss ?? 0) > 0 ||
+    (stats.slider_break ?? 0) > 0 ||
+    (stats.combo_break ?? 0) > 0
+  ) {
     return { kind: "unknown" };
   }
 
