@@ -308,7 +308,7 @@ export function GeneratorPage() {
       >
         {result ? (
           <>
-            <div style={{ boxShadow: "0 10px 40px rgba(0,0,0,0.6)" }}>
+            <div style={{ width: "100%", flex: 1, minHeight: 0 }}>
               <EditorCanvas
                 template={template}
                 data={result.data}

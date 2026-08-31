@@ -49,6 +49,8 @@ export function EditorCanvas({
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const panStart = useRef<{ pointerX: number; pointerY: number; x: number; y: number } | null>(null);
+  const resizeStart = useRef<{ rect: Rect; fontSize: number } | null>(null);
+  const viewPlaced = useRef(false);
   const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
   const [selection, setSelection] = useState<Rect | null>(null);
   const [draft, setDraft] = useState("");
@@ -56,6 +58,22 @@ export function EditorCanvas({
   const [accentMenu, setAccentMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const [layerMenu, setLayerMenu] = useState<{ x: number; y: number; layer: string } | null>(null);
   const effectiveScale = scale * view.zoom;
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry || viewPlaced.current) return;
+      viewPlaced.current = true;
+      setView({
+        zoom: 1,
+        x: (entry.contentRect.width - template.canvas.width * scale) / 2,
+        y: (entry.contentRect.height - template.canvas.height * scale) / 2,
+      });
+    });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [scale, template.canvas.height, template.canvas.width]);
 
   const layerAt = (element: HTMLElement | null): string | null => {
     let current = element;
@@ -127,10 +145,12 @@ export function EditorCanvas({
     bounds: { x: number; y: number; width: number; height: number },
     original: Rect,
   ) => {
+    const start = resizeStart.current;
+    const origin = start?.rect ?? original;
     if (FONT_SIZE_LAYERS.has(layer)) {
-      const ratio = Math.max(0.15, bounds.height / Math.max(1, original.height));
+      const ratio = Math.max(0.15, bounds.height / Math.max(1, origin.height));
       onResize(layer, {
-        fontSize: Math.max(10, Math.round((Number(configFor(layer).fontSize) || 40) * ratio)),
+        fontSize: Math.max(10, Math.round((start?.fontSize ?? (Number(configFor(layer).fontSize) || 40)) * ratio)),
         x: Math.round(bounds.x), y: Math.round(bounds.y),
       });
     } else if (SIZE_FIELDS[layer]) {
@@ -161,7 +181,7 @@ export function EditorCanvas({
     <div
       ref={viewportRef}
       style={{
-        position: "relative", width: template.canvas.width * scale, height: template.canvas.height * scale,
+        position: "relative", width: "100%", height: "100%",
         overflow: "hidden", cursor: panStart.current ? "grabbing" : undefined,
       }}
       onWheel={(event) => {
@@ -247,12 +267,19 @@ export function EditorCanvas({
             }}
             onDragStart={beginInteraction}
             onDrag={(_event, position) => onMove(selected, position.x, position.y)}
-            onResizeStart={beginInteraction}
+            onResizeStart={() => {
+              resizeStart.current = {
+                rect: selection,
+                fontSize: Number(configFor(selected).fontSize) || 40,
+              };
+              beginInteraction();
+            }}
             onResize={(_event, _direction, ref, _delta, position) =>
               applyGeometry(selected, {
                 x: position.x, y: position.y, width: ref.offsetWidth, height: ref.offsetHeight,
               }, selection)
             }
+            onResizeStop={() => { resizeStart.current = null; }}
           />
         ) : null}
 
