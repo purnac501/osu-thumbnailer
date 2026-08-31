@@ -64,7 +64,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
     fontFamily: FONTS.display,
     fontSize: 68,
     fontWeight: 700,
-    color: "#8C8CF0",
+    color: "#FFFFFF",
     glow: { blur: 14, layers: 2 },
   },
   starNotch: {

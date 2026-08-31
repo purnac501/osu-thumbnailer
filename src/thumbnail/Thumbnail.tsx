@@ -61,6 +61,28 @@ export function Thumbnail({
   const texts = computeTexts(data, template);
   const text = (key: string) => withTextOverride(key, texts, template);
   const bgSrc = data.backgroundUrl ?? data.backgroundFallbacks?.[0];
+  const hasMisses = text("status") !== "";
+  const hasSliderBreaks = text("status-sb") !== "";
+  const splitStatus = hasMisses && hasSliderBreaks;
+  const statusMiss = splitStatus
+    ? { ...c.statusMiss, fontSize: c.statusMiss.fontSize * 0.62 }
+    : c.statusMiss;
+  const statusSB = {
+    ...c.statusSB,
+    ...(splitStatus
+      ? {
+          y: c.statusMiss.y + c.statusMiss.fontSize * 0.68,
+          fontSize: c.statusSB.fontSize * 0.78,
+        }
+      : !hasMisses
+        ? {
+            x: c.statusMiss.x,
+            y: c.statusMiss.y,
+            maxWidth: c.statusMiss.maxWidth,
+            fontSize: c.statusMiss.fontSize * 0.62,
+          }
+        : {}),
+  };
 
   // Signal render completion (fonts + images) for the Playwright pipeline.
   useEffect(() => {
@@ -117,10 +139,10 @@ export function Thumbnail({
         </TextLayer>
       ) : (
         <>
-          <TextLayer config={c.statusMiss} testId="status-miss">
+          <TextLayer config={statusMiss} testId="status-miss">
             {text("status")}
           </TextLayer>
-          <TextLayer config={c.statusSB} testId="status-sb">
+          <TextLayer config={statusSB} testId="status-sb">
             {text("status-sb")}
           </TextLayer>
         </>
