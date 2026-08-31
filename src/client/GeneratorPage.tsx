@@ -268,7 +268,6 @@ export function GeneratorPage() {
                 <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>Why data is missing - osu! API reference</a>
                 <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>Calculate PP yourself - rosu-pp developer library</a>
               </div>
-              <p style={{ margin: "8px 0 0", color: "#9a8f93" }}>These links are technical references, not one-click calculators.</p>
             </div>
           </details>
         </div>
