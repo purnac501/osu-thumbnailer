@@ -264,9 +264,11 @@ export function GeneratorPage() {
               <strong style={{ color: "#fff" }}>Missing score data</strong>
               <p style={{ margin: "8px 0" }}>The osu! API cannot report exact slider breaks for Classic scores. This editor does not calculate PP if FC.</p>
               <p style={{ margin: "8px 0" }}>Use Slider breaks for the count. Use Add text for PP if FC or other details.</p>
-              <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>osu! API</a>
-              {" - "}
-              <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>rosu-pp calculator</a>
+              <div style={{ display: "grid", gap: 6 }}>
+                <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>Why data is missing - osu! API reference</a>
+                <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>Calculate PP yourself - rosu-pp developer library</a>
+              </div>
+              <p style={{ margin: "8px 0 0", color: "#9a8f93" }}>These links are technical references, not one-click calculators.</p>
             </div>
           </details>
         </div>
