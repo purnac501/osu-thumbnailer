@@ -47,7 +47,6 @@ export function GeneratorPage() {
   const [result, setResult] = useState<ThumbnailResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dragLayer, setDragLayer] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
 
@@ -119,6 +118,10 @@ export function GeneratorPage() {
       const res = await fetch(`/api/thumbnail?url=${encodeURIComponent(url)}`);
       if (!res.ok) throw new Error(await res.text());
       setResult((await res.json()) as ThumbnailResult);
+      replaceEditor(EMPTY_EDITOR);
+      setHistory({ past: [], future: [] });
+      setSelected(null);
+      setEditingLayer(null);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -153,15 +156,25 @@ export function GeneratorPage() {
 
   /** Text commits: inline editing routes the bottom message separately. */
   const onTextCommit = (key: string, value: string) => {
+    pushHistorySnapshot();
     if (key === "__bottom__") {
+      set({ bottomText: value });
+    } else if (key === "bottom-text") {
       set({ bottomText: value });
     } else {
       set({ textOverrides: { ...editor.textOverrides, [key]: value } });
     }
   };
 
-  const onResize = (layer: string, patch: Record<string, number>) =>
-    set({ sizeOverrides: { ...editor.sizeOverrides, [layer]: patch } });
+  const onResize = (layer: string, patch: Record<string, number>) => {
+    const { x, y, ...size } = patch;
+    set({
+      positionOverrides: x === undefined || y === undefined
+        ? editor.positionOverrides
+        : { ...editor.positionOverrides, [layer]: { x, y } },
+      sizeOverrides: { ...editor.sizeOverrides, [layer]: size },
+    });
+  };
 
   const resetLayer = (layer: string) => {
     pushHistorySnapshot();
@@ -170,8 +183,14 @@ export function GeneratorPage() {
     const text = { ...editor.textOverrides };
     delete pos[layer];
     delete size[layer];
-    delete text[layer];
-    replaceEditor({ ...editor, positionOverrides: pos, sizeOverrides: size, textOverrides: text });
+    delete text[layer === "bottom-message" ? "bottom-text" : layer];
+    replaceEditor({
+      ...editor,
+      ...(layer === "bottom-message" ? { bottomText: undefined, bottomAccent: undefined } : {}),
+      positionOverrides: pos,
+      sizeOverrides: size,
+      textOverrides: text,
+    });
   };
 
   return (
@@ -193,7 +212,6 @@ export function GeneratorPage() {
         <h1 style={{ fontFamily: '"Baloo 2", sans-serif', margin: 0, fontSize: 26 }}>osu! thumbnailer</h1>
 
         <section style={sectionStyle}>
-          <h2 style={h2Style}>Score</h2>
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -213,7 +231,6 @@ export function GeneratorPage() {
         </section>
 
         <section style={sectionStyle}>
-          <h2 style={h2Style}>Output</h2>
           <label style={labelStyle}>
             Resolution
             <select
@@ -247,17 +264,8 @@ export function GeneratorPage() {
           </label>
         </section>
 
-        <section style={sectionStyle}>
-          <h2 style={h2Style}>Editor</h2>
-          <div style={{ color: "#8a7f84", fontSize: 12, lineHeight: 1.6 }}>
-            Click an element to select it. Drag to move, corner handles to resize.
-            Double-click text to edit it in place. Select text in the bottom
-            message and right-click to accent it.
-          </div>
-          {dragLayer ? (
-            <div style={{ color: "#9a8f93", fontSize: 12 }}>Moving: {dragLayer}</div>
-          ) : null}
-          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8 }}>
             <button onClick={undo} disabled={history.past.length === 0} style={{ ...buttonStyle, flex: 1, background: "#3a3236", padding: "8px 0", fontSize: 13 }} disabled-aria-label="undo">
               Undo (ctrl+Z)
             </button>
@@ -270,16 +278,13 @@ export function GeneratorPage() {
               Reset "{selected}" to default
             </button>
           ) : null}
-        </section>
+        </div>
 
         <button
           onClick={() => {
             // Full replacement (not a merge) so every override is cleared.
             pushHistorySnapshot();
-            replaceEditor({
-              accent: editor.accent,
-              twitchVisible: editor.twitchVisible,
-            });
+            replaceEditor(EMPTY_EDITOR);
             setSelected(null);
             setEditingLayer(null);
           }}
@@ -311,20 +316,16 @@ export function GeneratorPage() {
                 selected={selected}
                 editing={editingLayer}
                 onSelect={setSelected}
-                onEditStart={(layer) => {
-                  pushHistorySnapshot();
-                  setEditingLayer(layer);
-                }}
-                onCancelEdit={() => setEditingLayer(null)}
-                onDragStart={pushHistorySnapshot}
+                onEditStart={setEditingLayer}
+                onEditEnd={() => setEditingLayer(null)}
+                onInteractStart={pushHistorySnapshot}
                 onMove={(layer, x, y) =>
                   set({ positionOverrides: { ...editor.positionOverrides, [layer]: { x, y } } })
                 }
-                onResizeStart={pushHistorySnapshot}
                 onResize={onResize}
-                onTextChange={onTextCommit}
+                onTextCommit={onTextCommit}
                 onAccentSelection={(text) => set({ bottomAccent: text || undefined }, true)}
-                onInteractEnd={() => setDragLayer(null)}
+                onResetLayer={resetLayer}
               />
             </div>
             <button onClick={download} disabled={busy} style={buttonStyle}>
@@ -346,21 +347,9 @@ export function GeneratorPage() {
 }
 
 const sectionStyle: React.CSSProperties = {
-  background: "#1a1619",
-  borderRadius: 12,
-  padding: "14px 16px",
   display: "flex",
   flexDirection: "column",
   gap: 10,
-};
-
-const h2Style: React.CSSProperties = {
-  margin: 0,
-  fontSize: 13,
-  fontWeight: 600,
-  letterSpacing: 1,
-  textTransform: "uppercase",
-  color: "#a2949a",
 };
 
 const labelStyle: React.CSSProperties = {
@@ -384,7 +373,7 @@ const buttonStyle: React.CSSProperties = {
   padding: "10px 22px",
   borderRadius: 8,
   border: "none",
-  background: "#9146FF",
+  background: "#FF66AA",
   color: "#fff",
   fontWeight: 600,
   cursor: "pointer",

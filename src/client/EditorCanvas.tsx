@@ -1,56 +1,28 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
-import type { RndDragCallback, RndResizeCallback } from "react-rnd";
+import { createPortal } from "react-dom";
 import { Rnd } from "react-rnd";
 import type { ThumbnailData } from "../shared/types/thumbnail";
-import type { ThumbnailTemplate } from "../thumbnail/types";
-import { COMPONENT_BY_LAYER } from "../thumbnail/overrides";
 import { Thumbnail } from "../thumbnail/Thumbnail";
+import { COMPONENT_BY_LAYER } from "../thumbnail/overrides";
+import type { ThumbnailTemplate } from "../thumbnail/types";
 
-/** Layers that cannot be dragged or resized. */
 const NON_INTERACTIVE = new Set(["background", "badge-row", "status-sb", "status-miss"]);
-
-/** Text layers, mapped to their text key. */
-const TEXT_KEY_BY_LAYER: Record<string, string> = {
-  status: "status",
-  "star-rating": "star-rating",
-  pp: "pp",
-  combo: "combo",
-  difficulty: "difficulty",
-  bpm: "bpm",
-  "map-title": "map-title",
-  grade: "grade",
-  accuracy: "accuracy",
-  leaderboard: "leaderboard",
-  username: "username",
+const TEXT_KEYS: Record<string, string> = {
+  status: "status", "star-rating": "star-rating", pp: "pp", combo: "combo",
+  difficulty: "difficulty", bpm: "bpm", "map-title": "map-title", grade: "grade",
+  accuracy: "accuracy", leaderboard: "leaderboard", username: "username",
   "bottom-message": "bottom-text",
 };
-
-/** Text layers resize via fontSize. */
 const FONT_SIZE_LAYERS = new Set([
-  "status",
-  "star-rating",
-  "pp",
-  "map-title",
-  "grade",
-  "accuracy",
-  "leaderboard",
-  "bottom-message",
+  "status", "star-rating", "pp", "map-title", "grade", "accuracy", "leaderboard", "bottom-message",
 ]);
-
-/** Icon layers resize via a single size field. */
-const SIZE_FIELD_BY_LAYER: Record<string, "size" | "iconSize"> = {
+const SIZE_FIELDS: Record<string, "size" | "iconSize"> = {
   "twitch-logo": "size",
   "mod-list": "iconSize",
 };
 
-interface Rect {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
+interface Rect { left: number; top: number; width: number; height: number }
 interface Props {
   template: ThumbnailTemplate;
   data: ThumbnailData;
@@ -59,379 +31,304 @@ interface Props {
   editing: string | null;
   onSelect: (layer: string | null) => void;
   onEditStart: (layer: string) => void;
-  onCancelEdit: () => void;
-  onDragStart: () => void;
+  onEditEnd: () => void;
   onMove: (layer: string, x: number, y: number) => void;
-  onResizeStart: () => void;
   onResize: (layer: string, patch: Record<string, number>) => void;
-  onTextChange: (key: string, value: string) => void;
+  onTextCommit: (key: string, value: string) => void;
   onAccentSelection: (text: string) => void;
-  onInteractEnd: () => void;
+  onInteractStart: () => void;
+  onResetLayer: (layer: string) => void;
 }
 
-/**
- * Preview surface with direct manipulation built on react-rnd (MIT, by the
- * re-resizable author): controlled position+size, anchored resize with eight
- * handles, and first-class support for previews under `transform: scale()`
- * via its `scale` prop. Drag/resize events are translated into template
- * config patches (fontSize for text, width/height for boxes, size for icons).
- */
+/** Direct editor overlay. The thumbnail and react-rnd use the same logical coordinates. */
 export function EditorCanvas({
-  template,
-  data,
-  scale,
-  selected,
-  editing,
-  onSelect,
-  onEditStart,
-  onCancelEdit,
-  onDragStart,
-  onMove,
-  onResizeStart,
-  onResize,
-  onTextChange,
-  onAccentSelection,
-  onInteractEnd,
+  template, data, scale, selected, editing, onSelect, onEditStart, onEditEnd,
+  onMove, onResize, onTextCommit, onAccentSelection, onInteractStart,
+  onResetLayer,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [selRect, setSelRect] = useState<Rect | null>(null);
-  const [editRect, setEditRect] = useState<Rect | null>(null);
-  const [editStyle, setEditStyle] = useState<{
-    fontSize: number;
-    fontFamily: string;
-    fontWeight: number;
-    align: "left" | "center" | "right";
-    lineHeight: number;
-    color: string;
-  } | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const panStart = useRef<{ pointerX: number; pointerY: number; x: number; y: number } | null>(null);
+  const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
+  const [selection, setSelection] = useState<Rect | null>(null);
+  const [draft, setDraft] = useState("");
+  const [editStyle, setEditStyle] = useState<React.CSSProperties>({});
   const [accentMenu, setAccentMenu] = useState<{ x: number; y: number; text: string } | null>(null);
-  const interacted = useRef(false);
+  const [layerMenu, setLayerMenu] = useState<{ x: number; y: number; layer: string } | null>(null);
+  const effectiveScale = scale * view.zoom;
 
-  const layerAt = (el: HTMLElement | null): string | null => {
-    let cur: HTMLElement | null = el;
-    while (cur && cur.id !== "thumbnail-root") {
-      const l = cur.getAttribute("data-layer");
-      if (l) return l;
-      cur = cur.parentElement;
+  const layerAt = (element: HTMLElement | null): string | null => {
+    let current = element;
+    while (current && current.id !== "thumbnail-root") {
+      if (current.dataset.layer) return current.dataset.layer;
+      current = current.parentElement;
     }
     return null;
   };
-
+  const elementFor = (layer: string) =>
+    canvasRef.current?.querySelector(`[data-layer="${layer}"]`) as HTMLElement | null;
   const rectOf = (layer: string): Rect | null => {
-    const container = containerRef.current;
-    const el = container?.querySelector(`[data-layer="${layer}"]`) as HTMLElement | null;
-    if (!container || !el) return null;
-    const c = container.getBoundingClientRect();
-    const r = el.getBoundingClientRect();
-    return { left: r.left - c.left, top: r.top - c.top, width: r.width, height: r.height };
+    const canvas = canvasRef.current;
+    const element = elementFor(layer);
+    if (!canvas || !element) return null;
+    const base = canvas.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
+    return {
+      left: (rect.left - base.left) / effectiveScale,
+      top: (rect.top - base.top) / effectiveScale,
+      width: rect.width / effectiveScale,
+      height: rect.height / effectiveScale,
+    };
   };
-
-  const confOf = (layer: string): Record<string, number | string | undefined> => {
+  const configFor = (layer: string): Record<string, number | string | undefined> => {
     const key = COMPONENT_BY_LAYER[layer];
     return key
       ? (template.components as unknown as Record<string, Record<string, number | string | undefined>>)[key] ?? {}
       : {};
   };
 
-  // Track the selected element's rect while it is selected.
   useLayoutEffect(() => {
-    if (!selected || editing) {
-      setSelRect(null);
-      return;
-    }
-    let raf = 0;
-    const update = () => {
-      const r = rectOf(selected);
-      if (r) setSelRect(r);
-      raf = requestAnimationFrame(update);
-    };
-    update();
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setSelection(selected && !editing ? rectOf(selected) : null);
   }, [selected, editing, template]);
 
-  // While inline-editing, track the element rect and match its text style.
   useLayoutEffect(() => {
-    if (!editing) {
-      setEditRect(null);
-      setEditStyle(null);
-      return;
-    }
-    const r = rectOf(editing);
-    if (!r) return;
-    const conf = confOf(editing);
-    setEditRect(r);
-    setEditStyle({
-      fontSize: (Number(conf.fontSize) || 40) * scale,
-      fontFamily: (conf.fontFamily as string) ?? "inherit",
-      fontWeight: Number(conf.fontWeight) || 600,
-      align:
-        conf.align === "right" ? "right" : conf.align === "left" ? "left" : "center",
-      lineHeight: r.height / scale,
-      color: (conf.color as string) ?? "#fff",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing, template]);
-
-  // Deselect and commit when clicking outside the canvas.
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) {
-        if (editing) onCancelEdit();
-        onSelect(null);
-      }
-    };
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
-  }, [editing, onCancelEdit]);
-
-  function commitEdit() {
     if (!editing) return;
-    setAccentMenu(null);
-    onCancelEdit();
-  }
+    const element = elementFor(editing);
+    const rect = rectOf(editing);
+    if (!element || !rect) return;
+    const style = getComputedStyle(element);
+    setSelection(rect);
+    setDraft(element.textContent ?? "");
+    setEditStyle({
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+      fontWeight: style.fontWeight,
+      letterSpacing: style.letterSpacing,
+      lineHeight: style.lineHeight,
+      textAlign: style.textAlign as React.CSSProperties["textAlign"],
+      color: style.color,
+    });
+  }, [editing]);
 
-  /** Translates a drag/resize result into config patches for the layer. */
-  function applyGeometry(
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (canvasRef.current?.contains(event.target as Node)) return;
+      setAccentMenu(null);
+      setLayerMenu(null);
+      onEditEnd();
+      onSelect(null);
+    };
+    window.addEventListener("mousedown", close);
+    return () => window.removeEventListener("mousedown", close);
+  }, [onEditEnd, onSelect]);
+
+  const applyGeometry = (
     layer: string,
     bounds: { x: number; y: number; width: number; height: number },
-    orig: Rect,
-  ) {
+    original: Rect,
+  ) => {
     if (FONT_SIZE_LAYERS.has(layer)) {
-      const ratio = Math.max(0.15, bounds.height / Math.max(1, orig.height));
+      const ratio = Math.max(0.15, bounds.height / Math.max(1, original.height));
       onResize(layer, {
-        fontSize: Math.max(10, Math.round((Number(confOf(layer).fontSize) || 40) * ratio)),
-        x: Math.round(bounds.x),
-        y: Math.round(bounds.y),
+        fontSize: Math.max(10, Math.round((Number(configFor(layer).fontSize) || 40) * ratio)),
+        x: Math.round(bounds.x), y: Math.round(bounds.y),
       });
-    } else if (SIZE_FIELD_BY_LAYER[layer]) {
-      const field = SIZE_FIELD_BY_LAYER[layer]!;
+    } else if (SIZE_FIELDS[layer]) {
       onResize(layer, {
-        [field]: Math.max(10, Math.round(bounds.width)),
-        x: Math.round(bounds.x),
-        y: Math.round(bounds.y),
+        [SIZE_FIELDS[layer]!]: Math.max(10, Math.round(bounds.width)),
+        x: Math.round(bounds.x), y: Math.round(bounds.y),
       });
     } else {
       onResize(layer, {
-        width: Math.round(bounds.width),
-        height: Math.round(bounds.height),
-        x: Math.round(bounds.x),
-        y: Math.round(bounds.y),
+        width: Math.round(bounds.width), height: Math.round(bounds.height),
+        x: Math.round(bounds.x), y: Math.round(bounds.y),
       });
     }
-  }
+  };
 
-  function onDoubleClick(e: React.MouseEvent) {
-    const layer = layerAt(e.target as HTMLElement);
-    if (!layer) return;
-    const key = TEXT_KEY_BY_LAYER[layer];
-    if (!key) return;
-    onSelect(layer);
-    onEditStart(layer);
+  const finishTextEdit = (commit: boolean) => {
+    if (commit && editing) onTextCommit(TEXT_KEYS[editing] ?? editing, draft);
     setAccentMenu(null);
-    e.preventDefault();
-  }
-
-  const showRnd = selected && selRect && !editing && !NON_INTERACTIVE.has(selected);
-  const showBox = selected && selRect && !editing && NON_INTERACTIVE.has(selected);
+    onEditEnd();
+  };
+  const beginInteraction = () => {
+    setAccentMenu(null);
+    setLayerMenu(null);
+    onInteractStart();
+  };
 
   return (
     <div
-      ref={containerRef}
+      ref={viewportRef}
       style={{
-        width: template.canvas.width * scale,
-        height: template.canvas.height * scale,
-        overflow: "hidden",
-        position: "relative",
-        cursor: editing ? "text" : "default",
+        position: "relative", width: template.canvas.width * scale, height: template.canvas.height * scale,
+        overflow: "hidden", cursor: panStart.current ? "grabbing" : undefined,
       }}
-      onDoubleClick={onDoubleClick}
+      onWheel={(event) => {
+        event.preventDefault();
+        const viewport = viewportRef.current!.getBoundingClientRect();
+        const cursorX = event.clientX - viewport.left;
+        const cursorY = event.clientY - viewport.top;
+        setView((current) => {
+          const zoom = Math.min(3, Math.max(0.5, current.zoom * Math.exp(-event.deltaY * 0.001)));
+          const ratio = zoom / current.zoom;
+          return {
+            zoom,
+            x: cursorX - (cursorX - current.x) * ratio,
+            y: cursorY - (cursorY - current.y) * ratio,
+          };
+        });
+      }}
+      onPointerDown={(event) => {
+        if (event.button !== 1) return;
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        panStart.current = { pointerX: event.clientX, pointerY: event.clientY, x: view.x, y: view.y };
+      }}
+      onPointerMove={(event) => {
+        const start = panStart.current;
+        if (!start) return;
+        setView((current) => ({
+          ...current,
+          x: start.x + event.clientX - start.pointerX,
+          y: start.y + event.clientY - start.pointerY,
+        }));
+      }}
+      onPointerUp={(event) => {
+        if (event.button !== 1) return;
+        panStart.current = null;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }}
     >
-      <Thumbnail data={data} template={template} scale={scale} />
+      <div
+        ref={canvasRef}
+        style={{
+          position: "relative", width: template.canvas.width, height: template.canvas.height,
+          transform: `translate(${view.x}px, ${view.y}px) scale(${effectiveScale})`, transformOrigin: "top left",
+        }}
+        onPointerDown={(event) => {
+          if ((event.target as HTMLElement).closest("[data-editor-control]")) return;
+          const layer = layerAt(event.target as HTMLElement);
+          if (layer) onSelect(layer);
+        }}
+        onDoubleClick={(event) => {
+          const layer = layerAt(event.target as HTMLElement);
+          if (!layer || !TEXT_KEYS[layer]) return;
+          onSelect(layer);
+          onEditStart(layer);
+          event.preventDefault();
+        }}
+        onContextMenu={(event) => {
+          if ((event.target as HTMLElement).closest("textarea")) return;
+          const layer = layerAt(event.target as HTMLElement) ?? selected;
+          if (!layer) return;
+          event.preventDefault();
+          onSelect(layer);
+          setLayerMenu({ x: event.clientX, y: event.clientY, layer });
+        }}
+      >
+        <Thumbnail data={data} template={template} />
 
-      {/* react-rnd proxy over the selected layer: drag inside the box to move,
-          drag the handles to resize. Controlled from the layer's live rect. */}
-      {showRnd && selected && selRect ? (
-        <Rnd
-          key={selected}
-          size={{ width: selRect.width, height: selRect.height }}
-          position={{ x: selRect.left, y: selRect.top }}
-          scale={scale}
-          bounds="parent"
-          enableResizing={{
-            top: false,
-            right: false,
-            bottom: false,
-            left: false,
-            topLeft: true,
-            topRight: true,
-            bottomLeft: true,
-            bottomRight: true,
-          }}
-          resizeHandleStyles={{
-            topLeft: handleStyle("nwse-resize"),
-            topRight: handleStyle("nesw-resize"),
-            bottomLeft: handleStyle("nesw-resize"),
-            bottomRight: handleStyle("nwse-resize"),
-          }}
-          dragHandleClassName=".rnd-drag-area"
-          style={{
-            border: "2px dashed #9146FF",
-            background: "transparent",
-            zIndex: 50,
-          }}
-          onDragStart={() => {
-            interacted.current = true;
-            onDragStart();
-          }}
-          onDrag={(_e, data) => onMove(selected, data.x, data.y)}
-          onDragStop={() => onInteractEnd()}
-          onResizeStart={() => {
-            interacted.current = true;
-            onResizeStart();
-          }}
-          onResize={(_e, _dir, ref, _delta, pos) => {
-            applyGeometry(
-              selected,
-              { x: pos.x, y: pos.y, width: ref.offsetWidth, height: ref.offsetHeight },
-              selRect,
-            );
-          }}
-          onResizeStop={() => onInteractEnd()}
-        >
-          {/* Transparent drag area covering the whole box */}
-          <div className="rnd-drag-area" style={{ position: "absolute", inset: 0, cursor: "move" }} />
-        </Rnd>
-      ) : null}
-
-      {/* Non-interactive layers still show a selection box */}
-      {showBox && selRect ? (
-        <div
-          style={{
-            position: "absolute",
-            left: selRect.left - 3,
-            top: selRect.top - 3,
-            width: selRect.width + 6,
-            height: selRect.height + 6,
-            border: "2px dashed #9146FF",
-            pointerEvents: "none",
-            zIndex: 50,
-          }}
-        />
-      ) : null}
-
-      {/* Inline text editor, styled to match the element */}
-      {editing && editRect && editStyle ? (
-        <textarea
-          autoFocus
-          defaultValue={containerRef.current?.querySelector(`[data-layer="${editing}"]`)?.textContent ?? ""}
-          onChange={(e) => {
-            onTextChange(TEXT_KEY_BY_LAYER[editing] ?? editing, e.target.value);
-          }}
-          onBlur={() => commitEdit()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              commitEdit();
-            }
-            if (e.key === "Escape") {
-              onCancelEdit();
-            }
-          }}
-          onContextMenu={(e) => {
-            if (editing !== "bottom-message") return;
-            const sel = window.getSelection()?.toString() ?? "";
-            if (!sel) return;
-            e.preventDefault();
-            e.stopPropagation();
-            setAccentMenu({ x: e.clientX, y: e.clientY, text: sel });
-          }}
-          style={{
-            position: "absolute",
-            left: editRect.left,
-            top: editRect.top,
-            width: Math.max(editRect.width, 80),
-            height: Math.max(editRect.height, 24),
-            border: "2px solid #9146FF",
-            borderRadius: 4,
-            background: "rgba(0,0,0,0.45)",
-            color: editStyle.color,
-            fontFamily: editStyle.fontFamily,
-            fontSize: editStyle.fontSize,
-            fontWeight: editStyle.fontWeight,
-            textAlign: editStyle.align,
-            lineHeight: `${editStyle.lineHeight}px`,
-            resize: "none",
-            overflow: "hidden",
-            zIndex: 60,
-            padding: 0,
-            margin: 0,
-          }}
-        />
-      ) : null}
-
-      {/* Accent context menu for the bottom message */}
-      {accentMenu ? (
-        <div
-          style={{
-            position: "fixed",
-            left: accentMenu.x,
-            top: accentMenu.y,
-            background: "#241f22",
-            border: "1px solid #444",
-            borderRadius: 8,
-            padding: 6,
-            zIndex: 100,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            minWidth: 180,
-          }}
-        >
-          <button
-            onClick={() => {
-              onAccentSelection(accentMenu.text);
-              setAccentMenu(null);
+        {selected && selection && !editing && !NON_INTERACTIVE.has(selected) ? (
+          <Rnd
+            key={selected}
+            data-editor-control
+            size={{ width: selection.width, height: selection.height }}
+            position={{ x: selection.left, y: selection.top }}
+            scale={effectiveScale}
+            bounds="parent"
+            lockAspectRatio={FONT_SIZE_LAYERS.has(selected) || Boolean(SIZE_FIELDS[selected])}
+            resizeHandleStyles={resizeHandles}
+            style={{ border: "2px dashed #FF66AA", zIndex: 50 }}
+            onDoubleClick={(event: React.MouseEvent) => {
+              if (!TEXT_KEYS[selected]) return;
+              event.stopPropagation();
+              onEditStart(selected);
             }}
-            style={{ ...menuButtonStyle, color: "#F0A83C" }}
-          >
-            Accent: "{accentMenu.text}"
-          </button>
-          <button
-            onClick={() => {
-              onAccentSelection("");
-              setAccentMenu(null);
+            onDragStart={beginInteraction}
+            onDrag={(_event, position) => onMove(selected, position.x, position.y)}
+            onResizeStart={beginInteraction}
+            onResize={(_event, _direction, ref, _delta, position) =>
+              applyGeometry(selected, {
+                x: position.x, y: position.y, width: ref.offsetWidth, height: ref.offsetHeight,
+              }, selection)
+            }
+          />
+        ) : null}
+
+        {selected && selection && !editing && NON_INTERACTIVE.has(selected) ? (
+          <div data-editor-control style={{
+            position: "absolute", left: selection.left, top: selection.top,
+            width: selection.width, height: selection.height, border: "2px dashed #FF66AA",
+            pointerEvents: "none", zIndex: 50,
+          }} />
+        ) : null}
+
+        {editing && selection ? (
+          <textarea
+            data-editor-control autoFocus value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={() => finishTextEdit(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                finishTextEdit(true);
+              } else if (event.key === "Escape") {
+                finishTextEdit(false);
+              }
             }}
-            style={menuButtonStyle}
-          >
-            Clear accent
-          </button>
-        </div>
-      ) : null}
+            onContextMenu={(event) => {
+              if (editing !== "bottom-message") return;
+              const text = draft.slice(event.currentTarget.selectionStart, event.currentTarget.selectionEnd);
+              if (!text) return;
+              event.preventDefault();
+              setAccentMenu({ x: event.clientX, y: event.clientY, text });
+            }}
+            style={{
+              position: "absolute", left: selection.left, top: selection.top,
+              width: Math.max(selection.width, 80), height: Math.max(selection.height, 24),
+              boxSizing: "border-box", border: "2px solid #FF66AA",
+              background: "rgba(0,0,0,0.35)", padding: 0, margin: 0,
+              resize: "none", overflow: "hidden", zIndex: 60, ...editStyle,
+            }}
+          />
+        ) : null}
+
+        {accentMenu ? createPortal(
+          <div data-editor-control onMouseDown={(event) => event.stopPropagation()}
+            style={{ position: "fixed", left: accentMenu.x, top: accentMenu.y, ...menuStyle }}>
+            <button style={{ ...menuButtonStyle, color: "#F0A83C" }} onMouseDown={(event) => event.preventDefault()}
+              onClick={() => { onAccentSelection(accentMenu.text); setAccentMenu(null); }}>
+              Accent "{accentMenu.text}"
+            </button>
+            <button style={menuButtonStyle} onMouseDown={(event) => event.preventDefault()}
+              onClick={() => { onAccentSelection(""); setAccentMenu(null); }}>
+              Clear accent
+            </button>
+          </div>, document.body
+        ) : null}
+        {layerMenu ? createPortal(
+          <div data-editor-control onMouseDown={(event) => event.stopPropagation()}
+            style={{ position: "fixed", left: layerMenu.x, top: layerMenu.y, ...menuStyle }}>
+            <button style={menuButtonStyle} onMouseDown={(event) => event.preventDefault()}
+              onClick={() => { onResetLayer(layerMenu.layer); setLayerMenu(null); }}>
+              Reset element to default
+            </button>
+          </div>, document.body
+        ) : null}
+      </div>
     </div>
   );
-
 }
 
-function handleStyle(cursor: string): React.CSSProperties {
-  return {
-    width: 11,
-    height: 11,
-    background: "#9146FF",
-    border: "2px solid #fff",
-    borderRadius: 3,
-    cursor,
-  };
-}
-
+const handle = { width: 12, height: 12, background: "#FF66AA", border: "2px solid white", borderRadius: 3 };
+const resizeHandles = { topLeft: handle, topRight: handle, bottomLeft: handle, bottomRight: handle };
+const menuStyle: React.CSSProperties = {
+  background: "#241f22", border: "1px solid #54494f", borderRadius: 8,
+  padding: 6, zIndex: 100, display: "flex", flexDirection: "column", minWidth: 180,
+  fontFamily: '"Montserrat", sans-serif', fontSize: 13,
+};
 const menuButtonStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  color: "#eee",
-  textAlign: "left",
-  padding: "6px 10px",
-  borderRadius: 6,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 13,
+  background: "none", border: 0, color: "#eee", textAlign: "left",
+  padding: "7px 10px", cursor: "pointer", font: "inherit",
 };
