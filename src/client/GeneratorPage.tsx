@@ -6,7 +6,7 @@ import "@fontsource/montserrat/600.css";
 import "flag-icons/css/flag-icons.min.css";
 import "../thumbnail/styles.css";
 import { templates } from "../thumbnail/templates/registry";
-import { applyOverrides, type EditorState } from "../thumbnail/overrides";
+import { applyDataOverrides, applyOverrides, type EditorState } from "../thumbnail/overrides";
 import { computeTexts } from "../thumbnail/texts";
 import { RESOLUTION_PRESETS, type ResolutionPreset } from "../thumbnail/types";
 import type { ThumbnailResult } from "../shared/types/thumbnail";
@@ -108,6 +108,10 @@ export function GeneratorPage() {
 
   const base = Object.values(templates)[0]!;
   const template = useMemo(() => applyOverrides(base, editor), [base, editor]);
+  const previewData = useMemo(
+    () => result ? applyDataOverrides(result.data, editor) : null,
+    [result, editor],
+  );
 
   const set = (patch: Partial<EditorState>, push = false) => mutate(patch, push);
 
@@ -262,6 +266,18 @@ export function GeneratorPage() {
             />
             Twitch logo
           </label>
+          {result ? (
+            <label style={labelStyle}>
+              Slider breaks
+              <input
+                type="number"
+                min={0}
+                value={editor.sliderBreakCount ?? result.data.sbCount}
+                onChange={(event) => set({ sliderBreakCount: Math.max(0, Number(event.target.value) || 0) }, true)}
+                style={inputStyle}
+              />
+            </label>
+          ) : null}
         </section>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -311,7 +327,7 @@ export function GeneratorPage() {
             <div style={{ width: "100%", flex: 1, minHeight: 0 }}>
               <EditorCanvas
                 template={template}
-                data={result.data}
+                data={previewData!}
                 scale={previewScale}
                 selected={selected}
                 editing={editingLayer}

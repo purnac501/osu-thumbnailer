@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Thumbnail } from "../thumbnail/Thumbnail";
 import { getTemplate } from "../thumbnail/templates/registry";
-import { applyOverrides, type EditorState } from "../thumbnail/overrides";
+import { applyDataOverrides, applyOverrides, type EditorState } from "../thumbnail/overrides";
 import type { ThumbnailData } from "../shared/types/thumbnail";
 
 /**
@@ -66,5 +66,5 @@ export function RenderPage() {
     return <div style={{ padding: 20 }}>Loading data...</div>;
   }
 
-  return <Thumbnail data={data} template={template} scale={scale} markReady />;
+  return <Thumbnail data={applyDataOverrides(data, state)} template={template} scale={scale} markReady />;
 }

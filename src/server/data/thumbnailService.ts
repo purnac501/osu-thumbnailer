@@ -56,6 +56,10 @@ export async function getThumbnailData(
     baseBpm: baseBpmFallback,
   });
 
+  if (data.mods.some((mod) => mod.acronym === "CL") && data.sbCount === 0) {
+    warnings.push("Classic scoring does not expose slider breaks; enter the count manually");
+  }
+
   if (!data.baseBpm) warnings.push("beatmap BPM unavailable");
   return { data, warnings, mode: "live" };
 }

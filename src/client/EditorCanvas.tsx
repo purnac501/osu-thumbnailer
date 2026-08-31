@@ -85,6 +85,10 @@ export function EditorCanvas({
   };
   const elementFor = (layer: string) =>
     canvasRef.current?.querySelector(`[data-layer="${layer}"]`) as HTMLElement | null;
+  const textElementFor = (layer: string) => {
+    const element = elementFor(layer);
+    return (element?.querySelector("[data-editor-text]") as HTMLElement | null) ?? element;
+  };
   const rectOf = (layer: string): Rect | null => {
     const canvas = canvasRef.current;
     const element = elementFor(layer);
@@ -111,9 +115,17 @@ export function EditorCanvas({
 
   useLayoutEffect(() => {
     if (!editing) return;
-    const element = elementFor(editing);
-    const rect = rectOf(editing);
-    if (!element || !rect) return;
+    const element = textElementFor(editing);
+    const canvas = canvasRef.current;
+    if (!element || !canvas) return;
+    const base = canvas.getBoundingClientRect();
+    const bounds = element.getBoundingClientRect();
+    const rect = {
+      left: (bounds.left - base.left) / effectiveScale,
+      top: (bounds.top - base.top) / effectiveScale,
+      width: bounds.width / effectiveScale,
+      height: bounds.height / effectiveScale,
+    };
     const style = getComputedStyle(element);
     setSelection(rect);
     setDraft(element.textContent ?? "");
@@ -125,6 +137,7 @@ export function EditorCanvas({
       lineHeight: style.lineHeight,
       textAlign: style.textAlign as React.CSSProperties["textAlign"],
       color: style.color,
+      textShadow: style.textShadow,
     });
   }, [editing]);
 
@@ -315,7 +328,7 @@ export function EditorCanvas({
               position: "absolute", left: selection.left, top: selection.top,
               width: Math.max(selection.width, 80), height: Math.max(selection.height, 24),
               boxSizing: "border-box", border: "2px solid #FF66AA",
-              background: "rgba(0,0,0,0.35)", padding: 0, margin: 0,
+              background: "rgba(18,14,16,0.96)", padding: 0, margin: 0,
               resize: "none", overflow: "hidden", zIndex: 60, ...editStyle,
             }}
           />

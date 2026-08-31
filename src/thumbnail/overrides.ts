@@ -1,4 +1,5 @@
 import type { ThumbnailTemplate } from "./types";
+import type { ThumbnailData } from "../shared/types/thumbnail";
 import { mixColors, withAlpha } from "../shared/formatting/color";
 
 /**
@@ -9,6 +10,8 @@ import { mixColors, withAlpha } from "../shared/formatting/color";
 export interface EditorState {
   accent?: string;
   twitchVisible?: boolean;
+  /** Manual fallback when osu! does not expose slider-break statistics. */
+  sliderBreakCount?: number;
   /** Full bottom message text (replaces the template default). */
   bottomText?: string;
   /** Accent-colored substring of the bottom text. */
@@ -19,6 +22,18 @@ export interface EditorState {
   positionOverrides?: Record<string, { x: number; y: number }>;
   /** Config patches per layer id after resizing, e.g. { pp: { fontSize: 130 } }. */
   sizeOverrides?: Record<string, Record<string, number>>;
+}
+
+/** Applies data edits that cannot be represented by template configuration. */
+export function applyDataOverrides(data: ThumbnailData, state: EditorState | undefined): ThumbnailData {
+  if (state?.sliderBreakCount === undefined) return data;
+  const sbCount = Math.max(0, Math.round(state.sliderBreakCount));
+  return {
+    ...data,
+    sbCount,
+    status: sbCount > 0 && data.status.kind === "fc" ? { kind: "unknown" } : data.status,
+    isFullCombo: sbCount > 0 ? false : data.isFullCombo,
+  };
 }
 
 /** Maps data-layer ids to component config keys in the template. */

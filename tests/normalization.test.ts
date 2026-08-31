@@ -4,6 +4,7 @@ import { detectStatus } from "../src/shared/normalize/status";
 import { backgroundCandidates, normalizeScore } from "../src/shared/normalize/normalizeScore";
 import type { ApiScore } from "../src/shared/types/osu";
 import { referenceFixtureScore } from "../src/server/data/fixtures";
+import { applyDataOverrides } from "../src/thumbnail/overrides";
 
 describe("mods", () => {
   it("normalizes legacy acronym strings and structured mods", () => {
@@ -94,5 +95,15 @@ describe("normalizeScore", () => {
     const data = normalizeScore(referenceFixtureScore);
     expect(data.grade).toBe("S");
     expect(data.leaderboardPosition).toBe(2);
+  });
+});
+
+describe("manual score-data overrides", () => {
+  it("renders a manual slider-break count as a broken combo", () => {
+    const data = normalizeScore(referenceFixtureScore);
+    const edited = applyDataOverrides(data, { sliderBreakCount: 3 });
+    expect(edited.sbCount).toBe(3);
+    expect(edited.status.kind).toBe("unknown");
+    expect(edited.isFullCombo).toBe(false);
   });
 });

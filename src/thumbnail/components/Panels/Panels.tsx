@@ -32,6 +32,7 @@ export function BadgeLayer({
 
   const inner = (
     <div
+      data-editor-text
       style={{
         flex: 1,
         display: "flex",
