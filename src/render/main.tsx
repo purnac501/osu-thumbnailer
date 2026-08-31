@@ -1,0 +1,12 @@
+import { createRoot } from "react-dom/client";
+import "@fontsource/baloo-2/400.css";
+import "@fontsource/baloo-2/600.css";
+import "@fontsource/baloo-2/700.css";
+import "@fontsource/baloo-2/800.css";
+import "@fontsource/montserrat/400.css";
+import "@fontsource/montserrat/700.css";
+import "flag-icons/css/flag-icons.min.css";
+import "../thumbnail/styles.css";
+import { RenderPage } from "./RenderPage";
+
+createRoot(document.getElementById("root")!).render(<RenderPage />);

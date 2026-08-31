@@ -1,0 +1,157 @@
+import type { ApiScore } from "../../shared/types/osu";
+import type { ThumbnailData } from "../../shared/types/thumbnail";
+
+/**
+ * Fixture score matching reference/Reference.png:
+ * FC 10.53 1207PP 279x DIFF 195bpm MAP NAME S 99.26% #2 Name back to #2,
+ * HD + NC mods, Polish player.
+ */
+export const referenceFixtureScore: ApiScore = {
+  id: 4_098_321_756,
+  mode: "osu",
+  user_id: 8_192_637,
+  accuracy: 0.992612,
+  pp: 1207.34,
+  rank: "S",
+  max_combo: 279,
+  mods: [
+    { acronym: "HD", name: "Hidden" },
+    { acronym: "NC", name: "Nightcore", settings: { speed_change: 1.5 } },
+  ],
+  statistics: { great: 2148, meh: 12, miss: 0 },
+  is_perfect_combo: true,
+  rank_global: 2,
+  created_at: "2026-08-01T19:24:11Z",
+  beatmap_id: 3_141_592,
+  beatmap: {
+    id: 3_141_592,
+    beatmapset_id: 1_414_213,
+    difficulty_rating: 10.23,
+    version: "DIFF",
+    bpm: 130,
+    mode: "osu",
+  },
+  beatmapset: {
+    id: 1_414_213,
+    artist: "Artist",
+    title: "MAP NAME",
+    creator: "Mapper",
+    covers: {},
+  },
+  user: {
+    id: 8_192_637,
+    username: "Name",
+    avatar_url: "https://assets.ppy.sh/users/8192637",
+    country_code: "PL",
+  },
+};
+
+/** Pre-normalized fixture thumbnail data (base bpm 130, NC x1.5 -> 195). */
+export const referenceFixtureThumbnail: ThumbnailData = {
+  scoreId: "4098321756",
+  ruleset: "osu",
+
+  username: "Name",
+  userId: 8_192_637,
+  // Local deterministic assets so fixture renders are offline-safe.
+  avatarUrl: "/assets/template/fixture-avatar.jpg",
+  countryCode: "PL",
+
+  pp: 1207.34,
+
+  accuracy: 0.992612,
+  grade: "S",
+  maxCombo: 279,
+
+  leaderboardPosition: 2,
+
+  status: { kind: "fc" },
+  missCount: 0,
+  sbCount: 0,
+  isFullCombo: true,
+
+  mods: [
+    { acronym: "HD", name: "Hidden" },
+    { acronym: "NC", name: "Nightcore", settings: { speed_change: 1.5 } },
+  ],
+
+  statistics: { great: 2148, meh: 12 },
+
+  beatmapId: 3_141_592,
+  beatmapsetId: 1_414_213,
+  beatmapStatus: "ranked",
+
+  artist: "Artist",
+  title: "MAP NAME",
+  difficultyName: "DIFF",
+  mapper: "Mapper",
+
+  baseBpm: 130,
+  effectiveBpm: 195,
+  clockRate: 1.5,
+
+  baseStarRating: 10.23,
+  moddedStarRating: 10.53,
+
+  backgroundUrl: "/assets/template/fixture-bg.jpg",
+
+  playedAt: "2026-08-01T19:24:11Z",
+};
+
+export const fixtureRegistry: Record<string, ThumbnailData> = {
+  reference: referenceFixtureThumbnail,
+};
+
+/**
+ * Stress-test fixture: long text everywhere, many mods, non-FC status,
+ * big numbers. Used to verify dynamic badge sizing and no-overlap layout.
+ */
+export const longFixtureThumbnail: ThumbnailData = {
+  ...referenceFixtureThumbnail,
+  scoreId: "9000000001",
+
+  username: "VeryLongUsernameExample",
+  userId: 2,
+  avatarUrl: "/assets/template/fixture-avatar.jpg",
+  countryCode: "DE",
+
+  pp: 4321.56,
+
+  accuracy: 0.874213,
+  grade: "A",
+  maxCombo: 2731,
+
+  leaderboardPosition: 27,
+
+  status: { kind: "miss", count: 3 },
+  missCount: 3,
+  sbCount: 6,
+  isFullCombo: false,
+
+  mods: [
+    { acronym: "HD", name: "Hidden" },
+    { acronym: "HR", name: "Hard Rock" },
+    { acronym: "DT", name: "Double Time" },
+    { acronym: "FL", name: "Flashlight" },
+    { acronym: "XX", name: "Unknown Mod" },
+  ],
+
+  statistics: { great: 1200, ok: 400, meh: 100, miss: 3, combo_break: 6 },
+
+  beatmapId: 3_141_592,
+  beatmapsetId: 1_414_213,
+  beatmapStatus: "loved",
+
+  artist: "Some Really Long Artist Name Here",
+  title: "And A Very Long Map Title That Keeps Going",
+  difficultyName: "Reform's Extra Insane Hyper",
+
+  baseBpm: 178,
+  effectiveBpm: 267,
+  clockRate: 1.5,
+
+  baseStarRating: 9.1,
+  moddedStarRating: 9.87,
+};
+
+fixtureRegistry.long = longFixtureThumbnail;

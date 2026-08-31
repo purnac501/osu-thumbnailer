@@ -1,0 +1,88 @@
+import { describe, expect, it } from "vitest";
+import { getClockRate, modAssetPath, normalizeMods } from "../src/shared/mods/mods";
+import { detectStatus } from "../src/shared/normalize/status";
+import { backgroundCandidates, normalizeScore } from "../src/shared/normalize/normalizeScore";
+import type { ApiScore } from "../src/shared/types/osu";
+import { referenceFixtureScore } from "../src/server/data/fixtures";
+
+describe("mods", () => {
+  it("normalizes legacy acronym strings and structured mods", () => {
+    expect(normalizeMods(["HD", "DT"])).toEqual([
+      { acronym: "HD" },
+      { acronym: "DT" },
+    ]);
+    expect(normalizeMods([{ acronym: "NC", settings: { speed_change: 1.4 } }])).toEqual([
+      { acronym: "NC", settings: { speed_change: 1.4 } },
+    ]);
+    expect(normalizeMods(undefined)).toEqual([]);
+  });
+
+  it("computes clock rate from traditional mods", () => {
+    expect(getClockRate(normalizeMods(["DT"]))).toBe(1.5);
+    expect(getClockRate(normalizeMods(["NC"]))).toBe(1.5);
+    expect(getClockRate(normalizeMods(["HT"]))).toBe(0.75);
+    expect(getClockRate(normalizeMods(["HD", "HR"]))).toBe(1);
+  });
+
+  it("prefers structured lazer speed_change settings", () => {
+    const mods = normalizeMods([{ acronym: "DT", settings: { speed_change: 1.75 } }]);
+    expect(getClockRate(mods)).toBe(1.75);
+  });
+
+  it("maps acronyms to bundled assets and leaves unknown ones for fallback", () => {
+    expect(modAssetPath("HD")).toBe("/assets/osu/mods/mod-hidden.svg");
+    expect(modAssetPath("NC")).toBe("/assets/osu/mods/mod-nightcore.svg");
+    expect(modAssetPath("XX")).toBeNull();
+  });
+});
+
+describe("status / FC detection", () => {
+  it("detects FC from a perfect score", () => {
+    expect(detectStatus({ ...referenceFixtureScore }).kind).toBe("fc");
+  });
+
+  it("reports miss count", () => {
+    const score = { ...referenceFixtureScore, is_perfect_combo: true, statistics: { great: 10, miss: 2 } };
+    expect(detectStatus(score)).toEqual({ kind: "miss", count: 2 });
+  });
+
+  it("does not claim FC when combo is broken without misses", () => {
+    const score = { ...referenceFixtureScore, is_perfect_combo: false };
+    expect(detectStatus(score).kind).toBe("unknown");
+  });
+});
+
+describe("background fallbacks", () => {
+  it("prefers provided covers in quality order", () => {
+    const chain = backgroundCandidates(1, { raw: "r.jpg", cover: "c.jpg" });
+    expect(chain).toEqual(["r.jpg", "c.jpg"]);
+  });
+
+  it("falls back to the documented assets.ppy.sh route", () => {
+    const chain = backgroundCandidates(1234);
+    expect(chain[0]).toBe("https://assets.ppy.sh/beatmaps/1234/covers/raw.jpg");
+    expect(chain.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("normalizeScore", () => {
+  it("builds the thumbnail model from a raw API score", () => {
+    const data = normalizeScore(referenceFixtureScore, { moddedStarRating: 10.53, baseBpm: 130 });
+    expect(data.username).toBe("Name");
+    expect(data.countryCode).toBe("PL");
+    expect(data.pp).toBeCloseTo(1207.34);
+    expect(data.grade).toBe("S");
+    expect(data.maxCombo).toBe(279);
+    expect(data.leaderboardPosition).toBe(2);
+    expect(data.isFullCombo).toBe(true);
+    expect(data.effectiveBpm).toBe(195); // 130 * 1.5 (NC)
+    expect(data.moddedStarRating).toBe(10.53);
+    expect(data.mods.map((m) => m.acronym)).toEqual(["HD", "NC"]);
+  });
+
+  it("keeps rank (grade) separate from leaderboard position", () => {
+    const data = normalizeScore(referenceFixtureScore);
+    expect(data.grade).toBe("S");
+    expect(data.leaderboardPosition).toBe(2);
+  });
+});

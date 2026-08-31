@@ -1,0 +1,27 @@
+/* Shared thumbnail styles. Layout stays in template configs; this file only
+   neutralizes defaults that would leak into the render. */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #111;
+}
+
+#thumbnail-root {
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Widths/heights in template configs include borders. */
+#thumbnail-root,
+#thumbnail-root * {
+  box-sizing: border-box;
+}
+
+/* Deterministic rendering: kill all transitions/animations in render mode. */
+[data-render-ready] *,
+#thumbnail-root * {
+  transition: none !important;
+  animation: none !important;
+}
