@@ -65,14 +65,14 @@ export function Thumbnail({
   const hasSliderBreaks = text("status-sb") !== "";
   const splitStatus = hasMisses && hasSliderBreaks;
   const statusMiss = splitStatus
-    ? { ...c.statusMiss, fontSize: c.statusMiss.fontSize * 0.62 }
+    ? { ...c.statusMiss, fontSize: c.statusMiss.fontSize * 0.75 }
     : c.statusMiss;
   const statusSB = {
     ...c.statusSB,
     ...(splitStatus
       ? {
-          y: c.statusMiss.y + c.statusMiss.fontSize * 0.68,
-          fontSize: c.statusSB.fontSize * 0.78,
+          y: c.statusMiss.y + c.statusMiss.fontSize * 0.76,
+          fontSize: c.statusSB.fontSize * 0.9,
         }
       : !hasMisses
         ? {
