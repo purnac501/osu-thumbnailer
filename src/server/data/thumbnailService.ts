@@ -30,10 +30,6 @@ export async function getThumbnailData(
   const score = await fetchScore(parsed.scoreId, parsed.ruleset);
   const warnings: string[] = [];
 
-  if (parsed.ruleset === null) {
-    warnings.push("score URL had no ruleset; resolved as a lazer score id");
-  }
-
   const beatmapId = score.beatmap?.id ?? score.beatmap_id ?? 0;
   const mods = score.mods ?? [];
 
@@ -57,7 +53,7 @@ export async function getThumbnailData(
   });
 
   if (data.mods.some((mod) => mod.acronym === "CL") && data.sbCount === 0) {
-    warnings.push("Classic scoring does not expose slider breaks; enter the count manually");
+    warnings.push("Slider breaks are unavailable for Classic scores. Enter them below.");
   }
 
   if (!data.baseBpm) warnings.push("beatmap BPM unavailable");

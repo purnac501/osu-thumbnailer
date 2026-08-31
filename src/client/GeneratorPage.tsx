@@ -226,10 +226,9 @@ export function GeneratorPage() {
             {busy ? "Working..." : "Fetch score"}
           </button>
           {error ? <div style={{ color: "#f56", marginTop: 8, fontSize: 13 }}>{error}</div> : null}
-          {result ? (
+          {result && result.warnings.length > 0 ? (
             <div style={{ color: "#9a8f93", marginTop: 8, fontSize: 12 }}>
-              {result.mode} mode
-              {result.warnings.length > 0 ? ` - ${result.warnings.join("; ")}` : ""}
+              {result.warnings.join(" ")}
             </div>
           ) : null}
         </section>
