@@ -42,6 +42,11 @@ export interface TextLayerConfig extends LayerBase, TextEffect {
   valign?: "top" | "center" | "bottom";
 }
 
+export interface CustomTextLayerConfig extends TextLayerConfig {
+  id: string;
+  text: string;
+}
+
 /** Rounded pill/panel with text, e.g. combo / difficulty / bpm badges. */
 export interface BadgeLayerConfig extends TextLayerConfig {
   background: string;
@@ -278,6 +283,7 @@ export interface ThumbnailTemplate {
   bottomHighlightOverride?: string;
   /** Manual text per layer id (see computeTexts keys), applied at render time. */
   textOverrides?: Record<string, string>;
+  customTexts?: CustomTextLayerConfig[];
 }
 
 export const RESOLUTION_PRESETS = {

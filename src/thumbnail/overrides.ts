@@ -1,4 +1,4 @@
-import type { ThumbnailTemplate } from "./types";
+import type { CustomTextLayerConfig, ThumbnailTemplate } from "./types";
 import type { ThumbnailData } from "../shared/types/thumbnail";
 import { mixColors, withAlpha } from "../shared/formatting/color";
 
@@ -22,6 +22,7 @@ export interface EditorState {
   positionOverrides?: Record<string, { x: number; y: number }>;
   /** Config patches per layer id after resizing, e.g. { pp: { fontSize: 130 } }. */
   sizeOverrides?: Record<string, Record<string, number>>;
+  customTexts?: CustomTextLayerConfig[];
 }
 
 /** Applies data edits that cannot be represented by template configuration. */
@@ -74,7 +75,9 @@ export function applyOverrides(
   }
 
   const next = structuredClone(template);
-  const { accent, twitchVisible, bottomText, bottomAccent, textOverrides, positionOverrides, sizeOverrides } = state;
+  const { accent, twitchVisible, bottomText, bottomAccent, textOverrides, positionOverrides, sizeOverrides, customTexts } = state;
+
+  next.customTexts = structuredClone(customTexts ?? []);
 
   if (accent) {
     next.theme.accent = accent;
@@ -117,7 +120,7 @@ export function applyOverrides(
     const configs = next.components as unknown as Record<string, { x: number; y: number }>;
     for (const [layer, pos] of Object.entries(positionOverrides)) {
       const key = COMPONENT_BY_LAYER[layer];
-      const conf = key ? configs[key] : undefined;
+      const conf = key ? configs[key] : next.customTexts?.find((item) => item.id === layer);
       if (conf) {
         conf.x = Math.round(pos.x);
         conf.y = Math.round(pos.y);
@@ -129,7 +132,7 @@ export function applyOverrides(
     const configs = next.components as unknown as Record<string, Record<string, number>>;
     for (const [layer, patch] of Object.entries(sizeOverrides)) {
       const key = COMPONENT_BY_LAYER[layer];
-      const conf = key ? configs[key] : undefined;
+      const conf = key ? configs[key] : next.customTexts?.find((item) => item.id === layer);
       if (conf) Object.assign(conf, patch);
     }
   }

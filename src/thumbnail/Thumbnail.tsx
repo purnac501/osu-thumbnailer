@@ -194,6 +194,12 @@ export function Thumbnail({
         accentPart={template.bottomHighlightOverride}
         config={c.bottomMessage}
       />
+
+      {template.customTexts?.map((item) => (
+        <TextLayer key={item.id} config={item} testId={item.id}>
+          {item.text}
+        </TextLayer>
+      ))}
     </div>
   );
 }

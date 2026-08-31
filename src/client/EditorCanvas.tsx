@@ -38,6 +38,7 @@ interface Props {
   onAccentSelection: (text: string) => void;
   onInteractStart: () => void;
   onResetLayer: (layer: string) => void;
+  onRemoveLayer: (layer: string) => void;
 }
 
 /** Direct editor overlay. The thumbnail and react-rnd use the same logical coordinates. */
@@ -45,6 +46,7 @@ export function EditorCanvas({
   template, data, scale, selected, editing, onSelect, onEditStart, onEditEnd,
   onMove, onResize, onTextCommit, onAccentSelection, onInteractStart,
   onResetLayer,
+  onRemoveLayer,
 }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -58,6 +60,9 @@ export function EditorCanvas({
   const [accentMenu, setAccentMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const [layerMenu, setLayerMenu] = useState<{ x: number; y: number; layer: string } | null>(null);
   const effectiveScale = scale * view.zoom;
+  const isCustomText = (layer: string) => layer.startsWith("custom-");
+  const isTextLayer = (layer: string) => Boolean(TEXT_KEYS[layer]) || isCustomText(layer);
+  const isFontSizeLayer = (layer: string) => FONT_SIZE_LAYERS.has(layer) || isCustomText(layer);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
@@ -104,6 +109,9 @@ export function EditorCanvas({
   };
   const configFor = (layer: string): Record<string, number | string | undefined> => {
     const key = COMPONENT_BY_LAYER[layer];
+    if (!key) {
+      return (template.customTexts?.find((item) => item.id === layer) ?? {}) as unknown as Record<string, number | string | undefined>;
+    }
     return key
       ? (template.components as unknown as Record<string, Record<string, number | string | undefined>>)[key] ?? {}
       : {};
@@ -160,7 +168,7 @@ export function EditorCanvas({
   ) => {
     const start = resizeStart.current;
     const origin = start?.rect ?? original;
-    if (FONT_SIZE_LAYERS.has(layer)) {
+    if (isFontSizeLayer(layer)) {
       const ratio = Math.max(0.15, bounds.height / Math.max(1, origin.height));
       onResize(layer, {
         fontSize: Math.max(10, Math.round((start?.fontSize ?? (Number(configFor(layer).fontSize) || 40)) * ratio)),
@@ -246,7 +254,7 @@ export function EditorCanvas({
         }}
         onDoubleClick={(event) => {
           const layer = layerAt(event.target as HTMLElement);
-          if (!layer || !TEXT_KEYS[layer]) return;
+          if (!layer || !isTextLayer(layer)) return;
           onSelect(layer);
           onEditStart(layer);
           event.preventDefault();
@@ -270,11 +278,11 @@ export function EditorCanvas({
             position={{ x: selection.left, y: selection.top }}
             scale={effectiveScale}
             bounds="parent"
-            lockAspectRatio={FONT_SIZE_LAYERS.has(selected) || Boolean(SIZE_FIELDS[selected])}
+            lockAspectRatio={isFontSizeLayer(selected) || Boolean(SIZE_FIELDS[selected])}
             resizeHandleStyles={resizeHandles}
             style={{ border: "2px dashed #FF66AA", zIndex: 50 }}
             onDoubleClick={(event: React.MouseEvent) => {
-              if (!TEXT_KEYS[selected]) return;
+              if (!isTextLayer(selected)) return;
               event.stopPropagation();
               onEditStart(selected);
             }}
@@ -351,8 +359,12 @@ export function EditorCanvas({
           <div data-editor-control onMouseDown={(event) => event.stopPropagation()}
             style={{ position: "fixed", left: layerMenu.x, top: layerMenu.y, ...menuStyle }}>
             <button style={menuButtonStyle} onMouseDown={(event) => event.preventDefault()}
-              onClick={() => { onResetLayer(layerMenu.layer); setLayerMenu(null); }}>
-              Reset element to default
+              onClick={() => {
+                if (isCustomText(layerMenu.layer)) onRemoveLayer(layerMenu.layer);
+                else onResetLayer(layerMenu.layer);
+                setLayerMenu(null);
+              }}>
+              {isCustomText(layerMenu.layer) ? "Remove element" : "Reset element to default"}
             </button>
           </div>, document.body
         ) : null}

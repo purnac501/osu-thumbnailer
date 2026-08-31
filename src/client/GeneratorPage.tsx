@@ -49,6 +49,7 @@ export function GeneratorPage() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
+  const [sliderBreakDraft, setSliderBreakDraft] = useState("0");
 
   // History for undo/redo.
   const [history, setHistory] = useState<{ past: EditorState[]; future: EditorState[] }>({
@@ -113,6 +114,10 @@ export function GeneratorPage() {
     [result, editor],
   );
 
+  useEffect(() => {
+    setSliderBreakDraft(String(editor.sliderBreakCount ?? result?.data.sbCount ?? 0));
+  }, [result]);
+
   const set = (patch: Partial<EditorState>, push = false) => mutate(patch, push);
 
   async function generate() {
@@ -161,7 +166,9 @@ export function GeneratorPage() {
   /** Text commits: inline editing routes the bottom message separately. */
   const onTextCommit = (key: string, value: string) => {
     pushHistorySnapshot();
-    if (key === "__bottom__") {
+    if (key.startsWith("custom-")) {
+      set({ customTexts: editor.customTexts?.map((item) => item.id === key ? { ...item, text: value } : item) });
+    } else if (key === "__bottom__") {
       set({ bottomText: value });
     } else if (key === "bottom-text") {
       set({ bottomText: value });
@@ -197,6 +204,42 @@ export function GeneratorPage() {
     });
   };
 
+  const addCustomText = () => {
+    pushHistorySnapshot();
+    const index = editor.customTexts?.length ?? 0;
+    const id = `custom-${crypto.randomUUID()}`;
+    set({
+      customTexts: [...(editor.customTexts ?? []), {
+        id,
+        text: "Custom text",
+        visible: true,
+        x: 80,
+        y: 350 + index * 64,
+        fontFamily: '"Montserrat", sans-serif',
+        fontSize: 54,
+        fontWeight: 600,
+        color: "#FFFFFF",
+        glow: { blur: 10, layers: 2 },
+      }],
+    });
+    setSelected(id);
+  };
+
+  const removeLayer = (layer: string) => {
+    pushHistorySnapshot();
+    const positions = { ...editor.positionOverrides };
+    const sizes = { ...editor.sizeOverrides };
+    delete positions[layer];
+    delete sizes[layer];
+    set({
+      customTexts: editor.customTexts?.filter((item) => item.id !== layer),
+      positionOverrides: positions,
+      sizeOverrides: sizes,
+    });
+    setSelected(null);
+    setEditingLayer(null);
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#121013", color: "#e8e2e4", fontFamily: '"Montserrat", sans-serif' }}>
       {/* Left: controls */}
@@ -213,7 +256,20 @@ export function GeneratorPage() {
           gap: 18,
         }}
       >
-        <h1 style={{ fontFamily: '"Baloo 2", sans-serif', margin: 0, fontSize: 26 }}>osu! thumbnailer</h1>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+          <h1 style={{ fontFamily: '"Baloo 2", sans-serif', margin: 0, fontSize: 26 }}>osu! thumbnailer</h1>
+          <details style={{ position: "relative", zIndex: 80 }}>
+            <summary aria-label="Score data limits" title="Score data limits" style={{ cursor: "pointer", listStyle: "none", width: 26, height: 26, border: "1px solid #54494f", borderRadius: "50%", display: "grid", placeItems: "center", color: "#FF66AA", fontWeight: 700 }}>i</summary>
+            <div style={{ position: "absolute", right: 0, top: 34, width: 280, padding: 14, background: "#241f22", border: "1px solid #54494f", borderRadius: 8, fontSize: 12, lineHeight: 1.5, color: "#d8d0d3", boxShadow: "0 12px 30px rgba(0,0,0,.45)" }}>
+              <strong style={{ color: "#fff" }}>Missing score data</strong>
+              <p style={{ margin: "8px 0" }}>The osu! API cannot report exact slider breaks for Classic scores. This editor does not calculate PP if FC.</p>
+              <p style={{ margin: "8px 0" }}>Use Slider breaks for the count. Use Add text for PP if FC or other details.</p>
+              <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>osu! API</a>
+              {" - "}
+              <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>rosu-pp calculator</a>
+            </div>
+          </details>
+        </div>
 
         <section style={sectionStyle}>
           <input
@@ -269,14 +325,38 @@ export function GeneratorPage() {
             <label style={labelStyle}>
               Slider breaks
               <input
-                type="number"
-                min={0}
-                value={editor.sliderBreakCount ?? result.data.sbCount}
-                onChange={(event) => set({ sliderBreakCount: Math.max(0, Number(event.target.value) || 0) }, true)}
+                inputMode="numeric"
+                value={sliderBreakDraft}
+                onFocus={(event) => { pushHistorySnapshot(); event.currentTarget.select(); }}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (!/^\d*$/.test(value)) return;
+                  setSliderBreakDraft(value);
+                  if (value !== "") set({ sliderBreakCount: Number(value) });
+                }}
+                onBlur={() => {
+                  const value = String(Math.max(0, Number(sliderBreakDraft) || 0));
+                  setSliderBreakDraft(value);
+                  set({ sliderBreakCount: Number(value) });
+                }}
                 style={inputStyle}
               />
             </label>
           ) : null}
+          <button onClick={addCustomText} disabled={!result} style={{ ...buttonStyle, background: "#3a3236", padding: "8px 0" }}>
+            Add text
+          </button>
+          {editor.customTexts?.map((item) => (
+            <div key={item.id} style={{ display: "flex", gap: 6 }}>
+              <input
+                value={item.text}
+                onFocus={pushHistorySnapshot}
+                onChange={(event) => set({ customTexts: editor.customTexts?.map((current) => current.id === item.id ? { ...current, text: event.target.value } : current) })}
+                style={{ ...inputStyle, minWidth: 0 }}
+              />
+              <button onClick={() => removeLayer(item.id)} aria-label="Remove text" style={{ ...buttonStyle, width: 36, padding: 0, background: "#3a3236" }}>×</button>
+            </div>
+          ))}
         </section>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -289,8 +369,8 @@ export function GeneratorPage() {
             </button>
           </div>
           {selected ? (
-            <button onClick={() => resetLayer(selected)} style={{ ...buttonStyle, background: "#3a3236", padding: "8px 0", fontSize: 13 }}>
-              Reset "{selected}" to default
+            <button onClick={() => selected.startsWith("custom-") ? removeLayer(selected) : resetLayer(selected)} style={{ ...buttonStyle, background: "#3a3236", padding: "8px 0", fontSize: 13 }}>
+              {selected.startsWith("custom-") ? "Remove selected text" : `Reset "${selected}" to default`}
             </button>
           ) : null}
         </div>
@@ -300,6 +380,7 @@ export function GeneratorPage() {
             // Full replacement (not a merge) so every override is cleared.
             pushHistorySnapshot();
             replaceEditor(EMPTY_EDITOR);
+            setSliderBreakDraft(String(result?.data.sbCount ?? 0));
             setSelected(null);
             setEditingLayer(null);
           }}
@@ -341,6 +422,7 @@ export function GeneratorPage() {
                 onTextCommit={onTextCommit}
                 onAccentSelection={(text) => set({ bottomAccent: text || undefined }, true)}
                 onResetLayer={resetLayer}
+                onRemoveLayer={removeLayer}
               />
             </div>
             <button onClick={download} disabled={busy} style={buttonStyle}>

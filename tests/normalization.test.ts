@@ -4,7 +4,8 @@ import { detectStatus } from "../src/shared/normalize/status";
 import { backgroundCandidates, normalizeScore } from "../src/shared/normalize/normalizeScore";
 import type { ApiScore } from "../src/shared/types/osu";
 import { referenceFixtureScore } from "../src/server/data/fixtures";
-import { applyDataOverrides } from "../src/thumbnail/overrides";
+import { applyDataOverrides, applyOverrides } from "../src/thumbnail/overrides";
+import { referenceTemplate } from "../src/thumbnail/templates/reference/template";
 
 describe("mods", () => {
   it("normalizes legacy acronym strings and structured mods", () => {
@@ -105,5 +106,17 @@ describe("manual score-data overrides", () => {
     expect(edited.sbCount).toBe(3);
     expect(edited.status.kind).toBe("unknown");
     expect(edited.isFullCombo).toBe(false);
+  });
+
+  it("keeps custom text in downloaded template overrides", () => {
+    const custom = {
+      id: "custom-test", text: "2407PP", visible: true, x: 10, y: 20,
+      fontFamily: "Montserrat", fontSize: 40, fontWeight: 600, color: "#fff",
+    };
+    const template = applyOverrides(referenceTemplate, {
+      customTexts: [custom],
+      positionOverrides: { "custom-test": { x: 30, y: 40 } },
+    });
+    expect(template.customTexts?.[0]).toMatchObject({ text: "2407PP", x: 30, y: 40 });
   });
 });
