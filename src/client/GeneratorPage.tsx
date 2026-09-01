@@ -55,19 +55,7 @@ export function GeneratorPage() {
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
   const [sliderBreakDraft, setSliderBreakDraft] = useState("0");
   const [missDraft, setMissDraft] = useState("0");
-  const [queueInfo, setQueueInfo] = useState<{
-    queuedCount: number;
-    activeCount: number;
-    totalProcessed: number;
-    estWaitMs: number;
-    safeLimitPerMinute: number;
-  } | null>(null);
-  const [fetchStage, setFetchStage] = useState<"idle" | "queued" | "fetching" | "rendering" | "done">("idle");
-  const [fetchStats, setFetchStats] = useState<{
-    waitTimeMs?: number;
-    queuePosition?: number;
-    totalDurationMs?: number;
-  } | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
 
   useEffect(() => {
     let unmounted = false;
@@ -75,8 +63,8 @@ export function GeneratorPage() {
       try {
         const res = await fetch(`${API_BASE}/api/queue-status`);
         if (res.ok && !unmounted) {
-          const data = await res.json();
-          setQueueInfo(data);
+          const data = (await res.json()) as { queuedCount?: number };
+          setQueueCount(data.queuedCount ?? 0);
         }
       } catch {
         // Silently ignore queue status fetch errors
@@ -84,7 +72,7 @@ export function GeneratorPage() {
     };
 
     fetchQueueStatus();
-    const interval = setInterval(fetchQueueStatus, 6000);
+    const interval = setInterval(fetchQueueStatus, 5000);
     return () => {
       unmounted = true;
       clearInterval(interval);
@@ -170,41 +158,18 @@ export function GeneratorPage() {
   async function generate() {
     setBusy(true);
     setError(null);
-    setFetchStage("queued");
-    setFetchStats(null);
-    const startTime = Date.now();
-
-    const timer1 = setTimeout(() => setFetchStage("fetching"), 400);
-    const timer2 = setTimeout(() => setFetchStage("rendering"), 1200);
-
     try {
       const res = await fetch(`${API_BASE}/api/thumbnail?url=${encodeURIComponent(url)}`);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-
       if (!res.ok) {
-        const body = await res.json().catch(() => null) as { error?: string } | null;
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? `Score request failed (${res.status})`);
       }
-      setFetchStage("rendering");
-      const json = await res.json() as ThumbnailResult & { queue?: { waitTimeMs: number; queuePosition: number } };
-      const totalDurationMs = Date.now() - startTime;
-
-      setResult(json);
-      setFetchStats({
-        waitTimeMs: json.queue?.waitTimeMs ?? 0,
-        queuePosition: json.queue?.queuePosition ?? 1,
-        totalDurationMs,
-      });
-      setFetchStage("done");
+      setResult((await res.json()) as ThumbnailResult);
       replaceEditor(EMPTY_EDITOR);
       setHistory({ past: [], future: [] });
       setSelected(null);
       setEditingLayer(null);
     } catch (err) {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      setFetchStage("idle");
       setError(String(err));
     } finally {
       setBusy(false);
@@ -420,125 +385,19 @@ export function GeneratorPage() {
         </div>
 
         <section style={sectionStyle}>
-          {/* Live Queue & Safe Mode Header */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              fontSize: 11,
-              fontWeight: 600,
-              padding: "6px 9px",
-              borderRadius: 6,
-              background: "#1a1618",
-              border: "1px solid #332b2e",
-              color: "#a89da1",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  backgroundColor: queueInfo && queueInfo.queuedCount > 0 ? "#FFB800" : "#00FF88",
-                  boxShadow: queueInfo && queueInfo.queuedCount > 0 ? "0 0 6px #FFB800" : "0 0 6px #00FF88",
-                }}
-              />
-              <span>
-                {queueInfo && queueInfo.queuedCount > 0
-                  ? `Queue: ${queueInfo.queuedCount} waiting (~${Math.ceil(queueInfo.estWaitMs / 1000)}s est.)`
-                  : "API: Safe & Ready (0 waiting)"}
-              </span>
-            </div>
-            <span
-              title="Requests are automatically queued and rate-limited to safely stay within osu! API guidelines."
-              style={{ color: "#7a7074", cursor: "help" }}
-            >
-              Safe Mode (120/m)
-            </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 13, color: "#8a8084", fontWeight: 600 }}>Score URL</span>
+            <span style={{ fontSize: 12, color: "#8a8084" }}>Queue: {queueCount}</span>
           </div>
-
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://osu.ppy.sh/scores/123456789"
-            style={{ ...inputStyle, marginTop: 8 }}
+            style={inputStyle}
           />
-
-          <button onClick={generate} disabled={busy || !url} style={{ ...buttonStyle, width: "100%", marginTop: 8 }}>
-            {busy ? (
-              fetchStage === "queued" ? "⏳ In Queue..." :
-              fetchStage === "fetching" ? "⚡ Fetching osu! Data..." :
-              fetchStage === "rendering" ? "🎨 Composing Thumbnail..." :
-              "Working..."
-            ) : (
-              "Fetch score"
-            )}
+          <button onClick={generate} disabled={busy || !url} style={{ ...buttonStyle, width: "100%", marginTop: 10 }}>
+            {busy ? "Fetching..." : "Fetch score"}
           </button>
-
-          {/* Active Queue / Progress Banner */}
-          {busy && (
-            <div
-              style={{
-                marginTop: 8,
-                padding: "8px 10px",
-                borderRadius: 6,
-                background: "#241e21",
-                border: "1px solid #45373d",
-                fontSize: 12,
-                color: "#e8dfe2",
-                display: "flex",
-                flexDirection: "column",
-                gap: 4,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 600, color: "#FF66AA" }}>
-                  {fetchStage === "queued" ? "⏳ Step 1/3: In Queue" :
-                   fetchStage === "fetching" ? "⚡ Step 2/3: Querying osu! API" :
-                   "🎨 Step 3/3: Rendering Thumbnail"}
-                </span>
-                <span style={{ fontSize: 11, color: "#9a8f93" }}>
-                  {fetchStage === "queued" ? "Estimating ~1s" :
-                   fetchStage === "fetching" ? "Beatmap & Leaderboard" :
-                   "Ready in a moment"}
-                </span>
-              </div>
-              <div style={{ width: "100%", height: 3, background: "#1a1618", borderRadius: 2, overflow: "hidden", marginTop: 2 }}>
-                <div
-                  style={{
-                    height: "100%",
-                    background: "linear-gradient(90deg, #FF66AA, #FFCC22)",
-                    width: fetchStage === "queued" ? "33%" : fetchStage === "fetching" ? "66%" : "95%",
-                    transition: "width 0.4s ease",
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Success summary stats badge */}
-          {!busy && fetchStats && fetchStage === "done" && (
-            <div
-              style={{
-                marginTop: 6,
-                padding: "5px 8px",
-                borderRadius: 6,
-                background: "#19221c",
-                border: "1px solid #284431",
-                fontSize: 11,
-                color: "#8cd6a3",
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <span>✓ Loaded in {(fetchStats.totalDurationMs! / 1000).toFixed(1)}s</span>
-              <span>Queue wait: {(fetchStats.waitTimeMs! / 1000).toFixed(1)}s</span>
-            </div>
-          )}
-
           {error ? <div style={{ color: "#f56", marginTop: 8, fontSize: 13 }}>{error}</div> : null}
           {result && result.warnings.length > 0 ? (
             <div style={{ color: "#9a8f93", marginTop: 8, fontSize: 12 }}>
