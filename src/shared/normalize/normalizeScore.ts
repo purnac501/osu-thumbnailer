@@ -42,6 +42,11 @@ export function normalizeScore(
   const baseBpm = extras.baseBpm ?? beatmap?.bpm ?? 0;
   const beatmapsetId = beatmap?.beatmapset_id ?? 0;
   const beatmapMaxCombo = extras.maxCombo ?? beatmap?.max_combo;
+  const rawLeaderboardPosition = extras.leaderboardPosition ?? score.rank_global;
+  const leaderboardPosition =
+    typeof rawLeaderboardPosition === "number" && rawLeaderboardPosition > 0
+      ? rawLeaderboardPosition
+      : undefined;
 
   const status = detectStatus(score, beatmapMaxCombo);
   const stats: Record<string, number> = {};
@@ -71,7 +76,7 @@ export function normalizeScore(
     grade: score.rank ?? "",
     maxCombo: score.max_combo ?? 0,
 
-    leaderboardPosition: extras.leaderboardPosition ?? score.rank_global ?? undefined,
+    leaderboardPosition,
 
     status,
     missCount,

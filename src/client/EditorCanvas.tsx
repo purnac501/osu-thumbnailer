@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
-import { createPortal } from "react-dom";
+import { Button, ContextMenu, Flex, IconButton, Tooltip } from "@radix-ui/themes";
+import { EnterFullScreenIcon, MinusIcon, PlusIcon } from "@radix-ui/react-icons";
 import { Rnd } from "react-rnd";
 import type { ThumbnailData } from "../shared/types/thumbnail";
 import { Thumbnail } from "../thumbnail/Thumbnail";
@@ -16,6 +17,8 @@ const TEXT_KEYS: Record<string, string> = {
   accuracy: "accuracy", leaderboard: "leaderboard", username: "username",
   "bottom-message": "bottom-text",
 };
+
+export const getTextKeyForLayer = (layer: string) => TEXT_KEYS[layer] ?? layer;
 const SIZE_FIELDS: Record<string, "size" | "iconSize"> = {
   "twitch-logo": "size",
   "mod-list": "iconSize",
@@ -131,8 +134,10 @@ export function EditorCanvas({
   const [selection, setSelection] = useState<Rect | null>(null);
   const [draft, setDraft] = useState("");
   const [editStyle, setEditStyle] = useState<React.CSSProperties>({});
-  const [accentMenu, setAccentMenu] = useState<{ x: number; y: number; text: string } | null>(null);
-  const [layerMenu, setLayerMenu] = useState<{ x: number; y: number; layer: string } | null>(null);
+  const [contextOpen, setContextOpen] = useState(false);
+  const [contextTarget, setContextTarget] = useState<{ layer: string; text: string } | null>(null);
+  const contextAvailable = useRef(false);
+  const contextTextRange = useRef<Range | null>(null);
   const effectiveScale = scale * view.zoom;
 
   const resetFitView = useCallback(() => {
@@ -171,6 +176,28 @@ export function EditorCanvas({
     observer.observe(viewport);
     return () => observer.disconnect();
   }, [resetFitView]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const bounds = viewport.getBoundingClientRect();
+      const cursorX = event.clientX - bounds.left;
+      const cursorY = event.clientY - bounds.top;
+      setView((current) => {
+        const zoom = Math.min(3, Math.max(0.5, current.zoom * Math.exp(-event.deltaY * 0.001)));
+        const ratio = zoom / current.zoom;
+        return {
+          zoom,
+          x: cursorX - (cursorX - current.x) * ratio,
+          y: cursorY - (cursorY - current.y) * ratio,
+        };
+      });
+    };
+    viewport.addEventListener("wheel", onWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", onWheel);
+  }, []);
 
   const layerAt = (element: HTMLElement | null): string | null => {
     let current = element;
@@ -223,7 +250,12 @@ export function EditorCanvas({
     const textBounds = range.getBoundingClientRect();
     const bounds = element.dataset.editorText
       ? elementBounds
-      : { ...elementBounds, left: textBounds.left, width: textBounds.width };
+      : {
+          left: textBounds.left,
+          top: elementBounds.top,
+          width: textBounds.width,
+          height: elementBounds.height,
+        };
     const rect = {
       left: (bounds.left - base.left) / effectiveScale,
       top: (bounds.top - base.top) / effectiveScale,
@@ -268,8 +300,6 @@ export function EditorCanvas({
   useEffect(() => {
     const close = (event: MouseEvent) => {
       if (canvasRef.current?.contains(event.target as Node)) return;
-      setAccentMenu(null);
-      setLayerMenu(null);
       onEditEnd();
     };
     window.addEventListener("mousedown", close);
@@ -307,12 +337,10 @@ export function EditorCanvas({
   };
 
   const finishTextEdit = () => {
-    setAccentMenu(null);
+    if (contextAvailable.current) return;
     onEditEnd();
   };
   const beginInteraction = () => {
-    setAccentMenu(null);
-    setLayerMenu(null);
     onInteractStart();
   };
 
@@ -323,29 +351,15 @@ export function EditorCanvas({
         position: "relative", width: "100%", height: "100%",
         overflow: "hidden", cursor: panStart.current ? "grabbing" : undefined,
       }}
-      onWheel={(event) => {
-        event.preventDefault();
-        const viewport = viewportRef.current!.getBoundingClientRect();
-        const cursorX = event.clientX - viewport.left;
-        const cursorY = event.clientY - viewport.top;
-        setView((current) => {
-          const zoom = Math.min(3, Math.max(0.5, current.zoom * Math.exp(-event.deltaY * 0.001)));
-          const ratio = zoom / current.zoom;
-          return {
-            zoom,
-            x: cursorX - (cursorX - current.x) * ratio,
-            y: cursorY - (cursorY - current.y) * ratio,
-          };
-        });
-      }}
       onPointerDown={(event) => {
-        if (event.target === event.currentTarget) {
+        if (event.button === 0 && event.target === event.currentTarget) {
           onSelect(null);
         }
         const isBg = event.target === event.currentTarget ||
           (event.target as HTMLElement).id === "thumbnail-root" ||
           (event.target as HTMLElement).dataset.layer === "background";
         if (event.button === 1 || (isBg && (event.pointerType === "touch" || event.button === 0))) {
+          if (event.button === 1) event.preventDefault();
           if (event.button === 1 || isBg) {
             event.currentTarget.setPointerCapture(event.pointerId);
             panStart.current = { pointerX: event.clientX, pointerY: event.clientY, x: view.x, y: view.y };
@@ -372,33 +386,58 @@ export function EditorCanvas({
         }
       }}
     >
-      <div
-        ref={canvasRef}
-        style={{
-          position: "relative", width: template.canvas.width, height: template.canvas.height,
-          transform: `translate(${view.x}px, ${view.y}px) scale(${effectiveScale})`, transformOrigin: "top left",
-        }}
-        onPointerDown={(event) => {
-          if ((event.target as HTMLElement).closest("[data-editor-control]")) return;
-          const layer = layerAt(event.target as HTMLElement);
-          onSelect(layer);
-        }}
-        onDoubleClick={(event) => {
-          const layer = layerAt(event.target as HTMLElement);
-          if (!layer || !isTextLayer(layer)) return;
-          onSelect(layer);
-          onEditStart(layer);
-          event.preventDefault();
-        }}
-        onContextMenu={(event) => {
-          if ((event.target as HTMLElement).closest("[contenteditable]")) return;
-          const layer = layerAt(event.target as HTMLElement);
-          if (!layer) return;
-          event.preventDefault();
-          onSelect(layer);
-          setLayerMenu({ x: event.clientX, y: event.clientY, layer });
-        }}
-      >
+      <ContextMenu.Root open={contextOpen} onOpenChange={(open) => {
+        setContextOpen(open && contextAvailable.current);
+        if (!open) {
+          const range = contextTextRange.current;
+          contextAvailable.current = false;
+          contextTextRange.current = null;
+          if (editing && range) requestAnimationFrame(() => {
+            editRef.current?.focus({ preventScroll: true });
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          });
+        }
+      }}>
+        <ContextMenu.Trigger>
+          <div
+            ref={canvasRef}
+            style={{
+              position: "relative", width: template.canvas.width, height: template.canvas.height,
+              transform: `translate(${view.x}px, ${view.y}px) scale(${effectiveScale})`, transformOrigin: "top left",
+            }}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              if ((event.target as HTMLElement).closest("[data-editor-control]")) return;
+              const layer = layerAt(event.target as HTMLElement);
+              onSelect(layer);
+            }}
+            onDoubleClick={(event) => {
+              const layer = layerAt(event.target as HTMLElement);
+              if (!layer || !isTextLayer(layer)) return;
+              onSelect(layer);
+              onEditStart(layer);
+              event.preventDefault();
+            }}
+            onContextMenuCapture={(event) => {
+              const target = event.target as HTMLElement;
+              const layer = layerAt(target) ?? (target.closest("[data-editor-control]") ? editing ?? selected : null);
+              contextAvailable.current = Boolean(layer);
+              if (!layer) {
+                setContextTarget(null);
+                return;
+              }
+              const browserSelection = window.getSelection();
+              const isEditingText = Boolean(editing && target.closest("[contenteditable]"));
+              const text = isEditingText ? browserSelection?.toString().trim() ?? "" : "";
+              contextTextRange.current = isEditingText && browserSelection?.rangeCount
+                ? browserSelection.getRangeAt(0).cloneRange()
+                : null;
+              onSelect(layer);
+              setContextTarget({ layer, text });
+            }}
+          >
         <Thumbnail data={data} template={template} />
 
         {selected && selection && !editing ? (
@@ -411,7 +450,7 @@ export function EditorCanvas({
             bounds="parent"
             lockAspectRatio={Boolean(SIZE_FIELDS[selected])}
             resizeHandleStyles={resizeHandles}
-            style={{ border: "2px dashed #FF66AA", zIndex: 50 }}
+            style={{ border: "2px dashed #FFFFFF", zIndex: 50 }}
             onDoubleClick={(event: React.MouseEvent) => {
               if (!isTextLayer(selected)) return;
               event.stopPropagation();
@@ -456,7 +495,7 @@ export function EditorCanvas({
             onInput={(event) => {
               const value = event.currentTarget.innerText.replace(/\n$/, "");
               setDraft(value);
-              onTextChange(TEXT_KEYS[editing] ?? editing, value);
+              onTextChange(getTextKeyForLayer(editing), value);
               if (editing !== "username") {
                 const editor = event.currentTarget;
                 requestAnimationFrame(() => {
@@ -496,115 +535,53 @@ export function EditorCanvas({
           />
         ) : null}
 
-        {accentMenu ? createPortal(
-          <div data-editor-control onMouseDown={(event) => event.stopPropagation()}
-            style={{ position: "fixed", left: accentMenu.x, top: accentMenu.y, ...menuStyle }}>
-            <button style={{ ...menuButtonStyle, color: "#ffffff", fontWeight: 600 }} onMouseDown={(event) => event.preventDefault()}
-              onClick={() => { onAccentSelection(accentMenu.text); setAccentMenu(null); }}>
-              Accent "{accentMenu.text}"
-            </button>
-            <button style={menuButtonStyle} onMouseDown={(event) => event.preventDefault()}
-              onClick={() => { onAccentSelection(""); setAccentMenu(null); }}>
-              Clear accent
-            </button>
-          </div>, document.body
-        ) : null}
-        {layerMenu ? createPortal(
-          <div data-editor-control onMouseDown={(event) => event.stopPropagation()}
-            style={{ position: "fixed", left: layerMenu.x, top: layerMenu.y, ...menuStyle }}>
-            <button style={menuButtonStyle} onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                if (isCustomText(layerMenu.layer)) onRemoveLayer(layerMenu.layer);
-                else onResetLayer(layerMenu.layer);
-                setLayerMenu(null);
-              }}>
-              {isCustomText(layerMenu.layer) ? "Remove element" : "Reset element to default"}
-            </button>
-          </div>, document.body
-        ) : null}
-      </div>
+          </div>
+        </ContextMenu.Trigger>
+        <ContextMenu.Content size="1" style={{ minWidth: 190 }}>
+          {contextTarget?.text && (contextTarget.layer === "bottom-message" || contextTarget.layer === "bottom-text") ? (
+            <>
+              <ContextMenu.Item onSelect={() => onAccentSelection(contextTarget.text)}>
+                Apply accent color
+              </ContextMenu.Item>
+              <ContextMenu.Item onSelect={() => onAccentSelection("")}>Clear accent color</ContextMenu.Item>
+              <ContextMenu.Separator />
+            </>
+          ) : null}
+          {contextTarget ? (
+            <ContextMenu.Item onSelect={() => {
+              if (isCustomText(contextTarget.layer)) onRemoveLayer(contextTarget.layer);
+              else onResetLayer(contextTarget.layer);
+            }}>
+              {isCustomText(contextTarget.layer) ? "Remove element" : "Reset element to default"}
+            </ContextMenu.Item>
+          ) : null}
+        </ContextMenu.Content>
+      </ContextMenu.Root>
 
       {/* Floating Zoom & Fit Controls */}
-      <div
-        data-editor-control
-        style={{
-          position: "absolute",
-          bottom: 14,
-          right: 14,
-          display: "flex",
-          gap: 6,
-          background: "rgba(0, 0, 0, 0.85)",
-          backdropFilter: "blur(6px)",
-          padding: 5,
-          borderRadius: 8,
-          border: "1px solid #2e2e2e",
-          zIndex: 40,
-        }}
-      >
-        <button
+      <Flex data-editor-control className="canvas-zoom-controls" align="center" gap="2">
+        <Tooltip content="Zoom in" side="top" sideOffset={10}><IconButton
           type="button"
           onClick={() => setView((v) => ({ ...v, zoom: Math.min(3, v.zoom * 1.25) }))}
-          style={{
-            background: "#141414",
-            border: "1px solid #333333",
-            color: "#ffffff",
-            borderRadius: 6,
-            padding: "4px 10px",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-          title="Zoom in"
-        >
-          +
-        </button>
-        <button
+          size="2" variant="soft" color="gray"
+          aria-label="Zoom in"
+        ><PlusIcon /></IconButton></Tooltip>
+        <Tooltip content="Zoom out" side="top" sideOffset={10}><IconButton
           type="button"
           onClick={() => setView((v) => ({ ...v, zoom: Math.max(0.15, v.zoom * 0.8) }))}
-          style={{
-            background: "#141414",
-            border: "1px solid #333333",
-            color: "#ffffff",
-            borderRadius: 6,
-            padding: "4px 10px",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-          title="Zoom out"
-        >
-          −
-        </button>
-        <button
+          size="2" variant="soft" color="gray"
+          aria-label="Zoom out"
+        ><MinusIcon /></IconButton></Tooltip>
+        <Tooltip content="Fit thumbnail to screen" side="top" sideOffset={10}><Button
           type="button"
           onClick={resetFitView}
-          style={{
-            background: "#141414",
-            border: "1px solid #333333",
-            color: "#ffffff",
-            borderRadius: 6,
-            padding: "4px 8px",
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-          title="Fit thumbnail to screen"
-        >
-          Fit
-        </button>
-      </div>
+          size="2" variant="soft" color="gray"
+          aria-label="Fit thumbnail to screen"
+        ><EnterFullScreenIcon />Fit</Button></Tooltip>
+      </Flex>
     </div>
   );
 }
 
 const handle = { width: 12, height: 12, background: "#ffffff", border: "2px solid #000000", borderRadius: 3 };
 const resizeHandles = { topLeft: handle, topRight: handle, bottomLeft: handle, bottomRight: handle };
-const menuStyle: React.CSSProperties = {
-  background: "#141414", border: "1px solid #333333", borderRadius: 8,
-  padding: 6, zIndex: 100, display: "flex", flexDirection: "column", minWidth: 180,
-  fontFamily: '"Montserrat", sans-serif', fontSize: 13,
-};
-const menuButtonStyle: React.CSSProperties = {
-  background: "none", border: 0, color: "#eee", textAlign: "left",
-  padding: "7px 10px", cursor: "pointer", font: "inherit",
-};

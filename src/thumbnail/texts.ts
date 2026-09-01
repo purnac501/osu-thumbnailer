@@ -28,7 +28,7 @@ export function computeTexts(
 
   const maxLb = template.dataOptions.maxLeaderboardPosition ?? 50;
   const lb =
-    data.leaderboardPosition !== undefined && data.leaderboardPosition <= maxLb
+    data.leaderboardPosition !== undefined && data.leaderboardPosition > 0 && data.leaderboardPosition <= maxLb
       ? data.leaderboardPosition
       : undefined;
 
@@ -58,5 +58,10 @@ export function withTextOverride(
   texts: Record<string, string>,
   template: ThumbnailTemplate,
 ): string {
-  return template.textOverrides?.[key] ?? texts[key] ?? "";
+  const override = template.textOverrides?.[key];
+  if (key === "pp" && override !== undefined) {
+    const value = override.match(/\d+(?:\.\d+)?/)?.[0];
+    return value ? `${value}PP` : texts[key] ?? "";
+  }
+  return override ?? texts[key] ?? "";
 }

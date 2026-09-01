@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toBlob } from "html-to-image";
+import { Button, ContextMenu, Flex, IconButton, Popover, SegmentedControl, Select, Switch, TextField } from "@radix-ui/themes";
+import { DownloadIcon, InfoCircledIcon, PlusIcon, ResetIcon } from "@radix-ui/react-icons";
 import "@fontsource/baloo-2/400.css";
 import "@fontsource/baloo-2/700.css";
 import "@fontsource/montserrat/400.css";
@@ -11,13 +13,22 @@ import { applyDataOverrides, applyOverrides, type EditorState } from "../thumbna
 import { computeTexts } from "../thumbnail/texts";
 import { RESOLUTION_PRESETS, type ResolutionPreset } from "../thumbnail/types";
 import type { ThumbnailResult } from "../shared/types/thumbnail";
-import { EditorCanvas, getLayerTextStyle, isTextLayer, LAYER_NAMES } from "./EditorCanvas";
+import { EditorCanvas, getLayerTextStyle, getTextKeyForLayer, isTextLayer, LAYER_NAMES } from "./EditorCanvas";
 import { AccentPicker, ColorPicker } from "./AccentPicker";
 import "./styles.css";
 
 const RESOLUTIONS = Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[];
 const STORAGE_KEY = "osu-thumbnailer-editor-v1";
+const CLIENT_ID_KEY = "osu-thumbnailer-client-id";
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+
+function getClientId(): string {
+  const saved = localStorage.getItem(CLIENT_ID_KEY);
+  if (saved) return saved;
+  const id = crypto.randomUUID();
+  localStorage.setItem(CLIENT_ID_KEY, id);
+  return id;
+}
 
 interface SavedState {
   url: string;
@@ -55,30 +66,7 @@ export function GeneratorPage() {
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
   const [sliderBreakDraft, setSliderBreakDraft] = useState("0");
   const [missDraft, setMissDraft] = useState("0");
-  const [queueCount, setQueueCount] = useState(0);
-
-  useEffect(() => {
-    let unmounted = false;
-    const fetchQueueStatus = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/queue-status`);
-        if (res.ok && !unmounted) {
-          const data = (await res.json()) as { queuedCount?: number };
-          setQueueCount(data.queuedCount ?? 0);
-        }
-      } catch {
-        // Silently ignore queue status fetch errors
-      }
-    };
-
-    fetchQueueStatus();
-    const interval = setInterval(fetchQueueStatus, 5000);
-    return () => {
-      unmounted = true;
-      clearInterval(interval);
-    };
-  }, []);
-
+  const [sidebarAccentText, setSidebarAccentText] = useState("");
   // History for undo/redo.
   const [history, setHistory] = useState<{ past: EditorState[]; future: EditorState[] }>({
     past: [],
@@ -159,7 +147,9 @@ export function GeneratorPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/thumbnail?url=${encodeURIComponent(url)}`);
+      const res = await fetch(`${API_BASE}/api/thumbnail?url=${encodeURIComponent(url)}`, {
+        headers: { "X-Client-Id": getClientId() },
+      });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? `Score request failed (${res.status})`);
@@ -215,11 +205,45 @@ export function GeneratorPage() {
   const selectedTextStyle = selected && isTextLayer(selected)
     ? getLayerTextStyle(selected, template, previewData)
     : null;
+  const selectedTextKey = selected && isTextLayer(selected) ? getTextKeyForLayer(selected) : null;
+  const selectedTextValue = selectedTextKey
+    ? selectedTextKey.startsWith("custom-")
+      ? editor.customTexts?.find((item) => item.id === selectedTextKey)?.text ?? ""
+      : template.textOverrides?.[selectedTextKey]
+        ?? (previewData ? computeTexts(previewData, template)[selectedTextKey] : "")
+    : "";
+  const isFcPreset = previewData?.status.kind === "fc" && (previewData.sbCount ?? 0) === 0;
+  const isMissPreset = previewData?.status.kind === "miss";
+  const isSbPreset = (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss";
+  const statusPreset = isFcPreset ? "fc" : isMissPreset ? "miss" : isSbPreset ? "sb" : "";
+
+  const setStatusPreset = (value: string) => {
+    if (!value) return;
+    pushHistorySnapshot();
+    if (value === "fc") {
+      setMissDraft("0");
+      setSliderBreakDraft("0");
+      set({ missCount: 0, sliderBreakCount: 0, statusKind: "fc" });
+      setSelected("status");
+    } else if (value === "miss") {
+      const nextMiss = Math.max(1, Number(missDraft) || 1);
+      setMissDraft(String(nextMiss));
+      set({ missCount: nextMiss, statusKind: "miss" });
+      setSelected("status-miss");
+    } else {
+      const nextSb = Math.max(1, Number(sliderBreakDraft) || 1);
+      setSliderBreakDraft(String(nextSb));
+      set({ sliderBreakCount: nextSb, statusKind: "unknown" });
+      setSelected("status-sb");
+    }
+  };
 
   /** Live text updates route the bottom message separately. */
   const onTextChange = (key: string, value: string) => {
     if (key.startsWith("custom-")) {
       set({ customTexts: editor.customTexts?.map((item) => item.id === key ? { ...item, text: value } : item) });
+    } else if (key === "pp") {
+      set({ textOverrides: { ...editor.textOverrides, pp: value.match(/\d+(?:\.\d+)?/)?.[0] ?? "" } });
     } else if (key === "__bottom__") {
       set({ bottomText: value });
     } else if (key === "bottom-text") {
@@ -328,7 +352,7 @@ export function GeneratorPage() {
         glow: { blur: 10, layers: 2 },
       }],
     });
-    setSelected(id);
+    setSelected(null);
   };
 
   const removeLayer = (layer: string) => {
@@ -354,125 +378,79 @@ export function GeneratorPage() {
 
   return (
     <div className="app-container">
-      {/* Sidebar with Score input and collapsible feature dropdown bars */}
-      <div className="app-sidebar">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
-          <h1 style={{ fontFamily: '"Baloo 2", sans-serif', margin: 0, fontSize: 24, color: "#ffffff", letterSpacing: "-0.5px" }}>osu! thumbnailer</h1>
-          <details style={{ position: "relative", zIndex: 80 }}>
-            <summary aria-label="Score data limits" title="Score data limits" style={{ cursor: "pointer", listStyle: "none", width: 24, height: 24, border: "1px solid #444444", borderRadius: "50%", display: "grid", placeItems: "center", color: "#ffffff", fontWeight: 700, fontSize: 12 }}>i</summary>
-            <div style={{ position: "absolute", right: 0, top: 32, width: 270, padding: 14, background: "#141414", border: "1px solid #333333", borderRadius: 8, fontSize: 12, lineHeight: 1.5, color: "#cccccc", boxShadow: "0 12px 30px rgba(0,0,0,.8)" }}>
-              <strong style={{ color: "#ffffff" }}>Score data limits</strong>
-              <p style={{ margin: "8px 0" }}>Classic scores do not provide slider-break counts. Enter the count only if you know it. Otherwise leave it at 0.</p>
-              <p style={{ margin: "8px 0" }}>This editor does not calculate PP if FC. Calculate it elsewhere, then add it as custom text.</p>
-              <div style={{ display: "grid", gap: 6 }}>
-                <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#ffffff", textDecoration: "underline" }}>osu! API score data</a>
-                <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#ffffff", textDecoration: "underline" }}>rosu-pp calculation library</a>
+      <header className="app-toolbar">
+        <div className="toolbar-brand">
+          <h1>osu! thumbnailer</h1>
+          <Popover.Root>
+            <Popover.Trigger>
+              <IconButton className="help-trigger" aria-label="Score data limits" size="1" variant="soft" color="gray" radius="full">
+                <InfoCircledIcon />
+              </IconButton>
+            </Popover.Trigger>
+              <Popover.Content className="help-popover" sideOffset={8} align="start" size="1" width="280px">
+              <strong>Score data limits</strong>
+              <p>Classic scores do not provide slider-break counts. Enter the count only if you know it. Otherwise leave it at 0.</p>
+              <p>This editor does not calculate PP if FC. Add a calculated value as custom text.</p>
+              <div className="help-links">
+                <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer">osu! API score data</a>
+                <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer">rosu-pp calculation library</a>
               </div>
-            </div>
-          </details>
+              </Popover.Content>
+          </Popover.Root>
         </div>
+        <Flex className="toolbar-actions" align="center" gap="2">
+          <Select.Root size="2" value={resolution} onValueChange={(value) => setResolution(value as ResolutionPreset)}>
+            <Select.Trigger className="toolbar-select" aria-label="Canvas resolution" />
+            <Select.Content position="popper">
+              {RESOLUTIONS.map((r) => <Select.Item key={r} value={r}>{r}</Select.Item>)}
+            </Select.Content>
+          </Select.Root>
+          {result ? (
+            <Button type="button" onClick={download} disabled={busy} className="toolbar-download" size="2" variant="solid" color="gray" highContrast aria-label={busy ? "Preparing PNG" : "Download PNG"}>
+              <DownloadIcon />
+              <span className="toolbar-download-label">{busy ? "Preparing..." : "Download PNG"}</span>
+            </Button>
+          ) : null}
+        </Flex>
+      </header>
 
-        {/* Score URL Input & Fetch */}
-        <section style={sectionStyle}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-            <span style={{ fontSize: 13, color: "#888888", fontWeight: 600 }}>Score URL</span>
-            <span style={{ fontSize: 12, color: "#888888" }}>Queue: {queueCount}</span>
-          </div>
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://osu.ppy.sh/scores/123456789"
-            style={inputStyle}
-          />
-          <button onClick={generate} disabled={busy || !url} style={{ ...buttonStyle, width: "100%", marginTop: 8 }}>
-            {busy ? "Fetching..." : "Fetch score"}
-          </button>
-          {error ? <div style={{ color: "#ff4d4d", marginTop: 8, fontSize: 13 }}>{error}</div> : null}
+      <aside className="app-sidebar" aria-label="Editor controls">
+
+        <section className="sidebar-section score-section" aria-label="Score">
+          <label className="field">
+            <span className="field-label">Score URL</span>
+            <TextField.Root
+              className="editor-input"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://osu.ppy.sh/scores/123456789"
+            />
+          </label>
+          <Button type="button" onClick={generate} disabled={busy || !url} className="fetch-button" size="2" color="gray" highContrast>
+            {busy ? "Fetching score..." : "Fetch score"}
+          </Button>
+          {error ? <div className="error-message" role="alert">{error}</div> : null}
           {result && result.warnings.length > 0 ? (
-            <div style={{ color: "#888888", marginTop: 8, fontSize: 12 }}>
-              {result.warnings.join(" ")}
-            </div>
+            <div className="field-note" role="status">{result.warnings.join(" ")}</div>
           ) : null}
         </section>
 
-        {/* Dropdown Bar 1: Play Status & PP */}
         {result ? (
-          <details className="feature-dropdown" open>
-            <summary>
-              <span>Play Status & PP</span>
-              <span className="feature-dropdown-arrow">▼</span>
-            </summary>
-            <div className="feature-dropdown-content">
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "#888888", fontWeight: 600 }}>Status Preset</span>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      pushHistorySnapshot();
-                      setMissDraft("0");
-                      setSliderBreakDraft("0");
-                      set({ missCount: 0, sliderBreakCount: 0, statusKind: "fc" });
-                      setSelected("status");
-                    }}
-                    style={{
-                      ...secondaryButtonStyle,
-                      background: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#ffffff" : "#141414",
-                      color: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#000000" : "#ffffff",
-                      borderColor: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#ffffff" : "#2a2a2a",
-                      fontWeight: 700,
-                      padding: "7px 0",
-                    }}
-                  >
-                    FC
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      pushHistorySnapshot();
-                      const nextMiss = Math.max(1, Number(missDraft) || 1);
-                      setMissDraft(String(nextMiss));
-                      set({ missCount: nextMiss, statusKind: "miss" });
-                      setSelected("status-miss");
-                    }}
-                    style={{
-                      ...secondaryButtonStyle,
-                      background: (previewData?.status.kind === "miss") ? "#ffffff" : "#141414",
-                      color: (previewData?.status.kind === "miss") ? "#000000" : "#ffffff",
-                      borderColor: (previewData?.status.kind === "miss") ? "#ffffff" : "#2a2a2a",
-                      fontWeight: 700,
-                      padding: "7px 0",
-                    }}
-                  >
-                    Miss
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      pushHistorySnapshot();
-                      const nextSb = Math.max(1, Number(sliderBreakDraft) || 1);
-                      setSliderBreakDraft(String(nextSb));
-                      set({ sliderBreakCount: nextSb, statusKind: "unknown" });
-                      setSelected("status-sb");
-                    }}
-                    style={{
-                      ...secondaryButtonStyle,
-                      background: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#ffffff" : "#141414",
-                      color: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#000000" : "#ffffff",
-                      borderColor: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#ffffff" : "#2a2a2a",
-                      fontWeight: 700,
-                      padding: "7px 0",
-                    }}
-                  >
-                    SB
-                  </button>
-                </div>
+          <section className="sidebar-section" aria-label="Play status">
+            <div className="field">
+              <span className="field-label">Status preset</span>
+              <SegmentedControl.Root className="segmented-control" aria-label="Status preset" value={statusPreset} onValueChange={setStatusPreset} size="2">
+                <SegmentedControl.Item value="fc">FC</SegmentedControl.Item>
+                <SegmentedControl.Item value="miss">Miss</SegmentedControl.Item>
+                <SegmentedControl.Item value="sb">SB</SegmentedControl.Item>
+              </SegmentedControl.Root>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <label style={labelStyle}>
-                  Miss count
-                  <input
+              <div className="field-grid">
+                <label className="field">
+                  <span className="field-label">Misses</span>
+                  <TextField.Root
+                    className="editor-input numeric-control"
                     inputMode="numeric"
                     value={missDraft}
                     onFocus={(event) => { pushHistorySnapshot(); event.currentTarget.select(); setSelected("status-miss"); }}
@@ -491,12 +469,12 @@ export function GeneratorPage() {
                       const num = Number(value);
                       set({ missCount: num, statusKind: num > 0 ? "miss" : undefined });
                     }}
-                    style={inputStyle}
                   />
                 </label>
-                <label style={labelStyle}>
-                  Slider breaks
-                  <input
+                <label className="field">
+                  <span className="field-label">Slider breaks</span>
+                  <TextField.Root
+                    className="editor-input numeric-control"
                     inputMode="numeric"
                     value={sliderBreakDraft}
                     onFocus={(event) => { pushHistorySnapshot(); event.currentTarget.select(); setSelected("status-sb"); }}
@@ -515,190 +493,131 @@ export function GeneratorPage() {
                       const num = Number(value);
                       set({ sliderBreakCount: num, statusKind: num > 0 && (editor.missCount ?? result.data.missCount) === 0 ? "unknown" : undefined });
                     }}
-                    style={inputStyle}
                   />
                 </label>
               </div>
 
-              <label style={labelStyle}>
-                PP value
-                <input
-                  placeholder={result.data.pp !== undefined ? `${Math.round(result.data.pp)}PP` : "?PP"}
-                  value={editor.textOverrides?.pp ?? ""}
+              <label className="field">
+                <span className="field-label">PP value</span>
+                <TextField.Root
+                  className="editor-input"
+                  type="number"
+                  min="0"
+                  inputMode="decimal"
+                  placeholder={result.data.pp !== undefined ? String(Math.round(result.data.pp)) : "?"}
+                  value={editor.textOverrides?.pp?.replace(/pp$/i, "") ?? ""}
                   onFocus={() => { pushHistorySnapshot(); setSelected("pp"); }}
-                  onChange={(event) => {
-                    const val = event.target.value;
-                    set({ textOverrides: { ...editor.textOverrides, pp: val } });
-                  }}
-                  style={inputStyle}
+                  onChange={(event) => onTextChange("pp", event.target.value)}
                 />
               </label>
-            </div>
-          </details>
+          </section>
         ) : null}
 
-        {/* Dropdown Bar 2: Custom Text & Layer Options */}
-        <details className="feature-dropdown" open>
-          <summary>
-            <span>Custom Text & Layers</span>
-            <span className="feature-dropdown-arrow">▼</span>
-          </summary>
-          <div className="feature-dropdown-content">
-            <button onClick={addCustomText} disabled={!result} style={{ ...secondaryButtonStyle, width: "100%", padding: "8px 0" }}>
-              + Add custom text
-            </button>
-
-            {editor.customTexts && editor.customTexts.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {editor.customTexts.map((item) => (
-                  <div key={item.id} style={{ display: "flex", gap: 6 }}>
-                    <input
-                      value={item.text}
-                      onFocus={() => {
-                        pushHistorySnapshot();
-                        setSelected(item.id);
-                      }}
-                      onChange={(event) =>
-                        set({
-                          customTexts: editor.customTexts?.map((current) =>
-                            current.id === item.id ? { ...current, text: event.target.value } : current
-                          ),
-                        })
-                      }
-                      style={{
-                        ...inputStyle,
-                        minWidth: 0,
-                        borderColor: selected === item.id ? "#ffffff" : undefined,
-                      }}
-                    />
-                    <button
-                      onClick={() => removeLayer(item.id)}
-                      aria-label="Remove text"
-                      style={{ ...secondaryButtonStyle, width: 36, padding: 0 }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            {selected && isTextLayer(selected) && selectedTextStyle ? (
-              <div
-                style={{
-                  background: "#111111",
-                  padding: "12px",
-                  borderRadius: 8,
-                  border: "1px solid #2a2a2a",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, fontWeight: 600, color: "#ffffff" }}>
-                  <span>{LAYER_NAMES[selected] ?? "Custom Text"}</span>
-                  <button
-                    type="button"
-                    onClick={() => (selected.startsWith("custom-") ? removeLayer(selected) : resetLayer(selected))}
-                    style={{ background: "none", border: "none", color: "#888888", cursor: "pointer", fontSize: 12, padding: 0, textDecoration: "underline" }}
-                  >
-                    {selected.startsWith("custom-") ? "Delete" : "Reset"}
-                  </button>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "flex-end" }}>
-                  <label style={{ ...labelStyle, margin: 0 }}>
-                    <span>Font size (px)</span>
-                    <input
-                      type="number"
-                      min={10}
-                      max={500}
-                      value={selectedTextStyle.fontSize}
-                      onFocus={pushHistorySnapshot}
-                      onChange={(e) => onFontSizeChange(selected, Number(e.target.value))}
-                      style={{ ...inputStyle, width: "100%", padding: "6px 8px" }}
-                    />
-                  </label>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#a0a0a0" }}>
-                    <span>Color</span>
-                    <ColorPicker
-                      color={selectedTextStyle.color}
-                      onChange={(color) => onColorChange(selected, color)}
-                      label="Text color"
-                      align="right"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </details>
-
-        {/* Dropdown Bar 3: Appearance & Settings */}
-        <details className="feature-dropdown">
-          <summary>
-            <span>Appearance & Settings</span>
-            <span className="feature-dropdown-arrow">▼</span>
-          </summary>
-          <div className="feature-dropdown-content">
-            <label style={labelStyle}>
-              Resolution
-              <select
-                className="app-select"
-                value={resolution}
-                onChange={(e) => setResolution(e.target.value as ResolutionPreset)}
-                style={inputStyle}
-              >
-                {RESOLUTIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div role="group" aria-label="Accent" style={{ ...labelStyle, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <span>Accent Color</span>
-              <AccentPicker color={editor.accent ?? "#B8B8B8"} onChange={(accent) => set({ accent })} align="right" />
+        {result ? <section className="sidebar-section appearance-section" aria-label="Appearance">
+          <div className="setting-row">
+            <div className="setting-copy">
+              <span className="setting-label">Accent color</span>
+              <span className="setting-value">{(editor.accent ?? "#B8B8B8").toUpperCase()}</span>
             </div>
-
-            <label style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={editor.twitchVisible ?? false}
-                onChange={(e) => set({ twitchVisible: e.target.checked }, true)}
-              />
-              Twitch logo
-            </label>
-
-            <button
-              onClick={() => {
-                pushHistorySnapshot();
-                replaceEditor(EMPTY_EDITOR);
-                setSliderBreakDraft(String(result?.data.sbCount ?? 0));
-                setSelected(null);
-                setEditingLayer(null);
-              }}
-              style={{ ...secondaryButtonStyle, width: "100%", marginTop: 4 }}
-            >
-              Reset all edits
-            </button>
+            <AccentPicker color={editor.accent ?? "#B8B8B8"} onChange={(accent) => set({ accent })} align="right" />
           </div>
-        </details>
-      </div>
+          <div className="setting-row switch-setting">
+            <span className="setting-label">Twitch logo</span>
+            <Switch
+              className="switch-control"
+              size="2"
+              radius="full"
+              checked={editor.twitchVisible ?? false}
+              onCheckedChange={(checked) => set({ twitchVisible: checked }, true)}
+              aria-label="Twitch logo"
+            />
+          </div>
+          <Button type="button" onClick={addCustomText} className="add-layer-button" size="2" variant="soft" color="gray">
+            <PlusIcon /> Add text
+          </Button>
+          {selected && selectedTextKey && selectedTextStyle ? (
+            <div className="layer-inspector">
+              <div className="layer-inspector-header">
+                <span>{LAYER_NAMES[selected] ?? "Custom text"}</span>
+                <Button
+                  type="button"
+                  onClick={() => (selected.startsWith("custom-") ? removeLayer(selected) : resetLayer(selected))}
+                  className="quiet-button" size="1" variant="ghost" color="gray"
+                >
+                  {selected.startsWith("custom-") ? "Delete" : "Reset"}
+                </Button>
+              </div>
+              <label className="field">
+                <span className="field-label">Content</span>
+                <ContextMenu.Root>
+                  <ContextMenu.Trigger disabled={selected !== "bottom-message" && selected !== "bottom-text"}>
+                    <TextField.Root
+                      className="editor-input"
+                      value={selectedTextValue}
+                      onFocus={pushHistorySnapshot}
+                      onChange={(event) => onTextChange(selectedTextKey, event.target.value)}
+                      onContextMenuCapture={(event) => {
+                        const input = event.target as HTMLInputElement;
+                        setSidebarAccentText(input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0));
+                      }}
+                    />
+                  </ContextMenu.Trigger>
+                  <ContextMenu.Content size="1" style={{ minWidth: 190 }}>
+                    <ContextMenu.Item disabled={!sidebarAccentText} onSelect={() => set({ bottomAccent: sidebarAccentText || undefined }, true)}>
+                      Apply accent color
+                    </ContextMenu.Item>
+                    <ContextMenu.Item onSelect={() => set({ bottomAccent: undefined }, true)}>
+                      Clear accent color
+                    </ContextMenu.Item>
+                  </ContextMenu.Content>
+                </ContextMenu.Root>
+              </label>
+              <label className="field">
+                <span className="field-label">Font size (px)</span>
+                <TextField.Root
+                  className="editor-input numeric-control"
+                  type="number"
+                  min={10}
+                  max={500}
+                  value={selectedTextStyle.fontSize}
+                  onFocus={pushHistorySnapshot}
+                  onChange={(event) => onFontSizeChange(selected, Number(event.target.value))}
+                />
+              </label>
+              <div className="setting-row">
+                <span className="setting-label">Text color</span>
+                <ColorPicker
+                  color={selectedTextStyle.color}
+                  onChange={(color) => onColorChange(selected, color)}
+                  label="Text color"
+                  align="right"
+                />
+              </div>
+            </div>
+          ) : null}
+        </section> : null}
 
-      {/* Right / Preview area (Top on mobile) */}
-      <div className="app-preview">
+        {result ? <div className="sidebar-footer">
+          <Button
+            type="button"
+            onClick={() => {
+              pushHistorySnapshot();
+              replaceEditor(EMPTY_EDITOR);
+              setSliderBreakDraft(String(result?.data.sbCount ?? 0));
+              setSelected(null);
+              setEditingLayer(null);
+            }}
+            className="reset-button" size="2" variant="ghost" color="gray"
+          >
+            <ResetIcon />
+            Reset all edits
+          </Button>
+        </div> : null}
+      </aside>
+
+      <main className="app-preview" aria-label="Thumbnail canvas">
         {result ? (
-          <>
-            <button
-              onClick={download}
-              disabled={busy}
-              className="download-btn"
-              style={{ ...buttonStyle, position: "absolute", top: 16, right: 16, zIndex: 10 }}
-            >
-              Download PNG ({resolution})
-            </button>
-            <div style={{ width: "100%", flex: 1, minHeight: 0 }}>
+            <div className="canvas-stage">
               <EditorCanvas
                 template={template}
                 data={previewData!}
@@ -722,13 +641,12 @@ export function GeneratorPage() {
                 onRemoveLayer={removeLayer}
               />
             </div>
-          </>
         ) : (
-          <div style={{ color: "#777777", padding: 24, textAlign: "center", fontSize: 14 }}>
-            Paste a score URL and click "Fetch score" to edit.
+          <div className="empty-state">
+            <p>Paste a score URL and fetch it to start editing.</p>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 
@@ -736,49 +654,3 @@ export function GeneratorPage() {
     setHistory((h) => ({ past: [...h.past.slice(-59), editorRef.current], future: [] }));
   }
 }
-
-const sectionStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-};
-
-const labelStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 5,
-  fontSize: 12,
-  color: "#a0a0a0",
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: "8px 10px",
-  borderRadius: 7,
-  border: "1px solid #2a2a2a",
-  background: "#141414",
-  color: "#ffffff",
-  fontFamily: "inherit",
-  fontSize: 13,
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: "9px 18px",
-  borderRadius: 7,
-  border: "1px solid #ffffff",
-  background: "#ffffff",
-  color: "#000000",
-  fontWeight: 600,
-  cursor: "pointer",
-  fontSize: 13,
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 7,
-  border: "1px solid #2a2a2a",
-  background: "#141414",
-  color: "#ffffff",
-  fontWeight: 500,
-  cursor: "pointer",
-  fontSize: 13,
-};
