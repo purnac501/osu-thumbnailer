@@ -4,19 +4,18 @@ import { createPortal } from "react-dom";
 import { Rnd } from "react-rnd";
 import type { ThumbnailData } from "../shared/types/thumbnail";
 import { Thumbnail } from "../thumbnail/Thumbnail";
-import { COMPONENT_BY_LAYER } from "../thumbnail/overrides";
 import type { ThumbnailTemplate } from "../thumbnail/types";
 
-const NON_INTERACTIVE = new Set(["background", "badge-row", "status-sb", "status-miss"]);
+const UNSELECTABLE = new Set([
+  "background", "badge-row", "combo", "difficulty", "bpm",
+]);
 const TEXT_KEYS: Record<string, string> = {
-  status: "status", "star-rating": "star-rating", pp: "pp", combo: "combo",
+  status: "status", "status-miss": "status", "status-sb": "status-sb",
+  "star-rating": "star-rating", pp: "pp", combo: "combo",
   difficulty: "difficulty", bpm: "bpm", "map-title": "map-title", grade: "grade",
   accuracy: "accuracy", leaderboard: "leaderboard", username: "username",
   "bottom-message": "bottom-text",
 };
-const FONT_SIZE_LAYERS = new Set([
-  "status", "star-rating", "pp", "map-title", "grade", "accuracy", "leaderboard", "bottom-message",
-]);
 const SIZE_FIELDS: Record<string, "size" | "iconSize"> = {
   "twitch-logo": "size",
   "mod-list": "iconSize",
@@ -34,7 +33,7 @@ interface Props {
   onEditEnd: () => void;
   onMove: (layer: string, x: number, y: number) => void;
   onResize: (layer: string, patch: Record<string, number>) => void;
-  onTextCommit: (key: string, value: string) => void;
+  onTextChange: (key: string, value: string) => void;
   onAccentSelection: (text: string) => void;
   onInteractStart: () => void;
   onResetLayer: (layer: string) => void;
@@ -44,14 +43,13 @@ interface Props {
 /** Direct editor overlay. The thumbnail and react-rnd use the same logical coordinates. */
 export function EditorCanvas({
   template, data, scale, selected, editing, onSelect, onEditStart, onEditEnd,
-  onMove, onResize, onTextCommit, onAccentSelection, onInteractStart,
+  onMove, onResize, onTextChange, onAccentSelection, onInteractStart,
   onResetLayer,
   onRemoveLayer,
 }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const panStart = useRef<{ pointerX: number; pointerY: number; x: number; y: number } | null>(null);
-  const resizeStart = useRef<{ rect: Rect; fontSize: number } | null>(null);
   const viewPlaced = useRef(false);
   const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
   const [selection, setSelection] = useState<Rect | null>(null);
@@ -62,7 +60,6 @@ export function EditorCanvas({
   const effectiveScale = scale * view.zoom;
   const isCustomText = (layer: string) => layer.startsWith("custom-");
   const isTextLayer = (layer: string) => Boolean(TEXT_KEYS[layer]) || isCustomText(layer);
-  const isFontSizeLayer = (layer: string) => FONT_SIZE_LAYERS.has(layer) || isCustomText(layer);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
@@ -83,7 +80,9 @@ export function EditorCanvas({
   const layerAt = (element: HTMLElement | null): string | null => {
     let current = element;
     while (current && current.id !== "thumbnail-root") {
-      if (current.dataset.layer) return current.dataset.layer;
+      if (current.dataset.layer) {
+        return UNSELECTABLE.has(current.dataset.layer) ? null : current.dataset.layer;
+      }
       current = current.parentElement;
     }
     return null;
@@ -107,18 +106,9 @@ export function EditorCanvas({
       height: rect.height / effectiveScale,
     };
   };
-  const configFor = (layer: string): Record<string, number | string | undefined> => {
-    const key = COMPONENT_BY_LAYER[layer];
-    if (!key) {
-      return (template.customTexts?.find((item) => item.id === layer) ?? {}) as unknown as Record<string, number | string | undefined>;
-    }
-    return key
-      ? (template.components as unknown as Record<string, Record<string, number | string | undefined>>)[key] ?? {}
-      : {};
-  };
-
   useLayoutEffect(() => {
-    setSelection(selected && !editing ? rectOf(selected) : null);
+    if (editing) return;
+    setSelection(selected ? rectOf(selected) : null);
   }, [selected, editing, template]);
 
   useLayoutEffect(() => {
@@ -147,6 +137,8 @@ export function EditorCanvas({
       color: style.color,
       textShadow: style.textShadow,
     });
+    element.style.visibility = "hidden";
+    return () => { element.style.visibility = ""; };
   }, [editing]);
 
   useEffect(() => {
@@ -164,17 +156,8 @@ export function EditorCanvas({
   const applyGeometry = (
     layer: string,
     bounds: { x: number; y: number; width: number; height: number },
-    original: Rect,
   ) => {
-    const start = resizeStart.current;
-    const origin = start?.rect ?? original;
-    if (isFontSizeLayer(layer)) {
-      const ratio = Math.max(0.15, bounds.height / Math.max(1, origin.height));
-      onResize(layer, {
-        fontSize: Math.max(10, Math.round((start?.fontSize ?? (Number(configFor(layer).fontSize) || 40)) * ratio)),
-        x: Math.round(bounds.x), y: Math.round(bounds.y),
-      });
-    } else if (SIZE_FIELDS[layer]) {
+    if (SIZE_FIELDS[layer]) {
       onResize(layer, {
         [SIZE_FIELDS[layer]!]: Math.max(10, Math.round(bounds.width)),
         x: Math.round(bounds.x), y: Math.round(bounds.y),
@@ -187,8 +170,7 @@ export function EditorCanvas({
     }
   };
 
-  const finishTextEdit = (commit: boolean) => {
-    if (commit && editing) onTextCommit(TEXT_KEYS[editing] ?? editing, draft);
+  const finishTextEdit = () => {
     setAccentMenu(null);
     onEditEnd();
   };
@@ -250,7 +232,7 @@ export function EditorCanvas({
         onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest("[data-editor-control]")) return;
           const layer = layerAt(event.target as HTMLElement);
-          if (layer) onSelect(layer);
+          onSelect(layer);
         }}
         onDoubleClick={(event) => {
           const layer = layerAt(event.target as HTMLElement);
@@ -261,7 +243,7 @@ export function EditorCanvas({
         }}
         onContextMenu={(event) => {
           if ((event.target as HTMLElement).closest("textarea")) return;
-          const layer = layerAt(event.target as HTMLElement) ?? selected;
+          const layer = layerAt(event.target as HTMLElement);
           if (!layer) return;
           event.preventDefault();
           onSelect(layer);
@@ -270,7 +252,7 @@ export function EditorCanvas({
       >
         <Thumbnail data={data} template={template} />
 
-        {selected && selection && !editing && !NON_INTERACTIVE.has(selected) ? (
+        {selected && selection && !editing ? (
           <Rnd
             key={selected}
             data-editor-control
@@ -278,7 +260,7 @@ export function EditorCanvas({
             position={{ x: selection.left, y: selection.top }}
             scale={effectiveScale}
             bounds="parent"
-            lockAspectRatio={isFontSizeLayer(selected) || Boolean(SIZE_FIELDS[selected])}
+            lockAspectRatio={Boolean(SIZE_FIELDS[selected])}
             resizeHandleStyles={resizeHandles}
             style={{ border: "2px dashed #FF66AA", zIndex: 50 }}
             onDoubleClick={(event: React.MouseEvent) => {
@@ -289,41 +271,26 @@ export function EditorCanvas({
             onDragStart={beginInteraction}
             onDrag={(_event, position) => onMove(selected, position.x, position.y)}
             onResizeStart={() => {
-              resizeStart.current = {
-                rect: selection,
-                fontSize: Number(configFor(selected).fontSize) || 40,
-              };
               beginInteraction();
             }}
             onResize={(_event, _direction, ref, _delta, position) =>
               applyGeometry(selected, {
                 x: position.x, y: position.y, width: ref.offsetWidth, height: ref.offsetHeight,
-              }, selection)
+              })
             }
-            onResizeStop={() => { resizeStart.current = null; }}
           />
-        ) : null}
-
-        {selected && selection && !editing && NON_INTERACTIVE.has(selected) ? (
-          <div data-editor-control style={{
-            position: "absolute", left: selection.left, top: selection.top,
-            width: selection.width, height: selection.height, border: "2px dashed #FF66AA",
-            pointerEvents: "none", zIndex: 50,
-          }} />
         ) : null}
 
         {editing && selection ? (
           <textarea
             data-editor-control autoFocus value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={() => finishTextEdit(true)}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              onTextChange(TEXT_KEYS[editing] ?? editing, event.target.value);
+            }}
+            onBlur={finishTextEdit}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                finishTextEdit(true);
-              } else if (event.key === "Escape") {
-                finishTextEdit(false);
-              }
+              if (event.key === "Escape") finishTextEdit();
             }}
             onContextMenu={(event) => {
               if (editing !== "bottom-message") return;
@@ -335,8 +302,8 @@ export function EditorCanvas({
             style={{
               position: "absolute", left: selection.left, top: selection.top,
               width: Math.max(selection.width, 80), height: Math.max(selection.height, 24),
-              boxSizing: "border-box", border: "2px solid #FF66AA",
-              background: "rgba(18,14,16,0.96)", padding: 0, margin: 0,
+              boxSizing: "border-box", border: "1px solid #FF66AA",
+              background: "transparent", padding: 0, margin: 0,
               resize: "none", overflow: "hidden", zIndex: 60, ...editStyle,
             }}
           />

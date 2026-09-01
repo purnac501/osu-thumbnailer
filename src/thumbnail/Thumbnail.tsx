@@ -71,13 +71,12 @@ export function Thumbnail({
     ...c.statusSB,
     ...(splitStatus
       ? {
-          y: c.statusMiss.y + c.statusMiss.fontSize * 0.76,
           fontSize: c.statusSB.fontSize * 0.9,
         }
       : !hasMisses
         ? {
-            x: c.statusMiss.x,
-            y: c.statusMiss.y,
+            x: c.statusMiss.x + c.statusSB.x - 118,
+            y: c.statusMiss.y + c.statusSB.y - 158,
             maxWidth: c.statusMiss.maxWidth,
             fontSize: c.statusMiss.fontSize * 0.62,
           }

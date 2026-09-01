@@ -182,9 +182,8 @@ export function GeneratorPage() {
 
   const previewScale = 700 / template.canvas.width;
 
-  /** Text commits: inline editing routes the bottom message separately. */
-  const onTextCommit = (key: string, value: string) => {
-    pushHistorySnapshot();
+  /** Live text updates route the bottom message separately. */
+  const onTextChange = (key: string, value: string) => {
     if (key.startsWith("custom-")) {
       set({ customTexts: editor.customTexts?.map((item) => item.id === key ? { ...item, text: value } : item) });
     } else if (key === "__bottom__") {
@@ -213,7 +212,12 @@ export function GeneratorPage() {
     const text = { ...editor.textOverrides };
     delete pos[layer];
     delete size[layer];
-    delete text[layer === "bottom-message" ? "bottom-text" : layer];
+    const textKey = layer === "bottom-message"
+      ? "bottom-text"
+      : layer === "status-miss"
+        ? "status"
+        : layer;
+    delete text[textKey];
     replaceEditor({
       ...editor,
       ...(layer === "bottom-message" ? { bottomText: undefined, bottomAccent: undefined } : {}),
@@ -325,10 +329,10 @@ export function GeneratorPage() {
               ))}
             </select>
           </label>
-          <label style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8 }}>
-            Accent
+          <div role="group" aria-label="Accent" style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <span>Accent</span>
             <AccentPicker color={editor.accent ?? "#B8B8B8"} onChange={(accent) => set({ accent })} />
-          </label>
+          </div>
           <label style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <input
               type="checkbox"
@@ -414,12 +418,20 @@ export function GeneratorPage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          position: "relative",
           padding: 24,
           gap: 18,
         }}
       >
         {result ? (
           <>
+            <button
+              onClick={download}
+              disabled={busy}
+              style={{ ...buttonStyle, position: "absolute", top: 16, right: 24, zIndex: 10 }}
+            >
+              Download PNG ({resolution})
+            </button>
             <div style={{ width: "100%", flex: 1, minHeight: 0 }}>
               <EditorCanvas
                 template={template}
@@ -428,22 +440,22 @@ export function GeneratorPage() {
                 selected={selected}
                 editing={editingLayer}
                 onSelect={setSelected}
-                onEditStart={setEditingLayer}
+                onEditStart={(layer) => {
+                  pushHistorySnapshot();
+                  setEditingLayer(layer);
+                }}
                 onEditEnd={() => setEditingLayer(null)}
                 onInteractStart={pushHistorySnapshot}
                 onMove={(layer, x, y) =>
                   set({ positionOverrides: { ...editor.positionOverrides, [layer]: { x, y } } })
                 }
                 onResize={onResize}
-                onTextCommit={onTextCommit}
+                onTextChange={onTextChange}
                 onAccentSelection={(text) => set({ bottomAccent: text || undefined }, true)}
                 onResetLayer={resetLayer}
                 onRemoveLayer={removeLayer}
               />
             </div>
-            <button onClick={download} disabled={busy} style={buttonStyle}>
-              Download PNG ({resolution})
-            </button>
           </>
         ) : (
           <div style={{ color: "#6a5f64" }}>

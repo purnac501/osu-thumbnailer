@@ -86,7 +86,7 @@ export function BottomMessage({
         fontSize: config.fontSize,
         fontWeight: config.fontWeight,
         letterSpacing: config.letterSpacing,
-        whiteSpace: "nowrap",
+        whiteSpace: "pre",
       })}
       data-layer="bottom-message"
     >

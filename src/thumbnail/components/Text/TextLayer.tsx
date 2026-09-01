@@ -44,7 +44,7 @@ export function TextLayer({
     textAlign: config.align ?? "left",
     textTransform: config.textTransform ?? "none",
     textShadow: [shadow, glow].filter(Boolean).join(", ") || undefined,
-    whiteSpace: "nowrap",
+    whiteSpace: "pre",
     ...(config.valign === "center" && config.height
       ? { display: "flex", alignItems: "center", justifyContent: config.align === "center" ? "center" : config.align === "right" ? "flex-end" : "flex-start" }
       : {}),
