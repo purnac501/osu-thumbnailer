@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { BackgroundConfig } from "../../types";
+import { resolveAssetUrl } from "../../../shared/assets/assetUrl";
 
 /**
  * Beatmap background image with a fallback chain and independent filter tuning.
@@ -16,7 +17,7 @@ function BackgroundImage({
     (u): u is string => Boolean(u),
   );
   const [index, setIndex] = useState(0);
-  const current = urls[index];
+  const current = resolveAssetUrl(urls[index]);
 
   if (!current) return null;
 

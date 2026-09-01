@@ -1,6 +1,7 @@
 import type { AvatarConfig, CountryFlagConfig, BadgeLayerConfig } from "../../types";
 import { BadgeLayer } from "../Panels/Panels";
 import { layerStyle } from "../Layer";
+import { resolveAssetUrl } from "../../../shared/assets/assetUrl";
 
 /** Player avatar as its own component; flag is a separate overlapping layer. */
 export function Avatar({
@@ -11,6 +12,7 @@ export function Avatar({
   config: AvatarConfig;
 }) {
   if (!config.visible) return null;
+  const src = resolveAssetUrl(url);
   return (
     <div
       style={layerStyle(config, {
@@ -26,9 +28,9 @@ export function Avatar({
       })}
       data-layer="avatar"
     >
-      {url ? (
+      {src ? (
         <img
-          src={url}
+          src={src}
           alt=""
           style={{ width: "100%", height: "100%", objectFit: config.objectFit }}
         />

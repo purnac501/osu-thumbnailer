@@ -4,6 +4,7 @@ import type { BadgeLayerConfig, BadgeRowConfig, PanelLayerConfig, StarNotchConfi
 import { Layer, layerStyle } from "../Layer";
 import { fitFontSize } from "../Text/fit";
 import { TEXT_SHADOW_3D } from "../../../shared/formatting/color";
+import { resolveAssetUrl } from "../../../shared/assets/assetUrl";
 /** Rounded badge with centered text (combo / difficulty / bpm / username). */
 export function BadgeLayer({
   config,
@@ -125,12 +126,13 @@ export function StarNotch({
   if (!config.visible) return null;
 
   if (config.assets || config.asset) {
-    const asset =
+    const rawAsset =
       (beatmapStatus && config.assets?.[beatmapStatus]) ??
       (beatmapStatus && ["grave", "wip", "pending"].includes(beatmapStatus)
         ? config.assets?.unranked
         : config.assets?.ranked) ??
       config.asset;
+    const asset = resolveAssetUrl(rawAsset);
     if (asset) {
       return (
         <div style={layerStyle(config)} data-layer="star-notch">
@@ -237,7 +239,7 @@ export function PanelLayer({
       {bg && backgroundSrc ? (
         <>
           <img
-            src={backgroundSrc}
+            src={resolveAssetUrl(backgroundSrc)}
             alt=""
             style={{
               position: "absolute",

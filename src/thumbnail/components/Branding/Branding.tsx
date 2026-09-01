@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { BottomMessageConfig, TwitchLogoConfig } from "../../types";
 import { layerStyle } from "../Layer";
 import { softGlow, TEXT_SHADOW_3D } from "../../../shared/formatting/color";
+import { resolveAssetUrl } from "../../../shared/assets/assetUrl";
 
 /**
  * Static Twitch branding (v1). The glyph is the official mark from
@@ -9,6 +10,7 @@ import { softGlow, TEXT_SHADOW_3D } from "../../../shared/formatting/color";
  */
 export function TwitchLogo({ config }: { config: TwitchLogoConfig }) {
   if (!config.visible) return null;
+  const asset = resolveAssetUrl(config.asset);
   return (
     <div
       style={layerStyle(config, {
@@ -22,16 +24,18 @@ export function TwitchLogo({ config }: { config: TwitchLogoConfig }) {
       })}
       data-layer="twitch-logo"
     >
-      <img
-        src={config.asset}
-        alt="Twitch"
-        style={{
-          width: "58%",
-          height: "58%",
-          // simple-icons ships a black path; force the glyph to white.
-          filter: config.tint ? "none" : "brightness(0) invert(1)",
-        }}
-      />
+      {asset ? (
+        <img
+          src={asset}
+          alt="Twitch"
+          style={{
+            width: "58%",
+            height: "58%",
+            // simple-icons ships a black path; force the glyph to white.
+            filter: config.tint ? "none" : "brightness(0) invert(1)",
+          }}
+        />
+      ) : null}
     </div>
   );
 }

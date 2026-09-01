@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { NormalizedMod } from "../../../shared/types/thumbnail";
 import { modAssetPath } from "../../../shared/mods/mods";
+import { resolveAssetUrl } from "../../../shared/assets/assetUrl";
 import type { ModListConfig } from "../../types";
 
 /**
@@ -64,7 +65,8 @@ export function ModIcon({
   allowFallback: boolean;
   colorOverrides?: ModListConfig["modColors"];
 }) {
-  const asset = modAssetPath(mod.acronym);
+  const rawAsset = modAssetPath(mod.acronym);
+  const asset = resolveAssetUrl(rawAsset ?? undefined);
   const color = resolveColor(mod.acronym, colorOverrides);
   // White glyph artwork; darken the glyph only, never the tile.
   const imgFilter = color.fg === "dark" ? "brightness(0.15)" : undefined;
