@@ -142,18 +142,22 @@ export function Thumbnail({
       {/* Top panel and its children */}
       <PanelLayer config={c.topPanel} backgroundSrc={bgSrc} />
       <StarNotch config={c.starNotch} beatmapStatus={data.beatmapStatus} />
-      {data.status.kind === "fc" ? (
+      {data.status.kind === "fc" && !hasSliderBreaks ? (
         <TextLayer config={c.status} testId="status">
           {text("status")}
         </TextLayer>
       ) : (
         <>
-          <TextLayer config={statusMiss} testId="status-miss">
-            {text("status")}
-          </TextLayer>
-          <TextLayer config={statusSB} testId="status-sb">
-            {text("status-sb")}
-          </TextLayer>
+          {hasMisses ? (
+            <TextLayer config={statusMiss} testId="status-miss">
+              {text("status")}
+            </TextLayer>
+          ) : null}
+          {hasSliderBreaks ? (
+            <TextLayer config={statusSB} testId="status-sb">
+              {text("status-sb")}
+            </TextLayer>
+          ) : null}
         </>
       )}
       <TextLayer config={{ ...c.starRating, color: starColor(data, template) }} testId="star-rating">

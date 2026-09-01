@@ -124,6 +124,24 @@ describe("manual score-data overrides", () => {
     expect(edited.isFullCombo).toBe(false);
   });
 
+  it("renders manual miss count and statusKind overrides", () => {
+    const data = normalizeScore(referenceFixtureScore);
+    const missEdited = applyDataOverrides(data, { missCount: 2 });
+    expect(missEdited.missCount).toBe(2);
+    expect(missEdited.status).toEqual({ kind: "miss", count: 2 });
+    expect(missEdited.isFullCombo).toBe(false);
+
+    const fcEdited = applyDataOverrides(missEdited, { statusKind: "fc", missCount: 0, sliderBreakCount: 0 });
+    expect(fcEdited.status).toEqual({ kind: "fc" });
+    expect(fcEdited.isFullCombo).toBe(true);
+
+    const dualEdited = applyDataOverrides(data, { missCount: 1, sliderBreakCount: 1 });
+    expect(dualEdited.missCount).toBe(1);
+    expect(dualEdited.sbCount).toBe(1);
+    expect(dualEdited.status).toEqual({ kind: "miss", count: 1 });
+    expect(dualEdited.isFullCombo).toBe(false);
+  });
+
   it("preserves beatmap status from API response", () => {
     const graveyardScore: ApiScore = {
       ...referenceFixtureScore,

@@ -54,6 +54,7 @@ export function GeneratorPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [editingLayer, setEditingLayer] = useState<string | null>(null);
   const [sliderBreakDraft, setSliderBreakDraft] = useState("0");
+  const [missDraft, setMissDraft] = useState("0");
 
   // History for undo/redo.
   const [history, setHistory] = useState<{ past: EditorState[]; future: EditorState[] }>({
@@ -126,7 +127,8 @@ export function GeneratorPage() {
 
   useEffect(() => {
     setSliderBreakDraft(String(editor.sliderBreakCount ?? result?.data.sbCount ?? 0));
-  }, [result]);
+    setMissDraft(String(editor.missCount ?? result?.data.missCount ?? 0));
+  }, [result, editor.sliderBreakCount, editor.missCount]);
 
   const set = (patch: Partial<EditorState>, push = false) => mutate(patch, push);
 
@@ -406,27 +408,124 @@ export function GeneratorPage() {
             Twitch logo
           </label>
           {result ? (
-            <>
-              <label style={labelStyle}>
-                Slider breaks
-                <input
-                  inputMode="numeric"
-                  value={sliderBreakDraft}
-                  onFocus={(event) => { pushHistorySnapshot(); event.currentTarget.select(); }}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!/^\d*$/.test(value)) return;
-                    setSliderBreakDraft(value);
-                    if (value !== "") set({ sliderBreakCount: Number(value) });
-                  }}
-                  onBlur={() => {
-                    const value = String(Math.max(0, Number(sliderBreakDraft) || 0));
-                    setSliderBreakDraft(value);
-                    set({ sliderBreakCount: Number(value) });
-                  }}
-                  style={inputStyle}
-                />
-              </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 13, color: "#8a8084", fontWeight: 600 }}>Play Status</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      pushHistorySnapshot();
+                      setMissDraft("0");
+                      setSliderBreakDraft("0");
+                      set({ missCount: 0, sliderBreakCount: 0, statusKind: "fc" });
+                      setSelected("status");
+                    }}
+                    style={{
+                      ...buttonStyle,
+                      background: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#FF66AA" : "#2e282c",
+                      color: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#121013" : "#e8e2e4",
+                      fontWeight: 700,
+                      padding: "6px 0",
+                      fontSize: 13,
+                    }}
+                  >
+                    FC
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      pushHistorySnapshot();
+                      const nextMiss = Math.max(1, Number(missDraft) || 1);
+                      setMissDraft(String(nextMiss));
+                      set({ missCount: nextMiss, statusKind: "miss" });
+                      setSelected("status-miss");
+                    }}
+                    style={{
+                      ...buttonStyle,
+                      background: (previewData?.status.kind === "miss") ? "#FF66AA" : "#2e282c",
+                      color: (previewData?.status.kind === "miss") ? "#121013" : "#e8e2e4",
+                      fontWeight: 700,
+                      padding: "6px 0",
+                      fontSize: 13,
+                    }}
+                  >
+                    Miss
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      pushHistorySnapshot();
+                      const nextSb = Math.max(1, Number(sliderBreakDraft) || 1);
+                      setSliderBreakDraft(String(nextSb));
+                      set({ sliderBreakCount: nextSb, statusKind: "unknown" });
+                      setSelected("status-sb");
+                    }}
+                    style={{
+                      ...buttonStyle,
+                      background: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#FF66AA" : "#2e282c",
+                      color: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#121013" : "#e8e2e4",
+                      fontWeight: 700,
+                      padding: "6px 0",
+                      fontSize: 13,
+                    }}
+                  >
+                    SB
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <label style={labelStyle}>
+                  Miss count
+                  <input
+                    inputMode="numeric"
+                    value={missDraft}
+                    onFocus={(event) => { pushHistorySnapshot(); event.currentTarget.select(); setSelected("status-miss"); }}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (!/^\d*$/.test(value)) return;
+                      setMissDraft(value);
+                      if (value !== "") {
+                        const num = Number(value);
+                        set({ missCount: num, statusKind: num > 0 ? "miss" : undefined });
+                      }
+                    }}
+                    onBlur={() => {
+                      const value = String(Math.max(0, Number(missDraft) || 0));
+                      setMissDraft(value);
+                      const num = Number(value);
+                      set({ missCount: num, statusKind: num > 0 ? "miss" : undefined });
+                    }}
+                    style={inputStyle}
+                  />
+                </label>
+                <label style={labelStyle}>
+                  Slider breaks
+                  <input
+                    inputMode="numeric"
+                    value={sliderBreakDraft}
+                    onFocus={(event) => { pushHistorySnapshot(); event.currentTarget.select(); setSelected("status-sb"); }}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (!/^\d*$/.test(value)) return;
+                      setSliderBreakDraft(value);
+                      if (value !== "") {
+                        const num = Number(value);
+                        set({ sliderBreakCount: num, statusKind: num > 0 && (editor.missCount ?? result.data.missCount) === 0 ? "unknown" : undefined });
+                      }
+                    }}
+                    onBlur={() => {
+                      const value = String(Math.max(0, Number(sliderBreakDraft) || 0));
+                      setSliderBreakDraft(value);
+                      const num = Number(value);
+                      set({ sliderBreakCount: num, statusKind: num > 0 && (editor.missCount ?? result.data.missCount) === 0 ? "unknown" : undefined });
+                    }}
+                    style={inputStyle}
+                  />
+                </label>
+              </div>
+
               <label style={labelStyle}>
                 PP value
                 <input
@@ -440,7 +539,7 @@ export function GeneratorPage() {
                   style={inputStyle}
                 />
               </label>
-            </>
+            </div>
           ) : null}
           <button onClick={addCustomText} disabled={!result} style={{ ...buttonStyle, background: "#3a3236", padding: "8px 0" }}>
             Add text

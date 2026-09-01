@@ -12,6 +12,10 @@ export interface EditorState {
   twitchVisible?: boolean;
   /** Manual fallback when osu! does not expose slider-break statistics. */
   sliderBreakCount?: number;
+  /** Manual miss count override. */
+  missCount?: number;
+  /** Manual play status kind override. */
+  statusKind?: "fc" | "miss" | "unknown";
   /** Full bottom message text (replaces the template default). */
   bottomText?: string;
   /** Accent-colored substring of the bottom text. */
@@ -31,13 +35,38 @@ export interface EditorState {
 
 /** Applies data edits that cannot be represented by template configuration. */
 export function applyDataOverrides(data: ThumbnailData, state: EditorState | undefined): ThumbnailData {
-  if (state?.sliderBreakCount === undefined) return data;
-  const sbCount = Math.max(0, Math.round(state.sliderBreakCount));
+  if (!state) return data;
+
+  const missCount = state.missCount !== undefined ? Math.max(0, Math.round(state.missCount)) : data.missCount;
+  const sbCount = state.sliderBreakCount !== undefined ? Math.max(0, Math.round(state.sliderBreakCount)) : data.sbCount;
+
+  let status = data.status;
+  if (state.statusKind) {
+    if (state.statusKind === "fc") {
+      status = { kind: "fc" };
+    } else if (state.statusKind === "miss") {
+      status = { kind: "miss", count: Math.max(1, missCount) };
+    } else {
+      status = { kind: "unknown" };
+    }
+  } else if (state.missCount !== undefined || state.sliderBreakCount !== undefined) {
+    if (missCount > 0) {
+      status = { kind: "miss", count: missCount };
+    } else if (sbCount > 0) {
+      status = { kind: "unknown" };
+    } else {
+      status = { kind: "fc" };
+    }
+  }
+
+  const isFullCombo = status.kind === "fc" && sbCount === 0 && missCount === 0;
+
   return {
     ...data,
+    missCount,
     sbCount,
-    status: sbCount > 0 && data.status.kind === "fc" ? { kind: "unknown" } : data.status,
-    isFullCombo: sbCount > 0 ? false : data.isFullCombo,
+    status,
+    isFullCombo,
   };
 }
 
