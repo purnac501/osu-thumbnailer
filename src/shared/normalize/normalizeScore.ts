@@ -30,6 +30,7 @@ export function normalizeScore(
     moddedStarRating?: number;
     leaderboardPosition?: number;
     baseBpm?: number;
+    maxCombo?: number;
   } = {},
 ): ThumbnailData {
   const user = score.user;
@@ -40,8 +41,9 @@ export function normalizeScore(
   const clockRate = getClockRate(mods);
   const baseBpm = extras.baseBpm ?? beatmap?.bpm ?? 0;
   const beatmapsetId = beatmap?.beatmapset_id ?? 0;
+  const beatmapMaxCombo = extras.maxCombo ?? beatmap?.max_combo;
 
-  const status = detectStatus(score);
+  const status = detectStatus(score, beatmapMaxCombo);
   const stats: Record<string, number> = {};
   for (const [key, value] of Object.entries(score.statistics ?? {})) {
     if (typeof value === "number") stats[key] = value;

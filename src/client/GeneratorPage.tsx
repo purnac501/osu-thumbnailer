@@ -406,26 +406,41 @@ export function GeneratorPage() {
             Twitch logo
           </label>
           {result ? (
-            <label style={labelStyle}>
-              Slider breaks
-              <input
-                inputMode="numeric"
-                value={sliderBreakDraft}
-                onFocus={(event) => { pushHistorySnapshot(); event.currentTarget.select(); }}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  if (!/^\d*$/.test(value)) return;
-                  setSliderBreakDraft(value);
-                  if (value !== "") set({ sliderBreakCount: Number(value) });
-                }}
-                onBlur={() => {
-                  const value = String(Math.max(0, Number(sliderBreakDraft) || 0));
-                  setSliderBreakDraft(value);
-                  set({ sliderBreakCount: Number(value) });
-                }}
-                style={inputStyle}
-              />
-            </label>
+            <>
+              <label style={labelStyle}>
+                Slider breaks
+                <input
+                  inputMode="numeric"
+                  value={sliderBreakDraft}
+                  onFocus={(event) => { pushHistorySnapshot(); event.currentTarget.select(); }}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (!/^\d*$/.test(value)) return;
+                    setSliderBreakDraft(value);
+                    if (value !== "") set({ sliderBreakCount: Number(value) });
+                  }}
+                  onBlur={() => {
+                    const value = String(Math.max(0, Number(sliderBreakDraft) || 0));
+                    setSliderBreakDraft(value);
+                    set({ sliderBreakCount: Number(value) });
+                  }}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                PP value
+                <input
+                  placeholder={result.data.pp !== undefined ? `${Math.round(result.data.pp)}PP` : "?PP"}
+                  value={editor.textOverrides?.pp ?? ""}
+                  onFocus={() => { pushHistorySnapshot(); setSelected("pp"); }}
+                  onChange={(event) => {
+                    const val = event.target.value;
+                    set({ textOverrides: { ...editor.textOverrides, pp: val } });
+                  }}
+                  style={inputStyle}
+                />
+              </label>
+            </>
           ) : null}
           <button onClick={addCustomText} disabled={!result} style={{ ...buttonStyle, background: "#3a3236", padding: "8px 0" }}>
             Add text

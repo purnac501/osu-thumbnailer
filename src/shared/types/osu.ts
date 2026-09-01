@@ -52,6 +52,10 @@ export interface ApiBeatmap {
   bpm?: number;
   mode?: string;
   status?: string;
+  max_combo?: number;
+  count_circles?: number;
+  count_sliders?: number;
+  count_spinners?: number;
 }
 
 export interface ApiBeatmapset {

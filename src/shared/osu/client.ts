@@ -67,9 +67,13 @@ export function createOsuClient(credentials: OsuCredentials) {
       body: JSON.stringify({ mods }),
     });
     if (!res.ok) return null;
-    const body = await res.json() as { attributes?: { star_rating?: number; clock_rate?: number } };
+    const body = await res.json() as { attributes?: { star_rating?: number; clock_rate?: number; max_combo?: number } };
     if (!body.attributes?.star_rating) return null;
-    return { star_rating: body.attributes.star_rating, clock_rate: body.attributes.clock_rate };
+    return {
+      star_rating: body.attributes.star_rating,
+      clock_rate: body.attributes.clock_rate,
+      max_combo: body.attributes.max_combo,
+    };
   };
 
   const fetchLeaderboardPosition = async (beatmapId: number, scoreId: string, mods: unknown[]) => {

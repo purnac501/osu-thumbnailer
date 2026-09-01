@@ -6,6 +6,7 @@ import type { ApiScore } from "../src/shared/types/osu";
 import { referenceFixtureScore } from "../src/server/data/fixtures";
 import { applyDataOverrides, applyOverrides } from "../src/thumbnail/overrides";
 import { referenceTemplate } from "../src/thumbnail/templates/reference/template";
+import { formatPp } from "../src/shared/formatting/format";
 
 describe("mods", () => {
   it("normalizes legacy acronym strings and structured mods", () => {
@@ -48,9 +49,24 @@ describe("status / FC detection", () => {
     expect(detectStatus(score)).toEqual({ kind: "miss", count: 2 });
   });
 
-  it("detects FC when slider ends are dropped without misses or slider breaks", () => {
-    const score = { ...referenceFixtureScore, is_perfect_combo: false, statistics: { great: 50, miss: 0 } };
-    expect(detectStatus(score).kind).toBe("fc");
+  it("detects FC when slider ends are dropped near max combo without misses or slider breaks", () => {
+    const score: ApiScore = {
+      ...referenceFixtureScore,
+      max_combo: 275,
+      is_perfect_combo: false,
+      statistics: { great: 50, miss: 0 },
+    };
+    expect(detectStatus(score, 279).kind).toBe("fc");
+  });
+
+  it("does not detect FC when a slider break occurs in the middle of the map", () => {
+    const score: ApiScore = {
+      ...referenceFixtureScore,
+      max_combo: 140,
+      is_perfect_combo: false,
+      statistics: { great: 50, miss: 0 },
+    };
+    expect(detectStatus(score, 279).kind).toBe("unknown");
   });
 
   it("counts only large tick misses as slider breaks", () => {
@@ -147,19 +163,14 @@ describe("manual score-data overrides", () => {
     expect(template.customTexts?.[0]?.color).toBe("#FF9900");
   });
 
-  it("calculates PP using rosu-pp for graveyard and unranked scores", async () => {
-    const { calculateScorePp } = await import("../src/shared/pp/calculatePp");
-    const sampleBeatmap = "osu file format v14\n[General]\nMode: 0\n[Difficulty]\nHPDrainRate:5\nCircleSize:4\nOverallDifficulty:8\nApproachRate:9\nSliderMultiplier:1.4\nSliderTickRate:1\n[HitObjects]\n256,192,1000,1,0,0:0:0:0:\n256,192,2000,1,0,0:0:0:0:\n";
+  it("formats PP as ?PP for graveyard and unranked scores without PP", () => {
     const graveyardScore: ApiScore = {
       ...referenceFixtureScore,
       pp: null,
-      max_combo: 2,
-      accuracy: 1,
-      statistics: { great: 2, miss: 0 },
     };
-    const result = await calculateScorePp(graveyardScore, sampleBeatmap);
-    expect(result).not.toBeNull();
-    expect(result?.pp).toBeGreaterThan(0);
+    const data = normalizeScore(graveyardScore);
+    expect(data.pp).toBeUndefined();
+    expect(formatPp(data.pp)).toBe("?PP");
   });
 });
 

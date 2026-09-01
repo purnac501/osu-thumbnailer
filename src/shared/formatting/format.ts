@@ -1,7 +1,7 @@
 /** Centralized formatting helpers. Templates call these; JSX never formats inline. */
 
-export function formatPp(pp: number | undefined, decimals = 0): string {
-  if (pp === undefined || pp === null) return "";
+export function formatPp(pp: number | undefined | null, decimals = 0): string {
+  if (pp === undefined || pp === null || Number.isNaN(pp)) return "?PP";
   return `${pp.toFixed(decimals)}PP`;
 }
 

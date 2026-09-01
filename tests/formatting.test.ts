@@ -13,7 +13,8 @@ describe("formatting", () => {
   it("formats PP without decimals by default", () => {
     expect(formatPp(1207.34)).toBe("1207PP");
     expect(formatPp(812.6, 1)).toBe("812.6PP");
-    expect(formatPp(undefined)).toBe("");
+    expect(formatPp(undefined)).toBe("?PP");
+    expect(formatPp(null)).toBe("?PP");
   });
 
   it("formats accuracy as percentage", () => {
