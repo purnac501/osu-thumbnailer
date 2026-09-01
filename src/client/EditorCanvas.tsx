@@ -178,11 +178,10 @@ export function EditorCanvas({
       setAccentMenu(null);
       setLayerMenu(null);
       onEditEnd();
-      onSelect(null);
     };
     window.addEventListener("mousedown", close);
     return () => window.removeEventListener("mousedown", close);
-  }, [onEditEnd, onSelect]);
+  }, [onEditEnd]);
 
   const applyGeometry = (
     layer: string,
@@ -237,6 +236,9 @@ export function EditorCanvas({
         });
       }}
       onPointerDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onSelect(null);
+        }
         if (event.button !== 1) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -372,8 +374,8 @@ export function EditorCanvas({
             style={{
               position: "absolute", left: selection.left, top: selection.top,
               width: "max-content", height: "max-content",
-              minWidth: 1, minHeight: selection.height,
-              boxSizing: "border-box", outline: "1px solid #FF66AA",
+              minWidth: 1, minHeight: 1,
+              boxSizing: "border-box", outline: "2px solid #FF66AA",
               background: "transparent", padding: 0, margin: 0,
               overflow: "visible", whiteSpace: "pre", zIndex: 60, ...editStyle,
             }}

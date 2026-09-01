@@ -39,7 +39,7 @@ function loadSaved(): SavedState {
   };
 }
 
-const EMPTY_EDITOR: EditorState = { accent: "#B8B8B8", twitchVisible: true };
+const EMPTY_EDITOR: EditorState = { accent: "#B8B8B8", twitchVisible: false };
 
 /** Main app: fetch a score, then edit every element and download the PNG. */
 export function GeneratorPage() {
@@ -93,9 +93,15 @@ export function GeneratorPage() {
       return { past: [...past, editorRef.current], future: future.slice(1) };
     });
 
-  // Keyboard shortcuts: ctrl/cmd+Z undo, ctrl+Y or ctrl+shift+Z redo.
+  // Keyboard shortcuts: ctrl/cmd+D deselect, Z undo, Y or shift+Z redo.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        setEditingLayer(null);
+        setSelected(null);
+        return;
+      }
       const target = e.target as HTMLElement;
       if (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
       if (!(e.ctrlKey || e.metaKey)) return;
@@ -107,8 +113,8 @@ export function GeneratorPage() {
         redo();
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
   const base = Object.values(templates)[0]!;
@@ -212,15 +218,26 @@ export function GeneratorPage() {
     const text = { ...editor.textOverrides };
     delete pos[layer];
     delete size[layer];
-    const textKey = layer === "bottom-message"
-      ? "bottom-text"
-      : layer === "status-miss"
-        ? "status"
-        : layer;
-    delete text[textKey];
+    if (layer === "status-miss" || layer === "status") {
+      delete pos["status"];
+      delete pos["status-miss"];
+      delete size["status"];
+      delete size["status-miss"];
+      delete text["status"];
+      delete text["status-miss"];
+    } else if (layer === "bottom-message" || layer === "bottom-text") {
+      delete pos["bottom-message"];
+      delete pos["bottom-text"];
+      delete size["bottom-message"];
+      delete size["bottom-text"];
+      delete text["bottom-message"];
+      delete text["bottom-text"];
+    } else {
+      delete text[layer];
+    }
     replaceEditor({
       ...editor,
-      ...(layer === "bottom-message" ? { bottomText: undefined, bottomAccent: undefined } : {}),
+      ...(layer === "bottom-message" || layer === "bottom-text" ? { bottomText: undefined, bottomAccent: undefined } : {}),
       positionOverrides: pos,
       sizeOverrides: size,
       textOverrides: text,
@@ -264,7 +281,7 @@ export function GeneratorPage() {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#121013", color: "#e8e2e4", fontFamily: '"Montserrat", sans-serif' }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#121013", color: "#e8e2e4", fontFamily: '"Montserrat", sans-serif' }}>
       {/* Left: controls */}
       <div
         style={{
@@ -336,7 +353,7 @@ export function GeneratorPage() {
           <label style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <input
               type="checkbox"
-              checked={editor.twitchVisible ?? true}
+              checked={editor.twitchVisible ?? false}
               onChange={(e) => set({ twitchVisible: e.target.checked }, true)}
             />
             Twitch logo
@@ -414,13 +431,14 @@ export function GeneratorPage() {
       <div
         style={{
           flex: 1,
+          minWidth: 0,
+          height: "100vh",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
-          padding: 24,
-          gap: 18,
+          padding: 0,
         }}
       >
         {result ? (
@@ -428,7 +446,7 @@ export function GeneratorPage() {
             <button
               onClick={download}
               disabled={busy}
-              style={{ ...buttonStyle, position: "absolute", top: 16, right: 24, zIndex: 10 }}
+              style={{ ...buttonStyle, position: "absolute", top: 16, right: 16, zIndex: 10 }}
             >
               Download PNG ({resolution})
             </button>
