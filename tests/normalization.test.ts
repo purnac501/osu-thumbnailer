@@ -8,6 +8,7 @@ import { applyDataOverrides, applyOverrides } from "../src/thumbnail/overrides";
 import { referenceTemplate } from "../src/thumbnail/templates/reference/template";
 import { formatPp } from "../src/shared/formatting/format";
 import { OsuRequestQueue } from "../src/shared/osu/queue";
+import { withTextOverride } from "../src/thumbnail/texts";
 
 describe("mods", () => {
   it("normalizes legacy acronym strings and structured mods", () => {
@@ -114,6 +115,12 @@ describe("normalizeScore", () => {
     expect(data.grade).toBe("S");
     expect(data.leaderboardPosition).toBe(2);
   });
+
+  it("hides an unavailable zero leaderboard position", () => {
+    const score = { ...referenceFixtureScore, rank_global: 0 };
+    const data = normalizeScore(score, { leaderboardPosition: 0 });
+    expect(data.leaderboardPosition).toBeUndefined();
+  });
 });
 
 describe("manual score-data overrides", () => {
@@ -196,6 +203,12 @@ describe("manual score-data overrides", () => {
     expect(data.pp).toBeUndefined();
     expect(formatPp(data.pp)).toBe("?PP");
   });
+
+  it("keeps the PP suffix outside the editable override", () => {
+    const texts = { pp: "1207PP" };
+    expect(withTextOverride("pp", texts, { ...referenceTemplate, textOverrides: { pp: "1375" } })).toBe("1375PP");
+    expect(withTextOverride("pp", texts, { ...referenceTemplate, textOverrides: { pp: "1375PP" } })).toBe("1375PP");
+  });
 });
 
 describe("OsuRequestQueue", () => {
@@ -213,5 +226,16 @@ describe("OsuRequestQueue", () => {
     expect(res2.queueStats.queuePosition).toBeGreaterThanOrEqual(1);
     expect(queue.getStatus().totalProcessed).toBe(2);
   });
-});
 
+  it("rejects work when its pending queue is full", async () => {
+    const queue = new OsuRequestQueue(1, 0, 1);
+    let release!: () => void;
+    const blocker = new Promise<void>((resolve) => { release = resolve; });
+    const active = queue.run(() => blocker);
+    const pending = queue.run(async () => "pending");
+
+    await expect(queue.run(async () => "overflow")).rejects.toThrow("queue is full");
+    release();
+    await Promise.all([active, pending]);
+  });
+});

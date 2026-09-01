@@ -11,23 +11,22 @@ export interface QueueRunStats {
   queuePosition: number;
 }
 
-/**
- * Concurrency controller and queue manager for osu! API requests.
- * Enforces rate limits well below the osu! API v2 cap (1200 req/min)
- * to guarantee zero spamming or 429 rate limit errors from upstream osu! servers.
- */
+/** Bounds concurrent thumbnail lookups and rejects excess pending work. */
 export class OsuRequestQueue {
   private queue: Array<{
-    id: string;
     enqueuedAt: number;
     resolve: () => void;
-    reject: (err: unknown) => void;
   }> = [];
   private activeCount = 0;
-  private maxConcurrent = 2; // At most 2 concurrent batch lookups
-  private minIntervalMs = 300; // Minimum 300ms spacing between starting API calls (max 200/min, safely under osu!'s 1200/min)
+  private timer: ReturnType<typeof setTimeout> | null = null;
   private lastStartTime = 0;
   private totalProcessed = 0;
+
+  constructor(
+    private readonly maxConcurrent = 2,
+    private readonly minIntervalMs = 300,
+    private readonly maxQueued = 50,
+  ) {}
 
   getStatus(): QueueStatus {
     const queuedCount = this.queue.length;
@@ -42,12 +41,13 @@ export class OsuRequestQueue {
   }
 
   async run<T>(fn: () => Promise<T>): Promise<{ result: T; queueStats: QueueRunStats }> {
-    const id = Math.random().toString(36).slice(2, 9);
+    if (this.queue.length >= this.maxQueued) throw new Error("Score request queue is full");
+
     const enqueuedAt = Date.now();
     const queuePosition = this.queue.length + 1;
 
-    await new Promise<void>((resolve, reject) => {
-      this.queue.push({ id, enqueuedAt, resolve, reject });
+    await new Promise<void>((resolve) => {
+      this.queue.push({ enqueuedAt, resolve });
       this.processNext();
     });
 
@@ -72,7 +72,10 @@ export class OsuRequestQueue {
     const delay = Math.max(0, this.minIntervalMs - timeSinceLast);
 
     if (delay > 0) {
-      setTimeout(() => this.processNext(), delay);
+      this.timer ??= setTimeout(() => {
+        this.timer = null;
+        this.processNext();
+      }, delay);
       return;
     }
 
@@ -82,6 +85,7 @@ export class OsuRequestQueue {
     this.activeCount++;
     this.lastStartTime = Date.now();
     next.resolve();
+    this.processNext();
   }
 }
 

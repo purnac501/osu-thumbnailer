@@ -1,0 +1,61 @@
+name: Usage report
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Days to include
+        required: true
+        default: "30"
+        type: choice
+        options:
+          - "1"
+          - "7"
+          - "30"
+          - "90"
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query request analytics
+        env:
+          ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DAYS: ${{ inputs.days }}
+        run: |
+          endpoint="https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/analytics_engine/sql"
+          query() {
+            curl --fail-with-body --silent --show-error "$endpoint" \
+              --header "Authorization: Bearer $API_TOKEN" \
+              --data "$1 FORMAT JSON"
+          }
+
+          totals=$(query "SELECT sum(_sample_interval) AS requests, count(DISTINCT index1) AS approximate_browsers FROM osu_thumbnailer_requests WHERE timestamp > NOW() - INTERVAL '$DAYS' DAY")
+          maps=$(query "SELECT blob3 AS beatmapset_id, blob2 AS beatmap_id, sum(_sample_interval) AS requests FROM osu_thumbnailer_requests WHERE timestamp > NOW() - INTERVAL '$DAYS' DAY AND blob4 = 'success' GROUP BY beatmapset_id, beatmap_id ORDER BY requests DESC LIMIT 20")
+          scores=$(query "SELECT blob1 AS score_id, sum(_sample_interval) AS requests FROM osu_thumbnailer_requests WHERE timestamp > NOW() - INTERVAL '$DAYS' DAY GROUP BY score_id ORDER BY requests DESC LIMIT 20")
+
+          {
+            echo "# osu! thumbnailer usage - last $DAYS days"
+            echo
+            echo "## Totals"
+            echo
+            echo '| Requests | Approximate browsers |'
+            echo '| ---: | ---: |'
+            echo "$totals" | jq -r '.data[0] | "| \(.requests // 0) | \(.approximate_browsers // 0) |"'
+            echo
+            echo "## Most requested maps"
+            echo
+            echo '| Beatmapset | Beatmap | Requests |'
+            echo '| ---: | ---: | ---: |'
+            echo "$maps" | jq -r '.data[] | "| [\(.beatmapset_id)](https://osu.ppy.sh/beatmapsets/\(.beatmapset_id)) | \(.beatmap_id) | \(.requests) |"'
+            echo
+            echo "## Most requested scores"
+            echo
+            echo '| Score | Requests |'
+            echo '| ---: | ---: |'
+            echo "$scores" | jq -r '.data[] | "| [\(.score_id)](https://osu.ppy.sh/scores/\(.score_id)) | \(.requests) |"'
+          } >> "$GITHUB_STEP_SUMMARY"

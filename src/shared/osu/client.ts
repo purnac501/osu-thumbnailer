@@ -4,35 +4,50 @@ import type { Ruleset } from "../types/thumbnail";
 export interface OsuCredentials {
   clientId: string;
   clientSecret: string;
+  beforeRequest?: () => Promise<void>;
 }
 
 /** Creates an osu! API client that works in Node and edge runtimes. */
 export function createOsuClient(credentials: OsuCredentials) {
   let cached: { token: string; expiresAt: number } | null = null;
+  let tokenRequest: Promise<string> | null = null;
+
+  const request = async (url: string, init?: RequestInit) => {
+    await credentials.beforeRequest?.();
+    return fetch(url, { ...init, signal: AbortSignal.timeout(15_000) });
+  };
 
   const getAccessToken = async () => {
     if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
 
-    const res = await fetch("https://osu.ppy.sh/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
-        grant_type: "client_credentials",
-        client_id: Number(credentials.clientId),
-        client_secret: credentials.clientSecret,
-        scope: "public",
-      }),
-    });
-    if (!res.ok) throw new Error(`osu! OAuth failed: ${res.status} ${await res.text()}`);
+    if (tokenRequest) return tokenRequest;
+    tokenRequest = (async () => {
+      const res = await request("https://osu.ppy.sh/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          grant_type: "client_credentials",
+          client_id: Number(credentials.clientId),
+          client_secret: credentials.clientSecret,
+          scope: "public",
+        }),
+      });
+      if (!res.ok) throw new Error(`osu! OAuth failed: ${res.status} ${await res.text()}`);
 
-    const body = await res.json() as { access_token: string; expires_in: number };
-    cached = { token: body.access_token, expiresAt: Date.now() + body.expires_in * 1000 };
-    return cached.token;
+      const body = await res.json() as { access_token: string; expires_in: number };
+      cached = { token: body.access_token, expiresAt: Date.now() + body.expires_in * 1000 };
+      return cached.token;
+    })();
+    try {
+      return await tokenRequest;
+    } finally {
+      tokenRequest = null;
+    }
   };
 
   const apiGet = async (path: string) => {
     const token = await getAccessToken();
-    const res = await fetch(`https://osu.ppy.sh/api/v2${path}`, {
+    const res = await request(`https://osu.ppy.sh/api/v2${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -61,7 +76,7 @@ export function createOsuClient(credentials: OsuCredentials) {
 
   const getModdedBeatmapAttributes = async (beatmapId: number, mods: unknown[]) => {
     const token = await getAccessToken();
-    const res = await fetch(`https://osu.ppy.sh/api/v2/beatmaps/${beatmapId}/attributes`, {
+    const res = await request(`https://osu.ppy.sh/api/v2/beatmaps/${beatmapId}/attributes`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ mods }),

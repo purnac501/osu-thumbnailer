@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { HexColorInput, HexColorPicker } from "react-colorful";
+import { useEffect, useState } from "react";
+import { IconButton, Popover, TextField } from "@radix-ui/themes";
+import { HexColorPicker } from "react-colorful";
 
 export function ColorPicker({
   color,
@@ -12,47 +13,39 @@ export function ColorPicker({
   label?: string;
   align?: "left" | "right";
 }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
+  const [hexDraft, setHexDraft] = useState(color.replace(/^#/, "").toUpperCase());
 
   useEffect(() => {
-    if (!open) return;
-    const close = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [open]);
+    setHexDraft(color.replace(/^#/, "").toUpperCase());
+  }, [color]);
 
   return (
-    <div className="accent-picker" ref={root}>
-      <button
-        type="button"
-        className="accent-swatch"
-        style={{ backgroundColor: color }}
-        aria-label={`${label} ${color}`}
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      />
-      {open ? (
-        <div className="accent-popover" style={align === "right" ? { right: 0, left: "auto" } : undefined}>
+    <Popover.Root>
+      <Popover.Trigger>
+        <IconButton type="button" variant="ghost" color="gray" size="2" aria-label={`${label} ${color}`}>
+          <span className="accent-swatch" style={{ backgroundColor: color }} />
+        </IconButton>
+      </Popover.Trigger>
+      <Popover.Content className="accent-popover" size="2" width="220px" align={align === "right" ? "end" : "start"} sideOffset={6}>
           <HexColorPicker color={color} onChange={onChange} />
-          <div className="accent-hex-row">
-            <span>#</span>
-            <HexColorInput color={color} onChange={onChange} aria-label={`${label} hex color`} />
-          </div>
-        </div>
-      ) : null}
-    </div>
+          <TextField.Root
+            className="accent-hex-field"
+            size="2"
+            aria-label={`${label} hex color`}
+            value={hexDraft}
+            maxLength={6}
+            onChange={(event) => {
+              const value = event.target.value.replace(/[^0-9a-f]/gi, "").toUpperCase();
+              setHexDraft(value);
+              if (value.length === 6) onChange(`#${value}`);
+            }}
+            onBlur={() => setHexDraft(color.replace(/^#/, "").toUpperCase())}
+          >
+            <TextField.Slot>#</TextField.Slot>
+          </TextField.Root>
+      </Popover.Content>
+    </Popover.Root>
   );
 }
 
 export const AccentPicker = ColorPicker;
-

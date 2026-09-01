@@ -204,14 +204,16 @@ export const referenceLayout: ReferenceTemplateComponents = {
   mapTitle: {
     visible: true,
     x: 140,
-    y: 340,
+    y: 302,
     width: 1000,
+    height: 122,
     maxWidth: 1000,
     fontFamily: FONTS.display,
     fontSize: 72,
     fontWeight: 600,
     color: c.text,
     align: "center",
+    valign: "center",
     letterSpacing: 2,
   },
   grade: {
