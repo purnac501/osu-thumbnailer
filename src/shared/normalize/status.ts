@@ -13,9 +13,9 @@ export function detectStatus(score: ApiScore): PlayStatus {
     return { kind: "miss", count: miss };
   }
 
-  // A large tick miss is a slider break even when the API omits the combo flag.
+  // Large tick misses, slider breaks, or combo breaks indicate an actual broken combo.
+  // Dropping slider ends does not break combo and is counted as a Full Combo (FC).
   if (
-    score.is_perfect_combo === false ||
     (stats.large_tick_miss ?? 0) > 0 ||
     (stats.slider_break ?? 0) > 0 ||
     (stats.combo_break ?? 0) > 0

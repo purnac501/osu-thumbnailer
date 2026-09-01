@@ -48,9 +48,9 @@ describe("status / FC detection", () => {
     expect(detectStatus(score)).toEqual({ kind: "miss", count: 2 });
   });
 
-  it("does not claim FC when combo is broken without misses", () => {
-    const score = { ...referenceFixtureScore, is_perfect_combo: false };
-    expect(detectStatus(score).kind).toBe("unknown");
+  it("detects FC when slider ends are dropped without misses or slider breaks", () => {
+    const score = { ...referenceFixtureScore, is_perfect_combo: false, statistics: { great: 50, miss: 0 } };
+    expect(detectStatus(score).kind).toBe("fc");
   });
 
   it("counts only large tick misses as slider breaks", () => {
@@ -122,10 +122,10 @@ describe("manual score-data overrides", () => {
     expect(normalizeScore(qualifiedScore).beatmapStatus).toBe("qualified");
   });
 
-  it("maps qualified to approved notch and graveyard to graveyard notch", () => {
+  it("maps qualified to approved notch and graveyard to unranked notch", () => {
     expect(referenceTemplate.components.starNotch.assets?.qualified).toBe("/assets/osu/notch/approved.png");
     expect(referenceTemplate.components.starNotch.statusColors?.qualified).toBe("#3EA551");
-    expect(referenceTemplate.components.starNotch.assets?.graveyard).toBe("/assets/osu/notch/graveyard.png");
+    expect(referenceTemplate.components.starNotch.assets?.graveyard).toBe("/assets/osu/notch/unranked.png");
     expect(referenceTemplate.components.starNotch.statusColors?.graveyard).toBe("#6D6C70");
   });
 
@@ -145,6 +145,21 @@ describe("manual score-data overrides", () => {
     expect(template.components.status.color).toBe("#FF0055");
     expect(template.customTexts?.[0]?.fontSize).toBe(60);
     expect(template.customTexts?.[0]?.color).toBe("#FF9900");
+  });
+
+  it("calculates PP using rosu-pp for graveyard and unranked scores", async () => {
+    const { calculateScorePp } = await import("../src/shared/pp/calculatePp");
+    const sampleBeatmap = "osu file format v14\n[General]\nMode: 0\n[Difficulty]\nHPDrainRate:5\nCircleSize:4\nOverallDifficulty:8\nApproachRate:9\nSliderMultiplier:1.4\nSliderTickRate:1\n[HitObjects]\n256,192,1000,1,0,0:0:0:0:\n256,192,2000,1,0,0:0:0:0:\n";
+    const graveyardScore: ApiScore = {
+      ...referenceFixtureScore,
+      pp: null,
+      max_combo: 2,
+      accuracy: 1,
+      statistics: { great: 2, miss: 0 },
+    };
+    const result = await calculateScorePp(graveyardScore, sampleBeatmap);
+    expect(result).not.toBeNull();
+    expect(result?.pp).toBeGreaterThan(0);
   });
 });
 

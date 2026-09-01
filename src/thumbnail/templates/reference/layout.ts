@@ -79,12 +79,12 @@ export const referenceLayout: ReferenceTemplateComponents = {
       qualified: "/assets/osu/notch/approved.png",
       loved: "/assets/osu/notch/loved.png",
       approved: "/assets/osu/notch/approved.png",
-      graveyard: "/assets/osu/notch/graveyard.png",
-      grave: "/assets/osu/notch/graveyard.png",
-      wip: "/assets/osu/notch/unknown.png",
-      pending: "/assets/osu/notch/unknown.png",
+      graveyard: "/assets/osu/notch/unranked.png",
+      grave: "/assets/osu/notch/unranked.png",
+      wip: "/assets/osu/notch/unranked.png",
+      pending: "/assets/osu/notch/unranked.png",
       unranked: "/assets/osu/notch/unranked.png",
-      unknown: "/assets/osu/notch/unknown.png",
+      unknown: "/assets/osu/notch/unranked.png",
     },
     // Star-rating colors sampled from the actual notch asset pixels.
     statusColors: {
