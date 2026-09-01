@@ -170,13 +170,18 @@ describe("manual score-data overrides", () => {
     };
     const template = applyOverrides(referenceTemplate, {
       customTexts: [custom],
-      fontSizeOverrides: { pp: 140, "custom-test": 60, status: 200 },
-      colorOverrides: { pp: "#00FFCC", "custom-test": "#FF9900", status: "#FF0055" },
+      positionOverrides: { "status-sb": { x: 350, y: 120 } },
+      fontSizeOverrides: { pp: 140, "custom-test": 60, status: 200, "status-sb": 80 },
+      colorOverrides: { pp: "#00FFCC", "custom-test": "#FF9900", status: "#FF0055", "status-sb": "#FFAA00" },
     });
     expect(template.components.pp.fontSize).toBe(140);
     expect(template.components.pp.color).toBe("#00FFCC");
     expect(template.components.status.fontSize).toBe(200);
     expect(template.components.status.color).toBe("#FF0055");
+    expect(template.components.statusSB.fontSize).toBe(80);
+    expect(template.components.statusSB.color).toBe("#FFAA00");
+    expect(template.components.statusSB.x).toBe(350);
+    expect(template.components.statusSB.y).toBe(120);
     expect(template.customTexts?.[0]?.fontSize).toBe(60);
     expect(template.customTexts?.[0]?.color).toBe("#FF9900");
   });

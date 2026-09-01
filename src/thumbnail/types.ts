@@ -283,6 +283,10 @@ export interface ThumbnailTemplate {
   bottomHighlightOverride?: string;
   /** Manual text per layer id (see computeTexts keys), applied at render time. */
   textOverrides?: Record<string, string>;
+  positionOverrides?: Record<string, { x: number; y: number }>;
+  sizeOverrides?: Record<string, Record<string, number>>;
+  colorOverrides?: Record<string, string>;
+  fontSizeOverrides?: Record<string, number>;
   customTexts?: CustomTextLayerConfig[];
 }
 

@@ -159,6 +159,18 @@ export function applyOverrides(
   if (textOverrides && Object.keys(textOverrides).length > 0) {
     next.textOverrides = { ...next.textOverrides, ...textOverrides };
   }
+  if (positionOverrides) {
+    next.positionOverrides = { ...next.positionOverrides, ...positionOverrides };
+  }
+  if (sizeOverrides) {
+    next.sizeOverrides = { ...next.sizeOverrides, ...sizeOverrides };
+  }
+  if (fontSizeOverrides) {
+    next.fontSizeOverrides = { ...next.fontSizeOverrides, ...fontSizeOverrides };
+  }
+  if (colorOverrides) {
+    next.colorOverrides = { ...next.colorOverrides, ...colorOverrides };
+  }
 
   if (positionOverrides) {
     const configs = next.components as unknown as Record<string, { x: number; y: number }>;

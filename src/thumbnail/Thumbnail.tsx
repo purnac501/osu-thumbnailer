@@ -74,23 +74,34 @@ export function Thumbnail({
   const hasMisses = text("status") !== "";
   const hasSliderBreaks = text("status-sb") !== "";
   const splitStatus = hasMisses && hasSliderBreaks;
-  const statusMiss = splitStatus
-    ? { ...c.statusMiss, fontSize: c.statusMiss.fontSize * 0.75 }
-    : c.statusMiss;
+  const isSbPosOverridden = Boolean(template.positionOverrides?.["status-sb"] || template.positionOverrides?.["statusSB"]);
+  const isSbSizeOverridden = Boolean(template.fontSizeOverrides?.["status-sb"] || template.fontSizeOverrides?.["statusSB"] || template.sizeOverrides?.["status-sb"]);
+  const isMissSizeOverridden = Boolean(template.fontSizeOverrides?.["status-miss"] || template.fontSizeOverrides?.["status"]);
+
+  const statusMiss = {
+    ...c.statusMiss,
+    fontSize: !isMissSizeOverridden && splitStatus ? c.statusMiss.fontSize * 0.75 : c.statusMiss.fontSize,
+  };
+
   const statusSB = {
     ...c.statusSB,
-    ...(splitStatus
-      ? {
-          fontSize: c.statusSB.fontSize * 0.9,
-        }
+    fontSize: isSbSizeOverridden
+      ? c.statusSB.fontSize
+      : splitStatus
+        ? c.statusSB.fontSize * 0.9
+        : !hasMisses
+          ? c.statusMiss.fontSize * 0.75
+          : c.statusSB.fontSize,
+    x: isSbPosOverridden
+      ? c.statusSB.x
       : !hasMisses
-        ? {
-            x: c.statusMiss.x + c.statusSB.x - 118,
-            y: c.statusMiss.y + c.statusSB.y - 158,
-            maxWidth: c.statusMiss.maxWidth,
-            fontSize: c.statusMiss.fontSize * 0.62,
-          }
-        : {}),
+        ? c.statusMiss.x
+        : c.statusSB.x,
+    y: isSbPosOverridden
+      ? c.statusSB.y
+      : !hasMisses
+        ? c.statusMiss.y + 10
+        : c.statusSB.y,
   };
 
   // Signal render completion (fonts + images) for the Playwright pipeline.
