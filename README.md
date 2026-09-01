@@ -48,7 +48,7 @@ Cloudflare Workers.
 4. Add the Worker URL as the GitHub Actions variable `API_BASE_URL`.
 5. Enable GitHub Pages with GitHub Actions as the source.
 
-The Worker permits 30 score requests per minute for each client IP. Image
+The Worker permits 10 score requests per minute for each client IP. Image
 requests do not use the osu! API and have a one-day browser cache.
 
 ## Structure
