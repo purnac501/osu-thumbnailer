@@ -1,6 +1,6 @@
 # osu! thumbnailer
 
-Local web app that turns an osu! score URL into a YouTube-ready thumbnail.
+Web app that turns an osu! score URL into a YouTube-ready thumbnail.
 Paste a URL, pick a template and resolution, preview live, download a PNG.
 
 ```
@@ -8,15 +8,15 @@ paste osu! score URL -> fetch score/map/player data -> normalize
 -> apply to template -> live preview -> choose resolution -> download PNG
 ```
 
-No manual score-data entry. Without API credentials the app runs in mock mode
-with deterministic fixture data, so everything works offline.
+The frontend is static and works on GitHub Pages. A small Cloudflare Worker
+keeps the osu! OAuth secret private and proxies images for browser-side export.
 
 ## Install
 
 ```
 npm install
 cp .env.example .env
-npx playwright install chromium
+npx playwright install chromium # only needed for render tests and the generate command
 ```
 
 ## Environment / osu! API credentials
@@ -31,21 +31,32 @@ OSU_CLIENT_SECRET=<your client secret>
 
 - OAuth: `POST https://osu.ppy.sh/oauth/token` with `grant_type=client_credentials`,
   `scope=public`. The token is cached server-side until shortly before expiry.
-- The secret never leaves the server. Requests carry `X-API-Version: 20220705`.
-- With empty credentials the app uses fixture data (mock mode) and says so in
-  the UI.
+- The secret stays in the local or deployed Cloudflare Worker.
+- Requests carry `X-API-Version: 20220705`.
+- Score fetches are limited to 30 requests per minute for each client IP.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Vite (UI, port 5173) + API server (port 3737) |
+| `npm run dev` | Vite (UI, port 5173) + Cloudflare Worker (port 8788) |
+| `npm run dev:api` | Cloudflare Worker only (port 8788) |
 | `npm test` | Unit tests + render smoke tests (Vitest) |
 | `npm run typecheck` | TypeScript check |
 | `npm run template:compare` | Render fixture at 1024x576, diff vs `reference/Reference.png`, write `generated/*.png`, print similarity |
 | `npm run render:matrix` | Render reference + long-text stress fixtures at 1280x720 into `generated/` for eyeballing |
 | `npm run generate -- "URL" --template reference --resolution 2560x1440` | Headless PNG via Playwright, no browser UI |
 | `npm run build` | Production build |
+| `npm run deploy:api` | Deploy the Cloudflare Worker |
+
+## Deploy
+
+1. Add `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OSU_CLIENT_ID`,
+   `OSU_CLIENT_SECRET`, and `ALLOWED_ORIGIN` as GitHub Actions secrets.
+2. Set `ALLOWED_ORIGIN` to the full GitHub Pages origin.
+3. Run the `Deploy API` workflow and copy its Worker URL.
+4. Add that URL as the GitHub Actions variable `API_BASE_URL`.
+5. Enable GitHub Pages with GitHub Actions as its source. The frontend deploys on each push to `main`.
 
 Example:
 
@@ -64,16 +75,14 @@ src/
       reference/     template.ts (assembly) + layout.ts (positions) + theme.ts (colors/fonts)
     registry.ts      template registry
   render/            /render.html route used by Playwright (also usable manually)
-  server/
-    osu/             OAuth, API client, attributes, leaderboard lookup
-    data/            fixtures + normalization service (mock/live switch)
-    render/          Playwright PNG generation
+  server/            local Playwright render and fixture tooling
   shared/
     types/           ThumbnailData (normalized model), raw osu! API types
     score-url/       URL parser
     formatting/      PP / accuracy / combo / BPM / star / position formatting
     mods/            mod normalization, clock rate, asset mapping
     normalize/       raw API score -> ThumbnailData, FC detection, bg fallbacks
+worker/              Cloudflare Worker API and image proxy
 ```
 
 Data flow boundaries:
@@ -81,7 +90,8 @@ Data flow boundaries:
 - Raw osu! API JSON is typed in `shared/types/osu.ts` and never reaches templates.
 - `normalizeScore()` produces the `ThumbnailData` model in `shared/types/thumbnail.ts`.
 - Templates consume only `ThumbnailData` + their own config.
-- The PNG pipeline uses the exact same `Thumbnail` component as the UI preview.
+- The browser exports the exact `Thumbnail` component shown in the preview.
+- Playwright remains available for local render tests and command-line exports.
 
 ## Template configuration
 
