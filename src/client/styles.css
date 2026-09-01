@@ -89,3 +89,113 @@ summary:focus-visible {
   outline: 1px solid #ff66aa;
   outline-offset: 1px;
 }
+
+/* App layout & Mobile responsiveness */
+.app-container {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #121013;
+  color: #e8e2e4;
+  font-family: "Montserrat", sans-serif;
+}
+
+.app-sidebar {
+  width: 350px;
+  flex-shrink: 0;
+  padding: 24px 20px;
+  border-right: 1px solid #2a2427;
+  overflow-y: auto;
+  max-height: 100vh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.app-preview {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0;
+}
+
+.mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .mobile-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #181416;
+    border-bottom: 1px solid #2a2427;
+    z-index: 30;
+    flex-shrink: 0;
+  }
+
+  .mobile-tab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #3a3236;
+    background: #241f22;
+    color: #c9bfc3;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+  }
+
+  .mobile-tab-btn.active {
+    background: #ff66aa;
+    border-color: #ff66aa;
+    color: #121013;
+    font-weight: 700;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    max-height: none;
+    flex: 1;
+    border-right: none;
+    padding: 16px 14px 24px;
+    overflow-y: auto;
+  }
+
+  .app-sidebar.mobile-hidden {
+    display: none !important;
+  }
+
+  .app-preview {
+    width: 100%;
+    height: auto;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .app-preview.mobile-hidden {
+    display: none !important;
+  }
+
+  .download-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 12px !important;
+    padding: 8px 14px !important;
+  }
+}

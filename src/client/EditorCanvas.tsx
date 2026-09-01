@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { Rnd } from "react-rnd";
@@ -135,21 +135,42 @@ export function EditorCanvas({
   const [layerMenu, setLayerMenu] = useState<{ x: number; y: number; layer: string } | null>(null);
   const effectiveScale = scale * view.zoom;
 
+  const resetFitView = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const w = viewport.clientWidth;
+    const h = viewport.clientHeight;
+    if (w <= 0 || h <= 0) return;
+
+    const fitZoom = Math.min(
+      (w - 24) / (template.canvas.width * scale),
+      (h - 24) / (template.canvas.height * scale),
+      1.5
+    );
+    const zoom = Math.max(0.15, fitZoom);
+    const totalWidth = template.canvas.width * scale * zoom;
+    const totalHeight = template.canvas.height * scale * zoom;
+
+    setView({
+      zoom,
+      x: (w - totalWidth) / 2,
+      y: (h - totalHeight) / 2,
+    });
+  }, [scale, template.canvas.height, template.canvas.width]);
+
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const observer = new ResizeObserver(([entry]) => {
-      if (!entry || viewPlaced.current) return;
-      viewPlaced.current = true;
-      setView({
-        zoom: 1,
-        x: (entry.contentRect.width - template.canvas.width * scale) / 2,
-        y: (entry.contentRect.height - template.canvas.height * scale) / 2,
-      });
+      if (!entry) return;
+      if (!viewPlaced.current && entry.contentRect.width > 0) {
+        viewPlaced.current = true;
+        resetFitView();
+      }
     });
     observer.observe(viewport);
     return () => observer.disconnect();
-  }, [scale, template.canvas.height, template.canvas.width]);
+  }, [resetFitView]);
 
   const layerAt = (element: HTMLElement | null): string | null => {
     let current = element;
@@ -321,10 +342,15 @@ export function EditorCanvas({
         if (event.target === event.currentTarget) {
           onSelect(null);
         }
-        if (event.button !== 1) return;
-        event.preventDefault();
-        event.currentTarget.setPointerCapture(event.pointerId);
-        panStart.current = { pointerX: event.clientX, pointerY: event.clientY, x: view.x, y: view.y };
+        const isBg = event.target === event.currentTarget ||
+          (event.target as HTMLElement).id === "thumbnail-root" ||
+          (event.target as HTMLElement).dataset.layer === "background";
+        if (event.button === 1 || (isBg && (event.pointerType === "touch" || event.button === 0))) {
+          if (event.button === 1 || isBg) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            panStart.current = { pointerX: event.clientX, pointerY: event.clientY, x: view.x, y: view.y };
+          }
+        }
       }}
       onPointerMove={(event) => {
         const start = panStart.current;
@@ -336,9 +362,14 @@ export function EditorCanvas({
         }));
       }}
       onPointerUp={(event) => {
-        if (event.button !== 1) return;
-        panStart.current = null;
-        event.currentTarget.releasePointerCapture(event.pointerId);
+        if (panStart.current) {
+          panStart.current = null;
+          try {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          } catch {
+            // ignore
+          }
+        }
       }}
     >
       <div
@@ -494,6 +525,76 @@ export function EditorCanvas({
             </button>
           </div>, document.body
         ) : null}
+      </div>
+
+      {/* Floating Zoom & Fit Controls */}
+      <div
+        data-editor-control
+        style={{
+          position: "absolute",
+          bottom: 14,
+          right: 14,
+          display: "flex",
+          gap: 6,
+          background: "rgba(24, 20, 22, 0.85)",
+          backdropFilter: "blur(6px)",
+          padding: 5,
+          borderRadius: 8,
+          border: "1px solid #3d3439",
+          zIndex: 40,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setView((v) => ({ ...v, zoom: Math.min(3, v.zoom * 1.25) }))}
+          style={{
+            background: "#332b2f",
+            border: "1px solid #4a3e44",
+            color: "#eee",
+            borderRadius: 6,
+            padding: "4px 10px",
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+          title="Zoom in"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => setView((v) => ({ ...v, zoom: Math.max(0.15, v.zoom * 0.8) }))}
+          style={{
+            background: "#332b2f",
+            border: "1px solid #4a3e44",
+            color: "#eee",
+            borderRadius: 6,
+            padding: "4px 10px",
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+          title="Zoom out"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          onClick={resetFitView}
+          style={{
+            background: "#332b2f",
+            border: "1px solid #4a3e44",
+            color: "#eee",
+            borderRadius: 6,
+            padding: "4px 8px",
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+          title="Fit thumbnail to screen"
+        >
+          Fit
+        </button>
       </div>
     </div>
   );

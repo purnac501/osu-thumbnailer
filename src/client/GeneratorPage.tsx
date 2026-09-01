@@ -56,6 +56,7 @@ export function GeneratorPage() {
   const [sliderBreakDraft, setSliderBreakDraft] = useState("0");
   const [missDraft, setMissDraft] = useState("0");
   const [queueCount, setQueueCount] = useState(0);
+  const [mobileTab, setMobileTab] = useState<"preview" | "controls">("preview");
 
   useEffect(() => {
     let unmounted = false;
@@ -165,6 +166,7 @@ export function GeneratorPage() {
         throw new Error(body?.error ?? `Score request failed (${res.status})`);
       }
       setResult((await res.json()) as ThumbnailResult);
+      setMobileTab("preview");
       replaceEditor(EMPTY_EDITOR);
       setHistory({ past: [], future: [] });
       setSelected(null);
@@ -353,21 +355,27 @@ export function GeneratorPage() {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#121013", color: "#e8e2e4", fontFamily: '"Montserrat", sans-serif' }}>
-      {/* Left: controls */}
-      <div
-        style={{
-          width: 340,
-          flexShrink: 0,
-          padding: "24px 20px",
-          borderRight: "1px solid #2a2427",
-          overflowY: "auto",
-          maxHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          gap: 18,
-        }}
-      >
+    <div className="app-container">
+      {/* Mobile Tab Switcher */}
+      <div className="mobile-tabs">
+        <button
+          type="button"
+          className={`mobile-tab-btn ${mobileTab === "preview" ? "active" : ""}`}
+          onClick={() => setMobileTab("preview")}
+        >
+          Preview & Canvas
+        </button>
+        <button
+          type="button"
+          className={`mobile-tab-btn ${mobileTab === "controls" ? "active" : ""}`}
+          onClick={() => setMobileTab("controls")}
+        >
+          Controls & Status
+        </button>
+      </div>
+
+      {/* Left / Controls sidebar */}
+      <div className={`app-sidebar ${mobileTab !== "controls" ? "mobile-hidden" : ""}`}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
           <h1 style={{ fontFamily: '"Baloo 2", sans-serif', margin: 0, fontSize: 26 }}>osu! thumbnailer</h1>
           <details style={{ position: "relative", zIndex: 80 }}>
@@ -696,25 +704,14 @@ export function GeneratorPage() {
         </button>
       </div>
 
-      {/* Right: preview */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-          padding: 0,
-        }}
-      >
+      {/* Right / Preview area */}
+      <div className={`app-preview ${mobileTab !== "preview" ? "mobile-hidden" : ""}`}>
         {result ? (
           <>
             <button
               onClick={download}
               disabled={busy}
+              className="download-btn"
               style={{ ...buttonStyle, position: "absolute", top: 16, right: 16, zIndex: 10 }}
             >
               Download PNG ({resolution})
@@ -745,7 +742,7 @@ export function GeneratorPage() {
             </div>
           </>
         ) : (
-          <div style={{ color: "#6a5f64" }}>
+          <div style={{ color: "#6a5f64", padding: 24, textAlign: "center" }}>
             Paste a score URL and fetch it to start editing.
           </div>
         )}
