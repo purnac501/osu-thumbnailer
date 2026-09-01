@@ -20,8 +20,6 @@ jobs:
           secrets: |
             OSU_CLIENT_ID
             OSU_CLIENT_SECRET
-            ALLOWED_ORIGIN
         env:
           OSU_CLIENT_ID: ${{ secrets.OSU_CLIENT_ID }}
           OSU_CLIENT_SECRET: ${{ secrets.OSU_CLIENT_SECRET }}
-          ALLOWED_ORIGIN: ${{ secrets.ALLOWED_ORIGIN }}

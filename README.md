@@ -41,15 +41,18 @@ The included workflows deploy the frontend to GitHub Pages and the API to
 Cloudflare Workers.
 
 1. Add these GitHub Actions secrets: `CLOUDFLARE_API_TOKEN`,
-   `CLOUDFLARE_ACCOUNT_ID`, `OSU_CLIENT_ID`, `OSU_CLIENT_SECRET`, and
-   `ALLOWED_ORIGIN`.
-2. Set `ALLOWED_ORIGIN` to the full GitHub Pages origin.
+   `CLOUDFLARE_ACCOUNT_ID`, `OSU_CLIENT_ID`, and `OSU_CLIENT_SECRET`.
+2. Set `ALLOWED_ORIGIN` in `wrangler.jsonc` to the full GitHub Pages origin.
 3. Run the `Deploy API` workflow.
 4. Add the Worker URL as the GitHub Actions variable `API_BASE_URL`.
 5. Enable GitHub Pages with GitHub Actions as the source.
 
-The Worker permits 10 score requests per minute for each client IP. Image
-requests do not use the osu! API and have a one-day browser cache.
+The Worker permits 10 score requests and 60 image requests per minute for each
+client IP. Image responses have a one-day browser cache.
+
+Repository admins can run the `Usage report` workflow to view request totals,
+approximate browser counts, and the most requested scores and maps. Analytics
+use an anonymous browser ID and do not store IP addresses.
 
 ## Structure
 
