@@ -1,0 +1,85 @@
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 1px solid #ff66aa;
+  outline-offset: 1px;
+}
+
+.app-select {
+  appearance: none;
+  padding-right: 36px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23c9bfc3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-position: right 12px center !important;
+  background-repeat: no-repeat !important;
+}
+
+.accent-picker {
+  position: relative;
+}
+
+.accent-swatch {
+  width: 36px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #675b61;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px #141013;
+  cursor: pointer;
+}
+
+.accent-popover {
+  position: absolute;
+  z-index: 100;
+  top: 34px;
+  left: 0;
+  width: 200px;
+  padding: 10px;
+  border: 1px solid #54494f;
+  border-radius: 10px;
+  background: #241f22;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.accent-popover .react-colorful {
+  width: 100%;
+  height: 160px;
+}
+
+.accent-popover .react-colorful__saturation {
+  border-radius: 6px 6px 0 0;
+}
+
+.accent-popover .react-colorful__hue {
+  height: 14px;
+  border-radius: 0 0 6px 6px;
+}
+
+.accent-popover .react-colorful__pointer {
+  width: 18px;
+  height: 18px;
+}
+
+.accent-hex-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 7px 9px;
+  border: 1px solid #3a3236;
+  border-radius: 7px;
+  color: #9a8f93;
+  background: #141013;
+}
+
+.accent-hex-row input {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline-offset: 3px;
+  color: #eee;
+  background: transparent;
+  font: inherit;
+  text-transform: uppercase;
+}

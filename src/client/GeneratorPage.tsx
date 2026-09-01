@@ -12,6 +12,8 @@ import { computeTexts } from "../thumbnail/texts";
 import { RESOLUTION_PRESETS, type ResolutionPreset } from "../thumbnail/types";
 import type { ThumbnailResult } from "../shared/types/thumbnail";
 import { EditorCanvas } from "./EditorCanvas";
+import { AccentPicker } from "./AccentPicker";
+import "./styles.css";
 
 const RESOLUTIONS = Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[];
 const STORAGE_KEY = "osu-thumbnailer-editor-v1";
@@ -278,12 +280,12 @@ export function GeneratorPage() {
           <details style={{ position: "relative", zIndex: 80 }}>
             <summary aria-label="Score data limits" title="Score data limits" style={{ cursor: "pointer", listStyle: "none", width: 26, height: 26, border: "1px solid #54494f", borderRadius: "50%", display: "grid", placeItems: "center", color: "#FF66AA", fontWeight: 700 }}>i</summary>
             <div style={{ position: "absolute", right: 0, top: 34, width: 280, padding: 14, background: "#241f22", border: "1px solid #54494f", borderRadius: 8, fontSize: 12, lineHeight: 1.5, color: "#d8d0d3", boxShadow: "0 12px 30px rgba(0,0,0,.45)" }}>
-              <strong style={{ color: "#fff" }}>Missing score data</strong>
-              <p style={{ margin: "8px 0" }}>The osu! API cannot report exact slider breaks for Classic scores. This editor does not calculate PP if FC.</p>
-              <p style={{ margin: "8px 0" }}>Use Slider breaks for the count. Use Add text for PP if FC or other details.</p>
+              <strong style={{ color: "#fff" }}>Score data limits</strong>
+              <p style={{ margin: "8px 0" }}>Classic scores do not provide slider-break counts. Enter the count only if you know it. Otherwise leave it at 0.</p>
+              <p style={{ margin: "8px 0" }}>This editor does not calculate PP if FC. Calculate it elsewhere, then add it as custom text.</p>
               <div style={{ display: "grid", gap: 6 }}>
-                <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>Why data is missing - osu! API reference</a>
-                <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>Calculate PP yourself - rosu-pp developer library</a>
+                <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>osu! API score data</a>
+                <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>rosu-pp calculation library</a>
               </div>
             </div>
           </details>
@@ -311,6 +313,7 @@ export function GeneratorPage() {
           <label style={labelStyle}>
             Resolution
             <select
+              className="app-select"
               value={resolution}
               onChange={(e) => setResolution(e.target.value as ResolutionPreset)}
               style={inputStyle}
@@ -324,12 +327,7 @@ export function GeneratorPage() {
           </label>
           <label style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8 }}>
             Accent
-            <input
-              type="color"
-              value={editor.accent ?? "#B8B8B8"}
-              onChange={(e) => set({ accent: e.target.value })}
-              style={{ width: 46, height: 32, border: "none", background: "none", cursor: "pointer" }}
-            />
+            <AccentPicker color={editor.accent ?? "#B8B8B8"} onChange={(accent) => set({ accent })} />
           </label>
           <label style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
             <input

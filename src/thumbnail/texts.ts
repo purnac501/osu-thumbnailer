@@ -48,7 +48,7 @@ export function computeTexts(
     accuracy: formatAccuracy(data.accuracy),
     leaderboard: formatLeaderboardPosition(lb),
     username: data.username,
-    "bottom-text": template.dataOptions.bottomPrefix || `${data.username} - ${formatPp(data.pp)} on ${data.title}`,
+    "bottom-text": template.dataOptions.bottomPrefix || `${data.username} - ${formatPp(data.pp)}`,
   };
 }
 
