@@ -19,16 +19,7 @@ import "./styles.css";
 
 const RESOLUTIONS = Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[];
 const STORAGE_KEY = "osu-thumbnailer-editor-v1";
-const CLIENT_ID_KEY = "osu-thumbnailer-client-id";
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
-
-function getClientId(): string {
-  const saved = localStorage.getItem(CLIENT_ID_KEY);
-  if (saved) return saved;
-  const id = crypto.randomUUID();
-  localStorage.setItem(CLIENT_ID_KEY, id);
-  return id;
-}
 
 interface SavedState {
   url: string;
@@ -147,9 +138,7 @@ export function GeneratorPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/thumbnail?url=${encodeURIComponent(url)}`, {
-        headers: { "X-Client-Id": getClientId() },
-      });
+      const res = await fetch(`${API_BASE}/api/thumbnail?url=${encodeURIComponent(url)}`);
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? `Score request failed (${res.status})`);
