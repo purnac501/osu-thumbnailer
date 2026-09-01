@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"tsx watch src/server/index.ts\"",
+    "dev": "concurrently -k \"vite\" \"wrangler dev --port 8788 --env-file .env\"",
+    "dev:api": "wrangler dev --port 8788 --env-file .env",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -13,7 +14,8 @@
     "template:compare": "tsx scripts/template-compare.ts",
     "render:matrix": "tsx scripts/render-matrix.ts",
     "generate": "tsx scripts/generate.ts",
-    "serve:static": "vite build && tsx src/server/index.ts --serve-static"
+    "serve:static": "vite build && tsx src/server/index.ts --serve-static",
+    "deploy:api": "wrangler deploy"
   },
   "dependencies": {
     "@fontsource/baloo-2": "^5.0.0",
@@ -22,6 +24,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "flag-icons": "^7.2.3",
+    "html-to-image": "^1.11.13",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-rnd": "^10.5.3"
@@ -43,6 +46,7 @@
     "tsx": "^4.16.0",
     "typescript": "^5.5.3",
     "vite": "^5.3.3",
-    "vitest": "^2.0.2"
+    "vitest": "^2.0.2",
+    "wrangler": "^4.127.1"
   }
 }

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "osu-thumbnailer-api",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "ratelimits": [
+    {
+      "name": "SCORE_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    }
+  ],
+  "secrets": {
+    "required": ["OSU_CLIENT_ID", "OSU_CLIENT_SECRET"]
+  }
+}

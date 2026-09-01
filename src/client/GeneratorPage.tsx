@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toBlob } from "html-to-image";
 import "@fontsource/baloo-2/400.css";
 import "@fontsource/baloo-2/700.css";
 import "@fontsource/montserrat/400.css";
@@ -14,6 +15,7 @@ import { EditorCanvas } from "./EditorCanvas";
 
 const RESOLUTIONS = Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[];
 const STORAGE_KEY = "osu-thumbnailer-editor-v1";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
 interface SavedState {
   url: string;
@@ -124,8 +126,11 @@ export function GeneratorPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/thumbnail?url=${encodeURIComponent(url)}`);
-      if (!res.ok) throw new Error(await res.text());
+      const res = await fetch(`${API_BASE}/api/thumbnail?url=${encodeURIComponent(url)}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error ?? `Score request failed (${res.status})`);
+      }
       setResult((await res.json()) as ThumbnailResult);
       replaceEditor(EMPTY_EDITOR);
       setHistory({ past: [], future: [] });
@@ -142,13 +147,25 @@ export function GeneratorPage() {
     if (!result) return;
     setBusy(true);
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, resolution, edits: editor }),
+      const root = document.getElementById("thumbnail-root");
+      if (!root) throw new Error("Thumbnail preview is unavailable");
+      await document.fonts.ready;
+      await Promise.all(Array.from(root.querySelectorAll("img")).map((image) => image.decode().catch(() => undefined)));
+
+      const preset = RESOLUTION_PRESETS[resolution];
+      const blob = await toBlob(root, {
+        backgroundColor: "#141414",
+        cacheBust: true,
+        pixelRatio: preset.width / template.canvas.width,
+        skipAutoScale: true,
       });
-      if (!res.ok) throw new Error(await res.text());
-      const blob = await res.blob();
+      if (!blob) throw new Error("Browser could not create the PNG");
+
+      const bitmap = await createImageBitmap(blob);
+      const validSize = bitmap.width === preset.width && bitmap.height === preset.height;
+      bitmap.close();
+      if (!validSize) throw new Error("Generated PNG dimensions are incorrect");
+
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `osu-thumbnail-${result.data.beatmapId}-${resolution}.png`;
