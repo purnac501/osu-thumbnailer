@@ -129,16 +129,22 @@ describe("manual score-data overrides", () => {
     expect(referenceTemplate.components.starNotch.statusColors?.graveyard).toBe("#6D6C70");
   });
 
-  it("keeps custom text in downloaded template overrides", () => {
+  it("applies fontSizeOverrides and colorOverrides to template components and custom texts", () => {
     const custom = {
       id: "custom-test", text: "2407PP", visible: true, x: 10, y: 20,
       fontFamily: "Montserrat", fontSize: 40, fontWeight: 600, color: "#fff",
     };
     const template = applyOverrides(referenceTemplate, {
       customTexts: [custom],
-      positionOverrides: { "custom-test": { x: 30, y: 40 } },
+      fontSizeOverrides: { pp: 140, "custom-test": 60, status: 200 },
+      colorOverrides: { pp: "#00FFCC", "custom-test": "#FF9900", status: "#FF0055" },
     });
-    expect(template.customTexts?.[0]).toMatchObject({ text: "2407PP", x: 30, y: 40 });
+    expect(template.components.pp.fontSize).toBe(140);
+    expect(template.components.pp.color).toBe("#00FFCC");
+    expect(template.components.status.fontSize).toBe(200);
+    expect(template.components.status.color).toBe("#FF0055");
+    expect(template.customTexts?.[0]?.fontSize).toBe(60);
+    expect(template.customTexts?.[0]?.color).toBe("#FF9900");
   });
 });
 

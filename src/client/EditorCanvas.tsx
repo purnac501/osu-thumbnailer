@@ -21,6 +21,80 @@ const SIZE_FIELDS: Record<string, "size" | "iconSize"> = {
   "mod-list": "iconSize",
 };
 
+export const LAYER_NAMES: Record<string, string> = {
+  status: "Status (FC/Miss)",
+  "status-miss": "Miss Count",
+  "status-sb": "Slider Breaks",
+  "star-rating": "Star Rating",
+  pp: "PP Counter",
+  combo: "Combo Badge",
+  difficulty: "Difficulty Badge",
+  bpm: "BPM Badge",
+  "map-title": "Map Title",
+  grade: "Grade / Rank",
+  accuracy: "Accuracy",
+  leaderboard: "Leaderboard Rank",
+  username: "Username",
+  "bottom-message": "Bottom Message",
+};
+
+export function getLayerTextStyle(
+  layer: string | null,
+  template: ThumbnailTemplate,
+  data?: ThumbnailData | null,
+): { fontSize: number; color: string } {
+  if (!layer) return { fontSize: 48, color: "#FFFFFF" };
+  if (layer.startsWith("custom-")) {
+    const custom = template.customTexts?.find((c) => c.id === layer);
+    return {
+      fontSize: custom?.fontSize ?? 54,
+      color: custom?.color ?? "#FFFFFF",
+    };
+  }
+
+  const c = template.components;
+  switch (layer) {
+    case "status":
+      return {
+        fontSize: data && data.status.kind !== "fc" ? c.statusMiss.fontSize : c.status.fontSize,
+        color: data && data.status.kind !== "fc" ? c.statusMiss.color : c.status.color,
+      };
+    case "status-miss":
+      return { fontSize: c.statusMiss.fontSize, color: c.statusMiss.color };
+    case "status-sb":
+      return { fontSize: c.statusSB.fontSize, color: c.statusSB.color };
+    case "star-rating":
+      return { fontSize: c.starRating.fontSize, color: c.starRating.color };
+    case "pp":
+      return { fontSize: c.pp.fontSize, color: c.pp.color };
+    case "combo":
+      return { fontSize: c.comboBadge.fontSize, color: c.comboBadge.color };
+    case "difficulty":
+      return { fontSize: c.difficultyBadge.fontSize, color: c.difficultyBadge.color };
+    case "bpm":
+      return { fontSize: c.bpmBadge.fontSize, color: c.bpmBadge.color };
+    case "map-title":
+      return { fontSize: c.mapTitle.fontSize, color: c.mapTitle.color };
+    case "grade":
+      return { fontSize: c.grade.fontSize, color: c.grade.color };
+    case "accuracy":
+      return { fontSize: c.accuracy.fontSize, color: c.accuracy.color };
+    case "leaderboard":
+      return { fontSize: c.leaderboard.fontSize, color: c.leaderboard.color };
+    case "username":
+      return { fontSize: c.usernamePanel.fontSize, color: c.usernamePanel.color };
+    case "bottom-message":
+    case "bottom-text":
+      return { fontSize: c.bottomMessage.fontSize, color: c.bottomMessage.prefixColor };
+    default:
+      return { fontSize: 48, color: "#FFFFFF" };
+  }
+}
+
+export const isCustomText = (layer: string) => layer.startsWith("custom-");
+export const isTextLayer = (layer: string | null): boolean =>
+  layer ? Boolean(TEXT_KEYS[layer]) || isCustomText(layer) : false;
+
 interface Rect { left: number; top: number; width: number; height: number }
 interface Props {
   template: ThumbnailTemplate;
@@ -51,7 +125,7 @@ export function EditorCanvas({
   const canvasRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLDivElement>(null);
   const panStart = useRef<{ pointerX: number; pointerY: number; x: number; y: number } | null>(null);
-  const geometryStart = useRef<{ hitbox: Rect; layer: Rect } | null>(null);
+  const geometryStart = useRef<{ hitbox: Rect; layer: Rect; fontSize?: number } | null>(null);
   const viewPlaced = useRef(false);
   const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
   const [selection, setSelection] = useState<Rect | null>(null);
@@ -60,8 +134,6 @@ export function EditorCanvas({
   const [accentMenu, setAccentMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const [layerMenu, setLayerMenu] = useState<{ x: number; y: number; layer: string } | null>(null);
   const effectiveScale = scale * view.zoom;
-  const isCustomText = (layer: string) => layer.startsWith("custom-");
-  const isTextLayer = (layer: string) => Boolean(TEXT_KEYS[layer]) || isCustomText(layer);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
@@ -195,6 +267,16 @@ export function EditorCanvas({
         [SIZE_FIELDS[layer]!]: Math.max(10, Math.round(bounds.width)),
         x: Math.round(x), y: Math.round(y),
       });
+    } else if (isTextLayer(layer) && origin && origin.hitbox.height > 0 && origin.fontSize) {
+      const scaleRatio = bounds.height / origin.hitbox.height;
+      const newFontSize = Math.max(10, Math.min(500, Math.round(origin.fontSize * scaleRatio)));
+      onResize(layer, {
+        fontSize: newFontSize,
+        width: Math.round(bounds.width),
+        height: Math.round(bounds.height),
+        x: Math.round(x),
+        y: Math.round(y),
+      });
     } else {
       onResize(layer, {
         width: Math.round(bounds.width), height: Math.round(bounds.height),
@@ -318,7 +400,11 @@ export function EditorCanvas({
             }}
             onDragStop={() => { geometryStart.current = null; }}
             onResizeStart={() => {
-              geometryStart.current = { hitbox: selection, layer: rectOf(selected, true) ?? selection };
+              geometryStart.current = {
+                hitbox: selection,
+                layer: rectOf(selected, true) ?? selection,
+                fontSize: getLayerTextStyle(selected, template, data).fontSize,
+              };
               beginInteraction();
             }}
             onResize={(_event, _direction, ref, _delta, position) =>

@@ -20,6 +20,9 @@ declare global {
  * Other ranks use the template's per-rank colors.
  */
 function gradeColor(data: ThumbnailData, template: ThumbnailTemplate): string {
+  if (template.components.grade.color !== template.theme.grade) {
+    return template.components.grade.color;
+  }
   if (data.grade === "S" || data.grade === "SS") {
     const hd = data.mods.some((m) => m.acronym === "HD");
     return hd ? "#A5A4A6" : "#E7CE56";
@@ -29,6 +32,9 @@ function gradeColor(data: ThumbnailData, template: ThumbnailTemplate): string {
 
 /** Star rating color derives from the actual notch asset color per status. */
 function starColor(data: ThumbnailData, template: ThumbnailTemplate): string {
+  if (template.components.starRating.color !== template.theme.starRating) {
+    return template.components.starRating.color;
+  }
   const colors = template.components.starNotch.statusColors;
   const status = data.beatmapStatus;
   if (colors) {

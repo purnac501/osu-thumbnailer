@@ -11,8 +11,8 @@ import { applyDataOverrides, applyOverrides, type EditorState } from "../thumbna
 import { computeTexts } from "../thumbnail/texts";
 import { RESOLUTION_PRESETS, type ResolutionPreset } from "../thumbnail/types";
 import type { ThumbnailResult } from "../shared/types/thumbnail";
-import { EditorCanvas } from "./EditorCanvas";
-import { AccentPicker } from "./AccentPicker";
+import { EditorCanvas, getLayerTextStyle, isTextLayer, LAYER_NAMES } from "./EditorCanvas";
+import { AccentPicker, ColorPicker } from "./AccentPicker";
 import "./styles.css";
 
 const RESOLUTIONS = Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[];
@@ -187,6 +187,9 @@ export function GeneratorPage() {
   }
 
   const previewScale = 700 / template.canvas.width;
+  const selectedTextStyle = selected && isTextLayer(selected)
+    ? getLayerTextStyle(selected, template, previewData)
+    : null;
 
   /** Live text updates route the bottom message separately. */
   const onTextChange = (key: string, value: string) => {
@@ -202,12 +205,36 @@ export function GeneratorPage() {
   };
 
   const onResize = (layer: string, patch: Record<string, number>) => {
-    const { x, y, ...size } = patch;
+    const { x, y, fontSize, ...size } = patch;
     set({
       positionOverrides: x === undefined || y === undefined
         ? editor.positionOverrides
         : { ...editor.positionOverrides, [layer]: { x, y } },
-      sizeOverrides: { ...editor.sizeOverrides, [layer]: size },
+      sizeOverrides: Object.keys(size).length === 0
+        ? editor.sizeOverrides
+        : { ...editor.sizeOverrides, [layer]: size },
+      fontSizeOverrides: fontSize === undefined
+        ? editor.fontSizeOverrides
+        : { ...editor.fontSizeOverrides, [layer]: fontSize },
+    });
+  };
+
+  const onFontSizeChange = (layer: string, size: number) => {
+    const validSize = Math.max(10, Math.min(500, Number(size) || 10));
+    set({
+      fontSizeOverrides: {
+        ...editor.fontSizeOverrides,
+        [layer]: validSize,
+      },
+    });
+  };
+
+  const onColorChange = (layer: string, color: string) => {
+    set({
+      colorOverrides: {
+        ...editor.colorOverrides,
+        [layer]: color,
+      },
     });
   };
 
@@ -216,8 +243,12 @@ export function GeneratorPage() {
     const pos = { ...editor.positionOverrides };
     const size = { ...editor.sizeOverrides };
     const text = { ...editor.textOverrides };
+    const colors = { ...editor.colorOverrides };
+    const fontSizes = { ...editor.fontSizeOverrides };
     delete pos[layer];
     delete size[layer];
+    delete colors[layer];
+    delete fontSizes[layer];
     if (layer === "status-miss" || layer === "status") {
       delete pos["status"];
       delete pos["status-miss"];
@@ -225,6 +256,10 @@ export function GeneratorPage() {
       delete size["status-miss"];
       delete text["status"];
       delete text["status-miss"];
+      delete colors["status"];
+      delete colors["status-miss"];
+      delete fontSizes["status"];
+      delete fontSizes["status-miss"];
     } else if (layer === "bottom-message" || layer === "bottom-text") {
       delete pos["bottom-message"];
       delete pos["bottom-text"];
@@ -232,6 +267,10 @@ export function GeneratorPage() {
       delete size["bottom-text"];
       delete text["bottom-message"];
       delete text["bottom-text"];
+      delete colors["bottom-message"];
+      delete colors["bottom-text"];
+      delete fontSizes["bottom-message"];
+      delete fontSizes["bottom-text"];
     } else {
       delete text[layer];
     }
@@ -241,6 +280,8 @@ export function GeneratorPage() {
       positionOverrides: pos,
       sizeOverrides: size,
       textOverrides: text,
+      colorOverrides: colors,
+      fontSizeOverrides: fontSizes,
     });
   };
 
@@ -269,12 +310,18 @@ export function GeneratorPage() {
     pushHistorySnapshot();
     const positions = { ...editor.positionOverrides };
     const sizes = { ...editor.sizeOverrides };
+    const colors = { ...editor.colorOverrides };
+    const fontSizes = { ...editor.fontSizeOverrides };
     delete positions[layer];
     delete sizes[layer];
+    delete colors[layer];
+    delete fontSizes[layer];
     set({
       customTexts: editor.customTexts?.filter((item) => item.id !== layer),
       positionOverrides: positions,
       sizeOverrides: sizes,
+      colorOverrides: colors,
+      fontSizeOverrides: fontSizes,
     });
     setSelected(null);
     setEditingLayer(null);
@@ -387,14 +434,95 @@ export function GeneratorPage() {
             <div key={item.id} style={{ display: "flex", gap: 6 }}>
               <input
                 value={item.text}
-                onFocus={pushHistorySnapshot}
-                onChange={(event) => set({ customTexts: editor.customTexts?.map((current) => current.id === item.id ? { ...current, text: event.target.value } : current) })}
-                style={{ ...inputStyle, minWidth: 0 }}
+                onFocus={() => {
+                  pushHistorySnapshot();
+                  setSelected(item.id);
+                }}
+                onChange={(event) =>
+                  set({
+                    customTexts: editor.customTexts?.map((current) =>
+                      current.id === item.id ? { ...current, text: event.target.value } : current
+                    ),
+                  })
+                }
+                style={{
+                  ...inputStyle,
+                  minWidth: 0,
+                  borderColor: selected === item.id ? "#FF66AA" : undefined,
+                }}
               />
-              <button onClick={() => removeLayer(item.id)} aria-label="Remove text" style={{ ...buttonStyle, width: 36, padding: 0, background: "#3a3236" }}>×</button>
+              <button
+                onClick={() => removeLayer(item.id)}
+                aria-label="Remove text"
+                style={{ ...buttonStyle, width: 36, padding: 0, background: "#3a3236" }}
+              >
+                ×
+              </button>
             </div>
           ))}
         </section>
+
+        {selected && isTextLayer(selected) && selectedTextStyle ? (
+          <section
+            style={{
+              ...sectionStyle,
+              background: "#1c171a",
+              padding: "12px 14px",
+              borderRadius: 10,
+              border: "1px solid #3d3439",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#fff",
+              }}
+            >
+              <span>{LAYER_NAMES[selected] ?? "Custom Text"}</span>
+              <button
+                type="button"
+                onClick={() => (selected.startsWith("custom-") ? removeLayer(selected) : resetLayer(selected))}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#FF66AA",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  padding: 0,
+                }}
+              >
+                {selected.startsWith("custom-") ? "Delete" : "Reset"}
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "flex-end" }}>
+              <label style={{ ...labelStyle, margin: 0 }}>
+                <span>Font size (px)</span>
+                <input
+                  type="number"
+                  min={10}
+                  max={500}
+                  value={selectedTextStyle.fontSize}
+                  onFocus={pushHistorySnapshot}
+                  onChange={(e) => onFontSizeChange(selected, Number(e.target.value))}
+                  style={{ ...inputStyle, width: "100%", padding: "6px 8px" }}
+                />
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#c9bfc3" }}>
+                <span>Color</span>
+                <ColorPicker
+                  color={selectedTextStyle.color}
+                  onChange={(color) => onColorChange(selected, color)}
+                  label="Text color"
+                  align="right"
+                />
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", gap: 8 }}>

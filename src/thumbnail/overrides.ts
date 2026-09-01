@@ -22,6 +22,10 @@ export interface EditorState {
   positionOverrides?: Record<string, { x: number; y: number }>;
   /** Config patches per layer id after resizing, e.g. { pp: { fontSize: 130 } }. */
   sizeOverrides?: Record<string, Record<string, number>>;
+  /** Text color overrides per layer id. */
+  colorOverrides?: Record<string, string>;
+  /** Font size overrides per layer id. */
+  fontSizeOverrides?: Record<string, number>;
   customTexts?: CustomTextLayerConfig[];
 }
 
@@ -75,7 +79,18 @@ export function applyOverrides(
   }
 
   const next = structuredClone(template);
-  const { accent, twitchVisible, bottomText, bottomAccent, textOverrides, positionOverrides, sizeOverrides, customTexts } = state;
+  const {
+    accent,
+    twitchVisible,
+    bottomText,
+    bottomAccent,
+    textOverrides,
+    positionOverrides,
+    sizeOverrides,
+    colorOverrides,
+    fontSizeOverrides,
+    customTexts,
+  } = state;
 
   next.customTexts = structuredClone(customTexts ?? []);
 
@@ -134,6 +149,53 @@ export function applyOverrides(
       const key = COMPONENT_BY_LAYER[layer];
       const conf = key ? configs[key] : next.customTexts?.find((item) => item.id === layer);
       if (conf) Object.assign(conf, patch);
+    }
+  }
+
+  if (fontSizeOverrides) {
+    for (const [layer, size] of Object.entries(fontSizeOverrides)) {
+      if (layer.startsWith("custom-")) {
+        const item = next.customTexts?.find((c) => c.id === layer);
+        if (item) item.fontSize = size;
+      } else {
+        const key = COMPONENT_BY_LAYER[layer];
+        if (key && key in next.components) {
+          const conf = (next.components as unknown as Record<string, any>)[key];
+          if (conf && typeof conf.fontSize === "number") {
+            conf.fontSize = size;
+            if (typeof conf.maxWidth === "number") {
+              conf.maxWidth = Math.max(conf.maxWidth, size * 8);
+            }
+          }
+          if (layer === "status") {
+            next.components.statusMiss.fontSize = size;
+            if (typeof next.components.statusMiss.maxWidth === "number") {
+              next.components.statusMiss.maxWidth = Math.max(next.components.statusMiss.maxWidth, size * 8);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (colorOverrides) {
+    for (const [layer, color] of Object.entries(colorOverrides)) {
+      if (layer.startsWith("custom-")) {
+        const item = next.customTexts?.find((c) => c.id === layer);
+        if (item) item.color = color;
+      } else {
+        const key = COMPONENT_BY_LAYER[layer];
+        if (key && key in next.components) {
+          const conf = (next.components as unknown as Record<string, any>)[key];
+          if (conf) {
+            if ("color" in conf) conf.color = color;
+            if ("prefixColor" in conf) conf.prefixColor = color;
+          }
+          if (layer === "status") {
+            next.components.statusMiss.color = color;
+          }
+        }
+      }
     }
   }
 
