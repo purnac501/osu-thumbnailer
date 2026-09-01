@@ -1,5 +1,6 @@
 import { createOsuClient, type OsuClient } from "../src/shared/osu/client";
 import { resolveThumbnail } from "../src/shared/normalize/resolveThumbnail";
+import { globalOsuQueue } from "../src/shared/osu/queue";
 import type { ThumbnailData } from "../src/shared/types/thumbnail";
 
 interface Env {
@@ -78,6 +79,7 @@ export default {
 
     const url = new URL(request.url);
     if (url.pathname === "/api/health") return json({ ok: true }, request, env);
+    if (url.pathname === "/api/queue-status") return json(globalOsuQueue.getStatus(), request, env);
     if (url.pathname === "/api/image") return imageResponse(request, env);
     if (url.pathname !== "/api/thumbnail") return json({ error: "Not found" }, request, env, 404);
 
@@ -94,8 +96,12 @@ export default {
 
     try {
       osuClient ??= createOsuClient({ clientId: env.OSU_CLIENT_ID, clientSecret: env.OSU_CLIENT_SECRET });
-      const result = await resolveThumbnail(scoreUrl, osuClient);
-      return json({ ...result, data: proxyThumbnailAssets(result.data, request) }, request, env);
+      const { result, queueStats } = await globalOsuQueue.run(() => resolveThumbnail(scoreUrl, osuClient!));
+      return json({
+        ...result,
+        queue: queueStats,
+        data: proxyThumbnailAssets(result.data, request),
+      }, request, env);
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : String(error) }, request, env, 400);
     }

@@ -7,6 +7,7 @@ import { referenceFixtureScore } from "../src/server/data/fixtures";
 import { applyDataOverrides, applyOverrides } from "../src/thumbnail/overrides";
 import { referenceTemplate } from "../src/thumbnail/templates/reference/template";
 import { formatPp } from "../src/shared/formatting/format";
+import { OsuRequestQueue } from "../src/shared/osu/queue";
 
 describe("mods", () => {
   it("normalizes legacy acronym strings and structured mods", () => {
@@ -194,6 +195,23 @@ describe("manual score-data overrides", () => {
     const data = normalizeScore(graveyardScore);
     expect(data.pp).toBeUndefined();
     expect(formatPp(data.pp)).toBe("?PP");
+  });
+});
+
+describe("OsuRequestQueue", () => {
+  it("enqueues and processes tasks with queue statistics", async () => {
+    const queue = new OsuRequestQueue();
+    expect(queue.getStatus().queuedCount).toBe(0);
+
+    const task1 = queue.run(async () => "result1");
+    const task2 = queue.run(async () => "result2");
+
+    const [res1, res2] = await Promise.all([task1, task2]);
+    expect(res1.result).toBe("result1");
+    expect(res2.result).toBe("result2");
+    expect(res1.queueStats.queuePosition).toBeGreaterThanOrEqual(1);
+    expect(res2.queueStats.queuePosition).toBeGreaterThanOrEqual(1);
+    expect(queue.getStatus().totalProcessed).toBe(2);
   });
 });
 

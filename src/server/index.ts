@@ -7,6 +7,7 @@ import { getThumbnailData } from "./data/thumbnailService";
 import { fixtureRegistry } from "./data/fixtures";
 import { generatePng } from "./render/generatePng";
 import { RESOLUTION_PRESETS } from "../thumbnail/types";
+import { globalOsuQueue } from "../shared/osu/queue";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -19,6 +20,10 @@ export function createServer({ serveStatic = true }: { serveStatic?: boolean } =
     res.json({ ok: true });
   });
 
+  app.get("/api/queue-status", (_req, res) => {
+    res.json(globalOsuQueue.getStatus());
+  });
+
   app.get("/api/fixture/:name", (req, res) => {
     const data = fixtureRegistry[req.params.name];
     if (!data) return res.status(404).send(`Unknown fixture: ${req.params.name}`);
@@ -29,8 +34,8 @@ export function createServer({ serveStatic = true }: { serveStatic?: boolean } =
     const url = String(req.query.url ?? "");
     if (!url) return res.status(400).send("Missing url parameter");
     try {
-      const result = await getThumbnailData(url);
-      res.json(result);
+      const { result, queueStats } = await globalOsuQueue.run(() => getThumbnailData(url));
+      res.json({ ...result, queue: queueStats });
     } catch (err) {
       res.status(400).send(String(err instanceof Error ? err.message : err));
     }
