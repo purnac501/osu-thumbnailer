@@ -122,6 +122,13 @@ describe("manual score-data overrides", () => {
     expect(normalizeScore(qualifiedScore).beatmapStatus).toBe("qualified");
   });
 
+  it("maps qualified to approved notch and graveyard to graveyard notch", () => {
+    expect(referenceTemplate.components.starNotch.assets?.qualified).toBe("/assets/osu/notch/approved.png");
+    expect(referenceTemplate.components.starNotch.statusColors?.qualified).toBe("#3EA551");
+    expect(referenceTemplate.components.starNotch.assets?.graveyard).toBe("/assets/osu/notch/graveyard.png");
+    expect(referenceTemplate.components.starNotch.statusColors?.graveyard).toBe("#6D6C70");
+  });
+
   it("keeps custom text in downloaded template overrides", () => {
     const custom = {
       id: "custom-test", text: "2407PP", visible: true, x: 10, y: 20,

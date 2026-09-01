@@ -76,7 +76,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
     // Per-status assets (icons baked in); unranked/graveyard falls back to grayscale.
     assets: {
       ranked: "/assets/osu/notch/ranked.png",
-      qualified: "/assets/osu/notch/qualified.png",
+      qualified: "/assets/osu/notch/approved.png",
       loved: "/assets/osu/notch/loved.png",
       approved: "/assets/osu/notch/approved.png",
       graveyard: "/assets/osu/notch/graveyard.png",
@@ -89,7 +89,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
     // Star-rating colors sampled from the actual notch asset pixels.
     statusColors: {
       ranked: "#3699F3",
-      qualified: "#01A6FF",
+      qualified: "#3EA551",
       loved: "#C3538F",
       approved: "#3EA551",
       graveyard: "#6D6C70",
