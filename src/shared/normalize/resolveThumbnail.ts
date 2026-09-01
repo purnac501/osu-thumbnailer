@@ -30,7 +30,7 @@ export async function resolveThumbnail(url: string, client: OsuClient): Promise<
     baseBpm: score.beatmap?.bpm ?? 0,
   });
   if (data.mods.some((mod) => mod.acronym === "CL") && data.sbCount === 0) {
-    warnings.push("Slider breaks are unavailable for Classic scores. Enter them below.");
+    warnings.push("Classic scores do not include slider-break data. Enter a count below if you know it, or leave it at 0.");
   }
   if (!data.baseBpm) warnings.push("Beatmap BPM unavailable.");
 
