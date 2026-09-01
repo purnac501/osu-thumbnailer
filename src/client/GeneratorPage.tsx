@@ -56,7 +56,6 @@ export function GeneratorPage() {
   const [sliderBreakDraft, setSliderBreakDraft] = useState("0");
   const [missDraft, setMissDraft] = useState("0");
   const [queueCount, setQueueCount] = useState(0);
-  const [mobileTab, setMobileTab] = useState<"preview" | "controls">("preview");
 
   useEffect(() => {
     let unmounted = false;
@@ -166,7 +165,6 @@ export function GeneratorPage() {
         throw new Error(body?.error ?? `Score request failed (${res.status})`);
       }
       setResult((await res.json()) as ThumbnailResult);
-      setMobileTab("preview");
       replaceEditor(EMPTY_EDITOR);
       setHistory({ past: [], future: [] });
       setSelected(null);
@@ -356,46 +354,29 @@ export function GeneratorPage() {
 
   return (
     <div className="app-container">
-      {/* Mobile Tab Switcher */}
-      <div className="mobile-tabs">
-        <button
-          type="button"
-          className={`mobile-tab-btn ${mobileTab === "preview" ? "active" : ""}`}
-          onClick={() => setMobileTab("preview")}
-        >
-          Preview & Canvas
-        </button>
-        <button
-          type="button"
-          className={`mobile-tab-btn ${mobileTab === "controls" ? "active" : ""}`}
-          onClick={() => setMobileTab("controls")}
-        >
-          Controls & Status
-        </button>
-      </div>
-
-      {/* Left / Controls sidebar */}
-      <div className={`app-sidebar ${mobileTab !== "controls" ? "mobile-hidden" : ""}`}>
+      {/* Sidebar with Score input and collapsible feature dropdown bars */}
+      <div className="app-sidebar">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
-          <h1 style={{ fontFamily: '"Baloo 2", sans-serif', margin: 0, fontSize: 26 }}>osu! thumbnailer</h1>
+          <h1 style={{ fontFamily: '"Baloo 2", sans-serif', margin: 0, fontSize: 24, color: "#ffffff", letterSpacing: "-0.5px" }}>osu! thumbnailer</h1>
           <details style={{ position: "relative", zIndex: 80 }}>
-            <summary aria-label="Score data limits" title="Score data limits" style={{ cursor: "pointer", listStyle: "none", width: 26, height: 26, border: "1px solid #54494f", borderRadius: "50%", display: "grid", placeItems: "center", color: "#FF66AA", fontWeight: 700 }}>i</summary>
-            <div style={{ position: "absolute", right: 0, top: 34, width: 280, padding: 14, background: "#241f22", border: "1px solid #54494f", borderRadius: 8, fontSize: 12, lineHeight: 1.5, color: "#d8d0d3", boxShadow: "0 12px 30px rgba(0,0,0,.45)" }}>
-              <strong style={{ color: "#fff" }}>Score data limits</strong>
+            <summary aria-label="Score data limits" title="Score data limits" style={{ cursor: "pointer", listStyle: "none", width: 24, height: 24, border: "1px solid #444444", borderRadius: "50%", display: "grid", placeItems: "center", color: "#ffffff", fontWeight: 700, fontSize: 12 }}>i</summary>
+            <div style={{ position: "absolute", right: 0, top: 32, width: 270, padding: 14, background: "#141414", border: "1px solid #333333", borderRadius: 8, fontSize: 12, lineHeight: 1.5, color: "#cccccc", boxShadow: "0 12px 30px rgba(0,0,0,.8)" }}>
+              <strong style={{ color: "#ffffff" }}>Score data limits</strong>
               <p style={{ margin: "8px 0" }}>Classic scores do not provide slider-break counts. Enter the count only if you know it. Otherwise leave it at 0.</p>
               <p style={{ margin: "8px 0" }}>This editor does not calculate PP if FC. Calculate it elsewhere, then add it as custom text.</p>
               <div style={{ display: "grid", gap: 6 }}>
-                <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>osu! API score data</a>
-                <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#FF66AA" }}>rosu-pp calculation library</a>
+                <a href="https://osu.ppy.sh/docs/" target="_blank" rel="noreferrer" style={{ color: "#ffffff", textDecoration: "underline" }}>osu! API score data</a>
+                <a href="https://github.com/MaxOhn/rosu-pp" target="_blank" rel="noreferrer" style={{ color: "#ffffff", textDecoration: "underline" }}>rosu-pp calculation library</a>
               </div>
             </div>
           </details>
         </div>
 
+        {/* Score URL Input & Fetch */}
         <section style={sectionStyle}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <span style={{ fontSize: 13, color: "#8a8084", fontWeight: 600 }}>Score URL</span>
-            <span style={{ fontSize: 12, color: "#8a8084" }}>Queue: {queueCount}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+            <span style={{ fontSize: 13, color: "#888888", fontWeight: 600 }}>Score URL</span>
+            <span style={{ fontSize: 12, color: "#888888" }}>Queue: {queueCount}</span>
           </div>
           <input
             value={url}
@@ -403,49 +384,27 @@ export function GeneratorPage() {
             placeholder="https://osu.ppy.sh/scores/123456789"
             style={inputStyle}
           />
-          <button onClick={generate} disabled={busy || !url} style={{ ...buttonStyle, width: "100%", marginTop: 10 }}>
+          <button onClick={generate} disabled={busy || !url} style={{ ...buttonStyle, width: "100%", marginTop: 8 }}>
             {busy ? "Fetching..." : "Fetch score"}
           </button>
-          {error ? <div style={{ color: "#f56", marginTop: 8, fontSize: 13 }}>{error}</div> : null}
+          {error ? <div style={{ color: "#ff4d4d", marginTop: 8, fontSize: 13 }}>{error}</div> : null}
           {result && result.warnings.length > 0 ? (
-            <div style={{ color: "#9a8f93", marginTop: 8, fontSize: 12 }}>
+            <div style={{ color: "#888888", marginTop: 8, fontSize: 12 }}>
               {result.warnings.join(" ")}
             </div>
           ) : null}
         </section>
 
-        <section style={sectionStyle}>
-          <label style={labelStyle}>
-            Resolution
-            <select
-              className="app-select"
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value as ResolutionPreset)}
-              style={inputStyle}
-            >
-              {RESOLUTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div role="group" aria-label="Accent" style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <span>Accent</span>
-            <AccentPicker color={editor.accent ?? "#B8B8B8"} onChange={(accent) => set({ accent })} />
-          </div>
-          <label style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={editor.twitchVisible ?? false}
-              onChange={(e) => set({ twitchVisible: e.target.checked }, true)}
-            />
-            Twitch logo
-          </label>
-          {result ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Dropdown Bar 1: Play Status & PP */}
+        {result ? (
+          <details className="feature-dropdown" open>
+            <summary>
+              <span>Play Status & PP</span>
+              <span className="feature-dropdown-arrow">▼</span>
+            </summary>
+            <div className="feature-dropdown-content">
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 13, color: "#8a8084", fontWeight: 600 }}>Play Status</span>
+                <span style={{ fontSize: 12, color: "#888888", fontWeight: 600 }}>Status Preset</span>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
                   <button
                     type="button"
@@ -457,12 +416,12 @@ export function GeneratorPage() {
                       setSelected("status");
                     }}
                     style={{
-                      ...buttonStyle,
-                      background: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#FF66AA" : "#2e282c",
-                      color: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#121013" : "#e8e2e4",
+                      ...secondaryButtonStyle,
+                      background: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#ffffff" : "#141414",
+                      color: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#000000" : "#ffffff",
+                      borderColor: (previewData?.status.kind === "fc" && (previewData?.sbCount ?? 0) === 0) ? "#ffffff" : "#2a2a2a",
                       fontWeight: 700,
-                      padding: "6px 0",
-                      fontSize: 13,
+                      padding: "7px 0",
                     }}
                   >
                     FC
@@ -477,12 +436,12 @@ export function GeneratorPage() {
                       setSelected("status-miss");
                     }}
                     style={{
-                      ...buttonStyle,
-                      background: (previewData?.status.kind === "miss") ? "#FF66AA" : "#2e282c",
-                      color: (previewData?.status.kind === "miss") ? "#121013" : "#e8e2e4",
+                      ...secondaryButtonStyle,
+                      background: (previewData?.status.kind === "miss") ? "#ffffff" : "#141414",
+                      color: (previewData?.status.kind === "miss") ? "#000000" : "#ffffff",
+                      borderColor: (previewData?.status.kind === "miss") ? "#ffffff" : "#2a2a2a",
                       fontWeight: 700,
-                      padding: "6px 0",
-                      fontSize: 13,
+                      padding: "7px 0",
                     }}
                   >
                     Miss
@@ -497,12 +456,12 @@ export function GeneratorPage() {
                       setSelected("status-sb");
                     }}
                     style={{
-                      ...buttonStyle,
-                      background: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#FF66AA" : "#2e282c",
-                      color: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#121013" : "#e8e2e4",
+                      ...secondaryButtonStyle,
+                      background: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#ffffff" : "#141414",
+                      color: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#000000" : "#ffffff",
+                      borderColor: (previewData?.sbCount ?? 0) > 0 && previewData?.status.kind !== "miss" ? "#ffffff" : "#2a2a2a",
                       fontWeight: 700,
-                      padding: "6px 0",
-                      fontSize: 13,
+                      padding: "7px 0",
                     }}
                   >
                     SB
@@ -575,137 +534,160 @@ export function GeneratorPage() {
                 />
               </label>
             </div>
-          ) : null}
-          <button onClick={addCustomText} disabled={!result} style={{ ...buttonStyle, background: "#3a3236", padding: "8px 0" }}>
-            Add text
-          </button>
-          {editor.customTexts?.map((item) => (
-            <div key={item.id} style={{ display: "flex", gap: 6 }}>
-              <input
-                value={item.text}
-                onFocus={() => {
-                  pushHistorySnapshot();
-                  setSelected(item.id);
-                }}
-                onChange={(event) =>
-                  set({
-                    customTexts: editor.customTexts?.map((current) =>
-                      current.id === item.id ? { ...current, text: event.target.value } : current
-                    ),
-                  })
-                }
-                style={{
-                  ...inputStyle,
-                  minWidth: 0,
-                  borderColor: selected === item.id ? "#FF66AA" : undefined,
-                }}
-              />
-              <button
-                onClick={() => removeLayer(item.id)}
-                aria-label="Remove text"
-                style={{ ...buttonStyle, width: 36, padding: 0, background: "#3a3236" }}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </section>
-
-        {selected && isTextLayer(selected) && selectedTextStyle ? (
-          <section
-            style={{
-              ...sectionStyle,
-              background: "#1c171a",
-              padding: "12px 14px",
-              borderRadius: 10,
-              border: "1px solid #3d3439",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#fff",
-              }}
-            >
-              <span>{LAYER_NAMES[selected] ?? "Custom Text"}</span>
-              <button
-                type="button"
-                onClick={() => (selected.startsWith("custom-") ? removeLayer(selected) : resetLayer(selected))}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#FF66AA",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  padding: 0,
-                }}
-              >
-                {selected.startsWith("custom-") ? "Delete" : "Reset"}
-              </button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "flex-end" }}>
-              <label style={{ ...labelStyle, margin: 0 }}>
-                <span>Font size (px)</span>
-                <input
-                  type="number"
-                  min={10}
-                  max={500}
-                  value={selectedTextStyle.fontSize}
-                  onFocus={pushHistorySnapshot}
-                  onChange={(e) => onFontSizeChange(selected, Number(e.target.value))}
-                  style={{ ...inputStyle, width: "100%", padding: "6px 8px" }}
-                />
-              </label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#c9bfc3" }}>
-                <span>Color</span>
-                <ColorPicker
-                  color={selectedTextStyle.color}
-                  onChange={(color) => onColorChange(selected, color)}
-                  label="Text color"
-                  align="right"
-                />
-              </div>
-            </div>
-          </section>
+          </details>
         ) : null}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={undo} disabled={history.past.length === 0} style={{ ...buttonStyle, flex: 1, background: "#3a3236", padding: "8px 0", fontSize: 13 }} disabled-aria-label="undo">
-              Undo (ctrl+Z)
+        {/* Dropdown Bar 2: Custom Text & Layer Options */}
+        <details className="feature-dropdown" open>
+          <summary>
+            <span>Custom Text & Layers</span>
+            <span className="feature-dropdown-arrow">▼</span>
+          </summary>
+          <div className="feature-dropdown-content">
+            <button onClick={addCustomText} disabled={!result} style={{ ...secondaryButtonStyle, width: "100%", padding: "8px 0" }}>
+              + Add custom text
             </button>
-            <button onClick={redo} disabled={history.future.length === 0} style={{ ...buttonStyle, flex: 1, background: "#3a3236", padding: "8px 0", fontSize: 13 }}>
-              Redo (ctrl+Y)
+
+            {editor.customTexts && editor.customTexts.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {editor.customTexts.map((item) => (
+                  <div key={item.id} style={{ display: "flex", gap: 6 }}>
+                    <input
+                      value={item.text}
+                      onFocus={() => {
+                        pushHistorySnapshot();
+                        setSelected(item.id);
+                      }}
+                      onChange={(event) =>
+                        set({
+                          customTexts: editor.customTexts?.map((current) =>
+                            current.id === item.id ? { ...current, text: event.target.value } : current
+                          ),
+                        })
+                      }
+                      style={{
+                        ...inputStyle,
+                        minWidth: 0,
+                        borderColor: selected === item.id ? "#ffffff" : undefined,
+                      }}
+                    />
+                    <button
+                      onClick={() => removeLayer(item.id)}
+                      aria-label="Remove text"
+                      style={{ ...secondaryButtonStyle, width: 36, padding: 0 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {selected && isTextLayer(selected) && selectedTextStyle ? (
+              <div
+                style={{
+                  background: "#111111",
+                  padding: "12px",
+                  borderRadius: 8,
+                  border: "1px solid #2a2a2a",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, fontWeight: 600, color: "#ffffff" }}>
+                  <span>{LAYER_NAMES[selected] ?? "Custom Text"}</span>
+                  <button
+                    type="button"
+                    onClick={() => (selected.startsWith("custom-") ? removeLayer(selected) : resetLayer(selected))}
+                    style={{ background: "none", border: "none", color: "#888888", cursor: "pointer", fontSize: 12, padding: 0, textDecoration: "underline" }}
+                  >
+                    {selected.startsWith("custom-") ? "Delete" : "Reset"}
+                  </button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "flex-end" }}>
+                  <label style={{ ...labelStyle, margin: 0 }}>
+                    <span>Font size (px)</span>
+                    <input
+                      type="number"
+                      min={10}
+                      max={500}
+                      value={selectedTextStyle.fontSize}
+                      onFocus={pushHistorySnapshot}
+                      onChange={(e) => onFontSizeChange(selected, Number(e.target.value))}
+                      style={{ ...inputStyle, width: "100%", padding: "6px 8px" }}
+                    />
+                  </label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#a0a0a0" }}>
+                    <span>Color</span>
+                    <ColorPicker
+                      color={selectedTextStyle.color}
+                      onChange={(color) => onColorChange(selected, color)}
+                      label="Text color"
+                      align="right"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </details>
+
+        {/* Dropdown Bar 3: Appearance & Settings */}
+        <details className="feature-dropdown">
+          <summary>
+            <span>Appearance & Settings</span>
+            <span className="feature-dropdown-arrow">▼</span>
+          </summary>
+          <div className="feature-dropdown-content">
+            <label style={labelStyle}>
+              Resolution
+              <select
+                className="app-select"
+                value={resolution}
+                onChange={(e) => setResolution(e.target.value as ResolutionPreset)}
+                style={inputStyle}
+              >
+                {RESOLUTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div role="group" aria-label="Accent" style={{ ...labelStyle, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Accent Color</span>
+              <AccentPicker color={editor.accent ?? "#B8B8B8"} onChange={(accent) => set({ accent })} align="right" />
+            </div>
+
+            <label style={{ ...labelStyle, flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={editor.twitchVisible ?? false}
+                onChange={(e) => set({ twitchVisible: e.target.checked }, true)}
+              />
+              Twitch logo
+            </label>
+
+            <button
+              onClick={() => {
+                pushHistorySnapshot();
+                replaceEditor(EMPTY_EDITOR);
+                setSliderBreakDraft(String(result?.data.sbCount ?? 0));
+                setSelected(null);
+                setEditingLayer(null);
+              }}
+              style={{ ...secondaryButtonStyle, width: "100%", marginTop: 4 }}
+            >
+              Reset all edits
             </button>
           </div>
-          {selected ? (
-            <button onClick={() => selected.startsWith("custom-") ? removeLayer(selected) : resetLayer(selected)} style={{ ...buttonStyle, background: "#3a3236", padding: "8px 0", fontSize: 13 }}>
-              {selected.startsWith("custom-") ? "Remove selected text" : `Reset "${selected}" to default`}
-            </button>
-          ) : null}
-        </div>
-
-        <button
-          onClick={() => {
-            // Full replacement (not a merge) so every override is cleared.
-            pushHistorySnapshot();
-            replaceEditor(EMPTY_EDITOR);
-            setSliderBreakDraft(String(result?.data.sbCount ?? 0));
-            setSelected(null);
-            setEditingLayer(null);
-          }}
-          style={{ ...buttonStyle, background: "#3a3236", marginTop: "auto" }}
-        >
-          Reset all edits
-        </button>
+        </details>
       </div>
 
-      {/* Right / Preview area */}
-      <div className={`app-preview ${mobileTab !== "preview" ? "mobile-hidden" : ""}`}>
+      {/* Right / Preview area (Top on mobile) */}
+      <div className="app-preview">
         {result ? (
           <>
             <button
@@ -742,8 +724,8 @@ export function GeneratorPage() {
             </div>
           </>
         ) : (
-          <div style={{ color: "#6a5f64", padding: 24, textAlign: "center" }}>
-            Paste a score URL and fetch it to start editing.
+          <div style={{ color: "#777777", padding: 24, textAlign: "center", fontSize: 14 }}>
+            Paste a score URL and click "Fetch score" to edit.
           </div>
         )}
       </div>
@@ -764,26 +746,39 @@ const sectionStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: 5,
   fontSize: 12,
-  color: "#c9bfc3",
+  color: "#a0a0a0",
 };
 
 const inputStyle: React.CSSProperties = {
   padding: "8px 10px",
-  borderRadius: 8,
-  border: "1px solid #3a3236",
-  background: "#141013",
-  color: "#eee",
+  borderRadius: 7,
+  border: "1px solid #2a2a2a",
+  background: "#141414",
+  color: "#ffffff",
   fontFamily: "inherit",
+  fontSize: 13,
 };
 
 const buttonStyle: React.CSSProperties = {
-  padding: "10px 22px",
-  borderRadius: 8,
-  border: "none",
-  background: "#FF66AA",
-  color: "#fff",
+  padding: "9px 18px",
+  borderRadius: 7,
+  border: "1px solid #ffffff",
+  background: "#ffffff",
+  color: "#000000",
   fontWeight: 600,
   cursor: "pointer",
+  fontSize: 13,
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 7,
+  border: "1px solid #2a2a2a",
+  background: "#141414",
+  color: "#ffffff",
+  fontWeight: 500,
+  cursor: "pointer",
+  fontSize: 13,
 };

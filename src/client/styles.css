@@ -1,16 +1,29 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
+  color: #ededed;
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 1px solid #ff66aa;
+  outline: 1px solid #ffffff;
   outline-offset: 1px;
 }
 
 .app-select {
   appearance: none;
   padding-right: 36px !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23c9bfc3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
   background-position: right 12px center !important;
   background-repeat: no-repeat !important;
 }
@@ -23,9 +36,9 @@ summary:focus-visible {
   width: 36px;
   height: 26px;
   padding: 0;
-  border: 1px solid #675b61;
+  border: 1px solid #444444;
   border-radius: 6px;
-  box-shadow: inset 0 0 0 2px #141013;
+  box-shadow: inset 0 0 0 2px #000000;
   cursor: pointer;
 }
 
@@ -36,10 +49,10 @@ summary:focus-visible {
   left: 0;
   width: 200px;
   padding: 10px;
-  border: 1px solid #54494f;
+  border: 1px solid #333333;
   border-radius: 10px;
-  background: #241f22;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  background: #141414;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8);
 }
 
 .accent-popover .react-colorful {
@@ -67,10 +80,10 @@ summary:focus-visible {
   gap: 4px;
   margin-top: 10px;
   padding: 7px 9px;
-  border: 1px solid #3a3236;
+  border: 1px solid #333333;
   border-radius: 7px;
-  color: #9a8f93;
-  background: #141013;
+  color: #888888;
+  background: #000000;
 }
 
 .accent-hex-row input {
@@ -78,40 +91,94 @@ summary:focus-visible {
   padding: 0;
   border: 0;
   outline: 0;
-  color: #eee;
+  color: #ffffff;
   background: transparent;
   font: inherit;
   text-transform: uppercase;
 }
 
 .accent-hex-row:focus-within {
-  border-color: #ff66aa;
-  outline: 1px solid #ff66aa;
+  border-color: #ffffff;
+  outline: 1px solid #ffffff;
   outline-offset: 1px;
 }
 
-/* App layout & Mobile responsiveness */
+/* Feature Dropdown Bars */
+.feature-dropdown {
+  border: 1px solid #222222;
+  border-radius: 8px;
+  background: #0d0d0d;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.feature-dropdown[open] {
+  border-color: #333333;
+}
+
+.feature-dropdown summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #111111;
+  user-select: none;
+  border-bottom: 1px solid transparent;
+}
+
+.feature-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.feature-dropdown[open] summary {
+  border-bottom: 1px solid #222222;
+}
+
+.feature-dropdown-arrow {
+  transition: transform 0.2s ease;
+  font-size: 10px;
+  color: #888888;
+}
+
+.feature-dropdown[open] .feature-dropdown-arrow {
+  transform: rotate(180deg);
+  color: #ffffff;
+}
+
+.feature-dropdown-content {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Layout container */
 .app-container {
   display: flex;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: #121013;
-  color: #e8e2e4;
-  font-family: "Montserrat", sans-serif;
+  background: #000000;
+  color: #ededed;
 }
 
 .app-sidebar {
-  width: 350px;
+  width: 360px;
   flex-shrink: 0;
-  padding: 24px 20px;
-  border-right: 1px solid #2a2427;
+  padding: 20px 18px;
+  border-right: 1px solid #222222;
+  background: #080808;
   overflow-y: auto;
   max-height: 100vh;
   max-height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .app-preview {
@@ -124,78 +191,49 @@ summary:focus-visible {
   align-items: center;
   justify-content: center;
   position: relative;
+  background: #000000;
   padding: 0;
 }
 
-.mobile-tabs {
-  display: none;
-}
-
+/* Mobile Layout (<860px) */
 @media (max-width: 860px) {
   .app-container {
     flex-direction: column;
-  }
-
-  .mobile-tabs {
-    display: flex;
-    gap: 8px;
-    padding: 10px 14px;
-    background: #181416;
-    border-bottom: 1px solid #2a2427;
-    z-index: 30;
-    flex-shrink: 0;
-  }
-
-  .mobile-tab-btn {
-    flex: 1;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid #3a3236;
-    background: #241f22;
-    color: #c9bfc3;
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.15s ease;
-  }
-
-  .mobile-tab-btn.active {
-    background: #ff66aa;
-    border-color: #ff66aa;
-    color: #121013;
-    font-weight: 700;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-y: auto;
   }
 
   .app-sidebar {
     width: 100%;
     max-height: none;
-    flex: 1;
+    flex: none;
     border-right: none;
-    padding: 16px 14px 24px;
-    overflow-y: auto;
-  }
-
-  .app-sidebar.mobile-hidden {
-    display: none !important;
+    padding: 16px 14px;
+    gap: 12px;
+    order: 2; /* Sidebar dropdown features below preview */
   }
 
   .app-preview {
     width: 100%;
-    height: auto;
-    flex: 1;
-    overflow: hidden;
+    height: 380px;
+    min-height: 320px;
+    flex: none;
+    border-bottom: 1px solid #222222;
+    order: 1; /* Preview at top for instant visual feedback */
   }
 
-  .app-preview.mobile-hidden {
-    display: none !important;
+  .mobile-score-header {
+    order: 0; /* URL input & fetch button at the very top */
+    padding: 16px 14px 10px;
+    background: #080808;
+    border-bottom: 1px solid #222222;
   }
 
   .download-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    font-size: 12px !important;
-    padding: 8px 14px !important;
+    position: static !important;
+    width: 100%;
+    margin-top: 10px;
   }
 }

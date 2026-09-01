@@ -479,20 +479,17 @@ export function EditorCanvas({
             }}
             onBlur={finishTextEdit}
             onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                finishTextEdit();
+              }
               if (event.key === "Escape") finishTextEdit();
-            }}
-            onContextMenu={(event) => {
-              if (editing !== "bottom-message") return;
-              const text = window.getSelection()?.toString() ?? "";
-              if (!text) return;
-              event.preventDefault();
-              setAccentMenu({ x: event.clientX, y: event.clientY, text });
             }}
             style={{
               position: "absolute", left: selection.left, top: selection.top,
               width: "max-content", height: "max-content",
               minWidth: 1, minHeight: 1,
-              boxSizing: "border-box", outline: "2px solid #FF66AA",
+              boxSizing: "border-box", outline: "2px solid #ffffff",
               background: "transparent", padding: 0, margin: 0,
               overflow: "visible", whiteSpace: "pre", zIndex: 60, ...editStyle,
             }}
@@ -502,7 +499,7 @@ export function EditorCanvas({
         {accentMenu ? createPortal(
           <div data-editor-control onMouseDown={(event) => event.stopPropagation()}
             style={{ position: "fixed", left: accentMenu.x, top: accentMenu.y, ...menuStyle }}>
-            <button style={{ ...menuButtonStyle, color: "#F0A83C" }} onMouseDown={(event) => event.preventDefault()}
+            <button style={{ ...menuButtonStyle, color: "#ffffff", fontWeight: 600 }} onMouseDown={(event) => event.preventDefault()}
               onClick={() => { onAccentSelection(accentMenu.text); setAccentMenu(null); }}>
               Accent "{accentMenu.text}"
             </button>
@@ -536,11 +533,11 @@ export function EditorCanvas({
           right: 14,
           display: "flex",
           gap: 6,
-          background: "rgba(24, 20, 22, 0.85)",
+          background: "rgba(0, 0, 0, 0.85)",
           backdropFilter: "blur(6px)",
           padding: 5,
           borderRadius: 8,
-          border: "1px solid #3d3439",
+          border: "1px solid #2e2e2e",
           zIndex: 40,
         }}
       >
@@ -548,9 +545,9 @@ export function EditorCanvas({
           type="button"
           onClick={() => setView((v) => ({ ...v, zoom: Math.min(3, v.zoom * 1.25) }))}
           style={{
-            background: "#332b2f",
-            border: "1px solid #4a3e44",
-            color: "#eee",
+            background: "#141414",
+            border: "1px solid #333333",
+            color: "#ffffff",
             borderRadius: 6,
             padding: "4px 10px",
             fontSize: 14,
@@ -565,9 +562,9 @@ export function EditorCanvas({
           type="button"
           onClick={() => setView((v) => ({ ...v, zoom: Math.max(0.15, v.zoom * 0.8) }))}
           style={{
-            background: "#332b2f",
-            border: "1px solid #4a3e44",
-            color: "#eee",
+            background: "#141414",
+            border: "1px solid #333333",
+            color: "#ffffff",
             borderRadius: 6,
             padding: "4px 10px",
             fontSize: 14,
@@ -582,9 +579,9 @@ export function EditorCanvas({
           type="button"
           onClick={resetFitView}
           style={{
-            background: "#332b2f",
-            border: "1px solid #4a3e44",
-            color: "#eee",
+            background: "#141414",
+            border: "1px solid #333333",
+            color: "#ffffff",
             borderRadius: 6,
             padding: "4px 8px",
             fontSize: 11,
@@ -600,10 +597,10 @@ export function EditorCanvas({
   );
 }
 
-const handle = { width: 12, height: 12, background: "#FF66AA", border: "2px solid white", borderRadius: 3 };
+const handle = { width: 12, height: 12, background: "#ffffff", border: "2px solid #000000", borderRadius: 3 };
 const resizeHandles = { topLeft: handle, topRight: handle, bottomLeft: handle, bottomRight: handle };
 const menuStyle: React.CSSProperties = {
-  background: "#241f22", border: "1px solid #54494f", borderRadius: 8,
+  background: "#141414", border: "1px solid #333333", borderRadius: 8,
   padding: 6, zIndex: 100, display: "flex", flexDirection: "column", minWidth: 180,
   fontFamily: '"Montserrat", sans-serif', fontSize: 13,
 };
