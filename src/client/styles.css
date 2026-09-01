@@ -77,9 +77,15 @@ summary:focus-visible {
   width: 100%;
   padding: 0;
   border: 0;
-  outline-offset: 3px;
+  outline: 0;
   color: #eee;
   background: transparent;
   font: inherit;
   text-transform: uppercase;
+}
+
+.accent-hex-row:focus-within {
+  border-color: #ff66aa;
+  outline: 1px solid #ff66aa;
+  outline-offset: 1px;
 }

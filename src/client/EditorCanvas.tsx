@@ -49,7 +49,9 @@ export function EditorCanvas({
 }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const editRef = useRef<HTMLDivElement>(null);
   const panStart = useRef<{ pointerX: number; pointerY: number; x: number; y: number } | null>(null);
+  const geometryStart = useRef<{ hitbox: Rect; layer: Rect } | null>(null);
   const viewPlaced = useRef(false);
   const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
   const [selection, setSelection] = useState<Rect | null>(null);
@@ -93,18 +95,23 @@ export function EditorCanvas({
     const element = elementFor(layer);
     return (element?.querySelector("[data-editor-text]") as HTMLElement | null) ?? element;
   };
-  const rectOf = (layer: string): Rect | null => {
+  const rectOf = (layer: string, fullLayer = false): Rect | null => {
     const canvas = canvasRef.current;
     const element = elementFor(layer);
     if (!canvas || !element) return null;
     const base = canvas.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
-    return {
+    const result = {
       left: (rect.left - base.left) / effectiveScale,
       top: (rect.top - base.top) / effectiveScale,
       width: rect.width / effectiveScale,
       height: rect.height / effectiveScale,
     };
+    if (layer === "grade" && !fullLayer) {
+      result.top += result.height * 0.15;
+      result.height *= 0.7;
+    }
+    return result;
   };
   useLayoutEffect(() => {
     if (editing) return;
@@ -117,7 +124,13 @@ export function EditorCanvas({
     const canvas = canvasRef.current;
     if (!element || !canvas) return;
     const base = canvas.getBoundingClientRect();
-    const bounds = element.getBoundingClientRect();
+    const elementBounds = element.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const textBounds = range.getBoundingClientRect();
+    const bounds = element.dataset.editorText
+      ? elementBounds
+      : { ...elementBounds, left: textBounds.left, width: textBounds.width };
     const rect = {
       left: (bounds.left - base.left) / effectiveScale,
       top: (bounds.top - base.top) / effectiveScale,
@@ -134,12 +147,30 @@ export function EditorCanvas({
       letterSpacing: style.letterSpacing,
       lineHeight: style.lineHeight,
       textAlign: style.textAlign as React.CSSProperties["textAlign"],
+      textTransform: style.textTransform as React.CSSProperties["textTransform"],
       color: style.color,
       textShadow: style.textShadow,
+      display: style.display,
+      alignItems: style.alignItems,
+      justifyContent: style.justifyContent,
+      padding: style.padding,
     });
     element.style.visibility = "hidden";
     return () => { element.style.visibility = ""; };
   }, [editing]);
+
+  useLayoutEffect(() => {
+    const editor = editRef.current;
+    if (!editing || !selection || !editor) return;
+    editor.textContent = draft;
+    editor.focus();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    const selectedText = window.getSelection();
+    selectedText?.removeAllRanges();
+    selectedText?.addRange(range);
+  }, [editing, selection]);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -157,15 +188,18 @@ export function EditorCanvas({
     layer: string,
     bounds: { x: number; y: number; width: number; height: number },
   ) => {
+    const origin = geometryStart.current;
+    const x = bounds.x + (origin ? origin.layer.left - origin.hitbox.left : 0);
+    const y = bounds.y + (origin ? origin.layer.top - origin.hitbox.top : 0);
     if (SIZE_FIELDS[layer]) {
       onResize(layer, {
         [SIZE_FIELDS[layer]!]: Math.max(10, Math.round(bounds.width)),
-        x: Math.round(bounds.x), y: Math.round(bounds.y),
+        x: Math.round(x), y: Math.round(y),
       });
     } else {
       onResize(layer, {
         width: Math.round(bounds.width), height: Math.round(bounds.height),
-        x: Math.round(bounds.x), y: Math.round(bounds.y),
+        x: Math.round(x), y: Math.round(y),
       });
     }
   };
@@ -242,7 +276,7 @@ export function EditorCanvas({
           event.preventDefault();
         }}
         onContextMenu={(event) => {
-          if ((event.target as HTMLElement).closest("textarea")) return;
+          if ((event.target as HTMLElement).closest("[contenteditable]")) return;
           const layer = layerAt(event.target as HTMLElement);
           if (!layer) return;
           event.preventDefault();
@@ -268,9 +302,21 @@ export function EditorCanvas({
               event.stopPropagation();
               onEditStart(selected);
             }}
-            onDragStart={beginInteraction}
-            onDrag={(_event, position) => onMove(selected, position.x, position.y)}
+            onDragStart={() => {
+              geometryStart.current = { hitbox: selection, layer: rectOf(selected, true) ?? selection };
+              beginInteraction();
+            }}
+            onDrag={(_event, position) => {
+              const origin = geometryStart.current;
+              onMove(
+                selected,
+                position.x + (origin ? origin.layer.left - origin.hitbox.left : 0),
+                position.y + (origin ? origin.layer.top - origin.hitbox.top : 0),
+              );
+            }}
+            onDragStop={() => { geometryStart.current = null; }}
             onResizeStart={() => {
+              geometryStart.current = { hitbox: selection, layer: rectOf(selected, true) ?? selection };
               beginInteraction();
             }}
             onResize={(_event, _direction, ref, _delta, position) =>
@@ -278,15 +324,39 @@ export function EditorCanvas({
                 x: position.x, y: position.y, width: ref.offsetWidth, height: ref.offsetHeight,
               })
             }
+            onResizeStop={() => { geometryStart.current = null; }}
           />
         ) : null}
 
         {editing && selection ? (
-          <textarea
-            data-editor-control autoFocus value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              onTextChange(TEXT_KEYS[editing] ?? editing, event.target.value);
+          <div
+            ref={editRef}
+            data-editor-control
+            contentEditable
+            suppressContentEditableWarning
+            onInput={(event) => {
+              const value = event.currentTarget.innerText.replace(/\n$/, "");
+              setDraft(value);
+              onTextChange(TEXT_KEYS[editing] ?? editing, value);
+              if (editing !== "username") {
+                const editor = event.currentTarget;
+                requestAnimationFrame(() => {
+                  const rendered = textElementFor(editing);
+                  if (rendered) {
+                    const style = getComputedStyle(rendered);
+                    editor.style.fontSize = style.fontSize;
+                    editor.style.lineHeight = style.lineHeight;
+                    editor.style.letterSpacing = style.letterSpacing;
+                  }
+                  const bounds = editor.getBoundingClientRect();
+                  onResize(editing, {
+                    x: selection.left,
+                    y: selection.top,
+                    width: bounds.width / effectiveScale,
+                    height: bounds.height / effectiveScale,
+                  });
+                });
+              }
             }}
             onBlur={finishTextEdit}
             onKeyDown={(event) => {
@@ -294,17 +364,18 @@ export function EditorCanvas({
             }}
             onContextMenu={(event) => {
               if (editing !== "bottom-message") return;
-              const text = draft.slice(event.currentTarget.selectionStart, event.currentTarget.selectionEnd);
+              const text = window.getSelection()?.toString() ?? "";
               if (!text) return;
               event.preventDefault();
               setAccentMenu({ x: event.clientX, y: event.clientY, text });
             }}
             style={{
               position: "absolute", left: selection.left, top: selection.top,
-              width: Math.max(selection.width, 80), height: Math.max(selection.height, 24),
-              boxSizing: "border-box", border: "1px solid #FF66AA",
+              width: "max-content", height: "max-content",
+              minWidth: 1, minHeight: selection.height,
+              boxSizing: "border-box", outline: "1px solid #FF66AA",
               background: "transparent", padding: 0, margin: 0,
-              resize: "none", overflow: "hidden", zIndex: 60, ...editStyle,
+              overflow: "visible", whiteSpace: "pre", zIndex: 60, ...editStyle,
             }}
           />
         ) : null}

@@ -47,7 +47,7 @@ export function BadgeLayer({
         letterSpacing: config.letterSpacing,
         color: config.color,
         textTransform: config.textTransform,
-        whiteSpace: "nowrap",
+        whiteSpace: "pre",
         minWidth: 0,
         overflow: "hidden",
         textShadow: TEXT_SHADOW_3D,
