@@ -33,8 +33,12 @@ function starColor(data: ThumbnailData, template: ThumbnailTemplate): string {
   const status = data.beatmapStatus;
   if (colors) {
     if (status && colors[status]) return colors[status];
-    if (status && ["grave", "wip", "pending"].includes(status) && colors.unranked) {
-      return colors.unranked;
+    if (
+      status &&
+      ["graveyard", "grave", "wip", "pending", "unranked", "unknown"].includes(status) &&
+      (colors.graveyard || colors.grave || colors.unranked || colors.unknown)
+    ) {
+      return colors.graveyard ?? colors.grave ?? colors.unranked ?? colors.unknown ?? template.components.starRating.color;
     }
     if (colors.ranked) return colors.ranked;
   }

@@ -108,6 +108,20 @@ describe("manual score-data overrides", () => {
     expect(edited.isFullCombo).toBe(false);
   });
 
+  it("preserves beatmap status from API response", () => {
+    const graveyardScore: ApiScore = {
+      ...referenceFixtureScore,
+      beatmap: { ...referenceFixtureScore.beatmap!, status: "graveyard" },
+    };
+    expect(normalizeScore(graveyardScore).beatmapStatus).toBe("graveyard");
+
+    const qualifiedScore: ApiScore = {
+      ...referenceFixtureScore,
+      beatmap: { ...referenceFixtureScore.beatmap!, status: "qualified" },
+    };
+    expect(normalizeScore(qualifiedScore).beatmapStatus).toBe("qualified");
+  });
+
   it("keeps custom text in downloaded template overrides", () => {
     const custom = {
       id: "custom-test", text: "2407PP", visible: true, x: 10, y: 20,
@@ -120,3 +134,4 @@ describe("manual score-data overrides", () => {
     expect(template.customTexts?.[0]).toMatchObject({ text: "2407PP", x: 30, y: 40 });
   });
 });
+

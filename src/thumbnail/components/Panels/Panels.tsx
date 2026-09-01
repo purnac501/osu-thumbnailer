@@ -128,8 +128,8 @@ export function StarNotch({
   if (config.assets || config.asset) {
     const rawAsset =
       (beatmapStatus && config.assets?.[beatmapStatus]) ??
-      (beatmapStatus && ["grave", "wip", "pending"].includes(beatmapStatus)
-        ? config.assets?.unranked
+      (beatmapStatus && ["graveyard", "grave", "wip", "pending", "unranked", "unknown"].includes(beatmapStatus)
+        ? (config.assets?.graveyard ?? config.assets?.grave ?? config.assets?.unranked ?? config.assets?.unknown)
         : config.assets?.ranked) ??
       config.asset;
     const asset = resolveAssetUrl(rawAsset);
