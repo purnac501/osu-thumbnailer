@@ -196,7 +196,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
   mapTitle: {
     visible: true,
     x: 140,
-    y: 330,
+    y: 340,
     width: 1000,
     maxWidth: 1000,
     fontFamily: FONTS.display,

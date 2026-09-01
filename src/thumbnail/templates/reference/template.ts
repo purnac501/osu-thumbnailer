@@ -52,10 +52,9 @@ export const referenceTemplate: ThumbnailTemplate = {
       C: "#C77BD0",
       D: "#E04A4A",
     },
-    bottomPrefix: "placeholder",
+    bottomPrefix: "",
   },
-  // Default bottom-message accent part; UI inputs override both.
-  bottomHighlightOverride: "text",
+  bottomHighlightOverride: undefined,
   components: referenceLayout,
 };
 
