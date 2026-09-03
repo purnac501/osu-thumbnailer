@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cute & Clean osu! Thumbnail — Local Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: "Fredoka";
+      font-style: normal;
+      font-weight: 700;
+      src: url("/assets/fonts/fredoka-700.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Montserrat";
+      font-style: normal;
+      font-weight: 900;
+      src: url("/assets/fonts/montserrat-900.woff2") format("woff2");
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --accent-color: #FF6584;
+      --accent-glow: rgba(255, 101, 132, 0.45);
+      --accent-soft: rgba(255, 101, 132, 0.18);
+      --glass-bg: rgba(22, 16, 32, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.28);
+    }
+    body {
+      background: #0E0B14;
+      color: #F8F5FC;
+      font-family: "Fredoka", "Montserrat", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 60px;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      max-width: 1280px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #231C30;
+      padding-bottom: 12px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #fff;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
+      font-weight: 700;
+      border-radius: 12px;
+    }
+    .back-link {
+      font-size: 12px;
+      color: #D8D1E8;
+      text-decoration: none;
+      padding: 6px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+    .back-link:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border-color: var(--accent-color);
+    }
+
+    /* Controls bar */
+    .controls {
+      width: 100%;
+      max-width: 1280px;
+      background: rgba(26, 19, 36, 0.85);
+      border: 1px solid #2B213D;
+      border-radius: 16px;
+      padding: 12px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 12px;
+      backdrop-filter: blur(12px);
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    label {
+      color: #C0B7D6;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input[type="text"] {
+      background: rgba(12, 8, 18, 0.8);
+      border: 1.5px solid #3B2E52;
+      color: #fff;
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      border-radius: 10px;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus {
+      border-color: var(--accent-color);
+    }
+    .palette-btn {
+      width: 24px;
+      height: 24px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .palette-btn:hover {
+      transform: scale(1.2);
+    }
+    .palette-btn.active {
+      border-color: #fff;
+      box-shadow: 0 0 10px var(--accent-color);
+    }
+    .btn {
+      padding: 6px 16px;
+      background: var(--accent-color);
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #E2DBF0;
+    }
+
+    /* Thumbnail Canvas (16:9 ratio, 1280x720 base logical) */
+    .thumbnail-wrapper {
+      width: 100%;
+      max-width: 1280px;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      overflow: hidden;
+      background: #110D1A;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px var(--accent-soft);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      user-select: none;
+    }
+
+    /* 1. Crisp Anime Background */
+    .bg-image {
+      position: absolute;
+      inset: 0;
+      background-image: url('/assets/cute/chika-bg.jpg');
+      background-size: cover;
+      background-position: center 30%;
+      filter: blur(0.5px) brightness(0.96) saturate(1.12) contrast(1.04);
+      transform: scale(1.02);
+    }
+
+    /* 2. Soft Darkening Gradient (Preserves character clarity) */
+    .darken-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(16, 10, 24, 0.05) 0%, rgba(16, 10, 24, 0.25) 50%, rgba(16, 10, 24, 0.72) 100%);
+      mix-blend-mode: multiply;
+      pointer-events: none;
+    }
+
+    /* 3. Soft Ambient Edge Glow & Frame */
+    .edge-glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px var(--accent-glow);
+      z-index: 5;
+    }
+    .inner-frame {
+      position: absolute;
+      inset: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.32);
+      border-radius: 20px;
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.12);
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    /* 4. Player Card in Top Left */
+    .player-card {
+      position: absolute;
+      top: 36px;
+      left: 42px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--glass-bg);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 40px;
+      padding: 6px 18px 6px 8px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 20;
+    }
+    .player-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-color);
+      object-fit: cover;
+    }
+    .player-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .player-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .player-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    .player-flag {
+      font-size: 14px;
+    }
+    .player-mods {
+      display: flex;
+      gap: 4px;
+    }
+    .mod-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      background: var(--accent-color);
+      color: #fff;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Star Rating Top Right */
+    .star-badge {
+      position: absolute;
+      top: 38px;
+      right: 42px;
+      background: var(--glass-bg);
+      border: 1.5px solid #FFD166;
+      border-radius: 20px;
+      padding: 7px 18px;
+      color: #FFFDF9;
+      font-size: 16px;
+      font-weight: 700;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3), 0 0 14px rgba(255, 209, 102, 0.4);
+      z-index: 20;
+    }
+
+    /* 5. Floating Cute Sparkles & Stars */
+    .sparkles-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      z-index: 10;
+    }
+
+    /* 6. Lower Content: PP + Status + Acc + Map Title */
+    .hero-content {
+      position: absolute;
+      left: 44px;
+      bottom: 40px;
+      right: 44px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    /* Status Pill */
+    .status-pill {
+      align-self: flex-start;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 6px 20px;
+      background: var(--glass-bg);
+      border: 2px solid var(--accent-color);
+      color: var(--accent-color);
+      border-radius: 16px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), 0 0 16px var(--accent-glow);
+      backdrop-filter: blur(14px);
+    }
+
+    /* Hero PP Counter */
+    .pp-counter {
+      font-size: clamp(48px, 8.8vw, 112px);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: 0.5px;
+      color: #FFFFFF;
+      background: linear-gradient(180deg, #FFFFFF 0%, #FFF2F5 60%, #FFDCE5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 8px 24px rgba(15, 10, 24, 0.75)) drop-shadow(0 0 28px var(--accent-glow));
+      white-space: nowrap;
+    }
+
+    /* Row with Accuracy, Leaderboard & Map Title */
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .meta-pill {
+      font-size: 15px;
+      font-weight: 700;
+      padding: 6px 18px;
+      background: var(--glass-bg);
+      border: 1.5px solid var(--glass-border);
+      color: #FFFFFF;
+      border-radius: 14px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+    .meta-pill.highlight {
+      border-color: #FFEAA7;
+      color: #FFEAA7;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 12px rgba(255, 234, 167, 0.4);
+    }
+    .map-banner {
+      flex: 1;
+      min-width: 250px;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 7px 20px;
+      background: var(--glass-bg);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 14px;
+      color: #FFFFFF;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <h1>Cute & Clean osu! Thumbnail Template — Local Preview</h1>
+      <span class="badge">Pastel & Glassmorphism</span>
+    </div>
+    <a href="/" class="back-link">Open Full Editor &rarr;</a>
+  </header>
+
+  <!-- Interactive Controls Bar -->
+  <div class="controls">
+    <div class="control-group">
+      <label>PP Value:</label>
+      <input type="text" id="input-pp" value="1,120 PP" style="width: 110px;">
+    </div>
+    <div class="control-group">
+      <label>Status:</label>
+      <input type="text" id="input-status" value="✦ FULL COMBO ✦" style="width: 160px;">
+    </div>
+    <div class="control-group">
+      <label>Map Info:</label>
+      <input type="text" id="input-map" value="Chika Fujiwara - Chikatto Chika Chika [Lami's Extra]" style="width: 260px;">
+    </div>
+    <div class="control-group">
+      <label>Pastel Palette:</label>
+      <button class="palette-btn active" style="background: #FF6584;" onclick="setTheme('#FF6584', 'rgba(255, 101, 132, 0.45)', 'rgba(255, 101, 132, 0.18)')" title="Sakura Strawberry"></button>
+      <button class="palette-btn" style="background: #FF7597;" onclick="setTheme('#FF7597', 'rgba(255, 117, 151, 0.45)', 'rgba(255, 117, 151, 0.18)')" title="Strawberry Cream"></button>
+      <button class="palette-btn" style="background: #A29BFE;" onclick="setTheme('#A29BFE', 'rgba(162, 155, 254, 0.45)', 'rgba(162, 155, 254, 0.18)')" title="Sweet Lavender"></button>
+      <button class="palette-btn" style="background: #55E6C1;" onclick="setTheme('#55E6C1', 'rgba(85, 230, 193, 0.45)', 'rgba(85, 230, 193, 0.18)')" title="Mint Macaron"></button>
+      <button class="palette-btn" style="background: #74B9FF;" onclick="setTheme('#74B9FF', 'rgba(116, 185, 255, 0.45)', 'rgba(116, 185, 255, 0.18)')" title="Sky Blue"></button>
+    </div>
+    <div class="control-group">
+      <label class="toggle-label"><input type="checkbox" id="toggle-sparkles" checked> Sparkles</label>
+      <label class="toggle-label"><input type="checkbox" id="toggle-frame" checked> Frame</label>
+      <label class="toggle-label"><input type="checkbox" id="toggle-player" checked> Player</label>
+    </div>
+    <div class="control-group" style="margin-left: auto;">
+      <label>Fetch score:</label>
+      <input type="text" id="input-score-url" placeholder="https://osu.ppy.sh/scores/..." style="width: 190px;">
+      <button id="btn-fetch" class="btn">Fetch</button>
+      <span id="fetch-status" style="font-size: 11px; color: #B0A5C8;"></span>
+    </div>
+  </div>
+
+  <!-- The 1920x1080 Thumbnail Canvas -->
+  <div class="thumbnail-wrapper" id="thumbnail-canvas">
+    <!-- 1. Background Art -->
+    <div class="bg-image" id="bg-image"></div>
+
+    <!-- 2. Darken overlay -->
+    <div class="darken-overlay"></div>
+
+    <!-- 3. Ambient Edge Glow & Frame -->
+    <div class="edge-glow" id="edge-glow"></div>
+    <div class="inner-frame" id="inner-frame"></div>
+
+    <!-- 4. Top Player Card -->
+    <div class="player-card" id="player-card">
+      <img src="/assets/template/fixture-avatar.jpg" class="player-avatar" id="player-avatar" alt="Avatar">
+      <div class="player-info">
+        <div class="player-name-row">
+          <span class="player-name" id="player-name">Chika</span>
+          <span class="player-flag" id="player-flag">🇯🇵</span>
+        </div>
+        <div class="player-mods" id="player-mods">
+          <span class="mod-pill">HD</span>
+          <span class="mod-pill">DT</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Star Rating Top Right -->
+    <div class="star-badge" id="star-badge">★ 8.46★</div>
+
+    <!-- 5. Floating Sparkles & Stars -->
+    <svg class="sparkles-overlay" id="sparkles-overlay" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="cute-sparkle-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" />
+        </filter>
+        <g id="sparkle-star">
+          <path d="M12 0 C12 6.6 6.6 12 0 12 C6.6 12 12 17.4 12 24 C12 17.4 17.4 12 24 12 C17.4 12 12 6.6 12 0 Z" fill="currentColor" />
+        </g>
+      </defs>
+
+      <!-- Sparkle Stars -->
+      <g color="#FFFDF9">
+        <use href="#sparkle-star" x="80" y="85" transform="scale(1.2)" filter="url(#cute-sparkle-glow)" opacity="0.9" />
+        <use href="#sparkle-star" x="80" y="85" transform="scale(1.2)" opacity="1" />
+      </g>
+      <g color="var(--accent-color)">
+        <use href="#sparkle-star" x="140" y="150" transform="scale(0.85)" opacity="0.85" />
+        <use href="#sparkle-star" x="220" y="60" transform="scale(0.7)" opacity="0.75" />
+      </g>
+      <g color="#FFEAA7">
+        <use href="#sparkle-star" x="420" y="110" transform="scale(0.9)" opacity="0.8" />
+        <use href="#sparkle-star" x="850" y="70" transform="scale(1.1)" filter="url(#cute-sparkle-glow)" opacity="0.85" />
+        <use href="#sparkle-star" x="850" y="70" transform="scale(1.1)" opacity="1" />
+      </g>
+      <g color="#A29BFE">
+        <use href="#sparkle-star" x="1140" y="140" transform="scale(1.3)" filter="url(#cute-sparkle-glow)" opacity="0.9" />
+        <use href="#sparkle-star" x="1140" y="140" transform="scale(1.3)" opacity="1" />
+      </g>
+      <g color="#FFFDF9">
+        <use href="#sparkle-star" x="65" y="470" transform="scale(0.9)" opacity="0.9" />
+        <use href="#sparkle-star" x="520" y="520" transform="scale(0.8)" opacity="0.85" />
+      </g>
+      <g color="var(--accent-color)">
+        <use href="#sparkle-star" x="560" y="430" transform="scale(1.0)" filter="url(#cute-sparkle-glow)" opacity="0.85" />
+        <use href="#sparkle-star" x="560" y="430" transform="scale(1.0)" opacity="1" />
+      </g>
+      <circle cx="110" cy="280" r="4.5" fill="#FFFFFF" opacity="0.75" />
+      <circle cx="180" cy="340" r="3" fill="var(--accent-color)" opacity="0.8" />
+      <circle cx="980" cy="180" r="5" fill="#A29BFE" opacity="0.65" />
+      <circle cx="1200" cy="310" r="3.5" fill="#FFFFFF" opacity="0.8" />
+      <circle cx="1110" cy="460" r="4" fill="var(--accent-color)" opacity="0.7" />
+    </svg>
+
+    <!-- 6. Hero Content -->
+    <div class="hero-content">
+      <div class="status-pill" id="display-status">✦ FULL COMBO ✦</div>
+      <div class="pp-counter" id="display-pp">1,120 PP</div>
+      <div class="meta-row">
+        <div class="meta-pill" id="display-acc">99.42% • S Rank</div>
+        <div class="meta-pill highlight" id="display-lb">#1 Global</div>
+        <div class="map-banner" id="display-map">Chika Fujiwara - Chikatto Chika Chika [Lami's Extra]</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const inputPp = document.getElementById("input-pp");
+    const inputStatus = document.getElementById("input-status");
+    const inputMap = document.getElementById("input-map");
+    const displayPp = document.getElementById("display-pp");
+    const displayStatus = document.getElementById("display-status");
+    const displayMap = document.getElementById("display-map");
+    const sparkles = document.getElementById("sparkles-overlay");
+    const frame = document.getElementById("inner-frame");
+    const playerCard = document.getElementById("player-card");
+
+    inputPp.addEventListener("input", () => { displayPp.textContent = inputPp.value; });
+    inputStatus.addEventListener("input", () => { displayStatus.textContent = inputStatus.value; });
+    inputMap.addEventListener("input", () => { displayMap.textContent = inputMap.value; });
+
+    document.getElementById("toggle-sparkles").addEventListener("change", (e) => {
+      sparkles.style.display = e.target.checked ? "block" : "none";
+    });
+    document.getElementById("toggle-frame").addEventListener("change", (e) => {
+      frame.style.display = e.target.checked ? "block" : "none";
+    });
+    document.getElementById("toggle-player").addEventListener("change", (e) => {
+      playerCard.style.display = e.target.checked ? "flex" : "none";
+    });
+
+    function setTheme(color, glow, soft) {
+      document.documentElement.style.setProperty("--accent-color", color);
+      document.documentElement.style.setProperty("--accent-glow", glow);
+      document.documentElement.style.setProperty("--accent-soft", soft);
+      document.querySelectorAll(".palette-btn").forEach(b => {
+        b.classList.toggle("active", b.style.background === color || (b.getAttribute("title") && b.getAttribute("title").includes(color)));
+      });
+    }
+
+    // Score fetcher via local API
+    const btnFetch = document.getElementById("btn-fetch");
+    const inputScore = document.getElementById("input-score-url");
+    const statusText = document.getElementById("fetch-status");
+    const bgImage = document.getElementById("bg-image");
+    const displayAcc = document.getElementById("display-acc");
+    const displayLb = document.getElementById("display-lb");
+    const starBadge = document.getElementById("star-badge");
+    const playerName = document.getElementById("player-name");
+    const playerAvatar = document.getElementById("player-avatar");
+    const playerMods = document.getElementById("player-mods");
+
+    btnFetch.addEventListener("click", async () => {
+      const url = inputScore.value.trim();
+      if (!url) return;
+      statusText.textContent = "Fetching...";
+      try {
+        const res = await fetch(`/api/thumbnail?url=${encodeURIComponent(url)}`);
+        if (!res.ok) throw new Error("API request failed");
+        const json = await res.json();
+        const data = json.data;
+        if (data) {
+          if (data.backgroundUrl) {
+            bgImage.style.backgroundImage = `url("${data.backgroundUrl}")`;
+          }
+          if (data.avatarUrl) {
+            playerAvatar.src = data.avatarUrl;
+          }
+          if (data.username) {
+            playerName.textContent = data.username;
+          }
+          if (data.mods && data.mods.length) {
+            playerMods.innerHTML = data.mods.map(m => `<span class="mod-pill">${m.acronym}</span>`).join("");
+          }
+          const pp = data.pp ? Math.round(data.pp) : 0;
+          displayPp.textContent = `${pp.toLocaleString()} PP`;
+          inputPp.value = displayPp.textContent;
+          const isFc = data.isFullCombo || data.status.kind === "fc";
+          displayStatus.textContent = isFc ? "✦ FULL COMBO ✦" : `★ ${data.missCount || 1}x MISS ★`;
+          inputStatus.value = displayStatus.textContent;
+          const fullMap = `${data.artist} - ${data.title} [${data.difficultyName || "Diff"}]`;
+          displayMap.textContent = fullMap;
+          inputMap.value = fullMap;
+          const acc = (data.accuracy * 100).toFixed(2);
+          displayAcc.textContent = `${acc}% • ${data.grade} Rank`;
+          if (data.leaderboardPosition) {
+            displayLb.textContent = `#${data.leaderboardPosition} Global`;
+            displayLb.style.display = "block";
+          } else {
+            displayLb.style.display = "none";
+          }
+          const sr = data.moddedStarRating || data.baseStarRating;
+          if (sr) starBadge.textContent = `★ ${sr.toFixed(2)}★`;
+          statusText.textContent = "Loaded!";
+        }
+      } catch (err) {
+        statusText.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

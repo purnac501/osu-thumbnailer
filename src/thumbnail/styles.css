@@ -1,5 +1,7 @@
 /* Shared thumbnail styles. Layout stays in template configs; this file only
    neutralizes defaults that would leak into the render. */
+@import "@fontsource/fredoka/index.css";
+@import "@fontsource/dynapuff/index.css";
 
 html,
 body {

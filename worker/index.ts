@@ -1,8 +1,10 @@
 import { createOsuClient, type OsuClient } from "../src/shared/osu/client";
 import { resolveThumbnail } from "../src/shared/normalize/resolveThumbnail";
+import { resolveOverlayData } from "../src/server/overlayResolver";
 import { globalOsuQueue } from "../src/shared/osu/queue";
 import { parseScoreUrl } from "../src/shared/score-url/parseScoreUrl";
 import type { ThumbnailData } from "../src/shared/types/thumbnail";
+import { fixtureRegistry } from "../src/server/data/fixtures";
 
 interface Env {
   OSU_CLIENT_ID: string;
@@ -40,7 +42,7 @@ function proxiedAsset(value: string | undefined, request: Request): string | und
   if (!value || !value.startsWith("http")) return value;
   const endpoint = new URL("/api/image", request.url);
   endpoint.searchParams.set("url", value);
-  return endpoint.toString();
+  return endpoint.pathname + endpoint.search;
 }
 
 function proxyThumbnailAssets(data: ThumbnailData, request: Request): ThumbnailData {
@@ -57,8 +59,10 @@ async function imageResponse(request: Request, env: Env): Promise<Response> {
   if (!source) return json({ error: "Missing image URL" }, request, env, 400);
 
   const clientIp = request.headers.get("CF-Connecting-IP") ?? "local";
-  const { success } = await env.IMAGE_RATE_LIMITER.limit({ key: clientIp });
-  if (!success) return json({ error: "Too many image requests" }, request, env, 429);
+  if (clientIp !== "local" && clientIp !== "127.0.0.1") {
+    const { success } = await env.IMAGE_RATE_LIMITER.limit({ key: clientIp });
+    if (!success) return json({ error: "Too many image requests" }, request, env, 429);
+  }
 
   let url: URL;
   try {
@@ -90,21 +94,57 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const origin = request.headers.get("Origin");
     const localWorker = ["localhost", "127.0.0.1"].includes(new URL(request.url).hostname);
-    if (env.ALLOWED_ORIGIN && origin && origin !== env.ALLOWED_ORIGIN && !(localWorker && origin.startsWith("http://localhost:"))) {
+    if (
+      env.ALLOWED_ORIGIN &&
+      origin &&
+      origin !== env.ALLOWED_ORIGIN &&
+      !(
+        localWorker &&
+        (origin.startsWith("http://localhost:") ||
+          origin.startsWith("http://192.168.") ||
+          origin.startsWith("http://10.") ||
+          origin.startsWith("http://172.") ||
+          origin.startsWith("http://100."))
+      )
+    ) {
       return json({ error: "Origin is not allowed" }, request, env, 403);
     }
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(request, env) });
-    if (request.method !== "GET") return json({ error: "Method not allowed" }, request, env, 405);
+    if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "Method not allowed" }, request, env, 405);
 
     const url = new URL(request.url);
     if (url.pathname === "/api/health") return json({ ok: true }, request, env);
     if (url.pathname === "/api/queue-status") return json(globalOsuQueue.getStatus(), request, env);
+    if (url.pathname.startsWith("/api/fixture")) {
+      const parts = url.pathname.split("/");
+      const name = parts[3] || "reference";
+      const data = fixtureRegistry[name] ?? fixtureRegistry.reference;
+      return json({ data, mode: "fixture", warnings: [] }, request, env);
+    }
     if (url.pathname === "/api/image") {
       try {
         return await imageResponse(request, env);
       } catch (error) {
         console.error(error);
         return json({ error: "Image unavailable" }, request, env, 502);
+      }
+    }
+    if (url.pathname === "/api/overlay-data") {
+      const targetUrl = url.searchParams.get("url") || "";
+      try {
+        osuClient ??= createOsuClient({
+          clientId: env.OSU_CLIENT_ID,
+          clientSecret: env.OSU_CLIENT_SECRET,
+          beforeRequest: async () => {
+            const { success: upstreamAllowed } = await env.OSU_RATE_LIMITER.limit({ key: "osu-api" });
+            if (!upstreamAllowed) throw new Error("Upstream request limit reached");
+          },
+        });
+        const data = await resolveOverlayData(targetUrl, osuClient, (u) => proxiedAsset(u, request));
+        return json({ data }, request, env);
+      } catch (err) {
+        console.error("Overlay data fetch error:", err);
+        return json({ error: "Failed to load overlay data" }, request, env, 500);
       }
     }
     if (url.pathname !== "/api/thumbnail") return json({ error: "Not found" }, request, env, 404);

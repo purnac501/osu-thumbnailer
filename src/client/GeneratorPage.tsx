@@ -6,25 +6,32 @@ import "@fontsource/baloo-2/400.css";
 import "@fontsource/baloo-2/700.css";
 import "@fontsource/montserrat/400.css";
 import "@fontsource/montserrat/600.css";
+import "@fontsource/fredoka/400.css";
+import "@fontsource/fredoka/600.css";
+import "@fontsource/fredoka/700.css";
+import "@fontsource/dynapuff/700.css";
 import "flag-icons/css/flag-icons.min.css";
 import "../thumbnail/styles.css";
 import { templates } from "../thumbnail/templates/registry";
 import { applyDataOverrides, applyOverrides, type EditorState } from "../thumbnail/overrides";
 import { computeTexts } from "../thumbnail/texts";
 import { RESOLUTION_PRESETS, type ResolutionPreset } from "../thumbnail/types";
-import type { ThumbnailResult } from "../shared/types/thumbnail";
+import type { ThumbnailResult, ThumbnailData } from "../shared/types/thumbnail";
+import { sampleImagePalette, applyColorsToRoot } from "../thumbnail/color-sampler";
+import { loadGoogleFont } from "../thumbnail/fonts";
 import { EditorCanvas, getLayerTextStyle, getTextKeyForLayer, isTextLayer, LAYER_NAMES } from "./EditorCanvas";
 import { AccentPicker, ColorPicker } from "./AccentPicker";
 import "./styles.css";
 
 const RESOLUTIONS = Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[];
-const STORAGE_KEY = "osu-thumbnailer-editor-v1";
+const STORAGE_KEY = "osu-thumbnailer-editor-v3";
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
 interface SavedState {
   url: string;
   resolution: ResolutionPreset;
   editor: EditorState;
+  templateId?: string;
 }
 
 function loadSaved(): SavedState {
@@ -37,11 +44,12 @@ function loadSaved(): SavedState {
   return {
     url: "",
     resolution: "1280x720",
-    editor: { accent: "#B8B8B8", twitchVisible: true },
+    editor: { twitchVisible: false, accent: "#00F0FF" },
+    templateId: "showcase",
   };
 }
 
-const EMPTY_EDITOR: EditorState = { accent: "#B8B8B8", twitchVisible: false };
+const EMPTY_EDITOR: EditorState = { twitchVisible: false };
 
 /** Main app: fetch a score, then edit every element and download the PNG. */
 export function GeneratorPage() {
@@ -58,6 +66,42 @@ export function GeneratorPage() {
   const [sliderBreakDraft, setSliderBreakDraft] = useState("0");
   const [missDraft, setMissDraft] = useState("0");
   const [sidebarAccentText, setSidebarAccentText] = useState("");
+  const [templateId, setTemplateId] = useState<string>(saved.templateId ?? "showcase");
+
+  useEffect(() => {
+    loadGoogleFont("Teko");
+    loadGoogleFont("Bebas Neue");
+    loadGoogleFont("Kaushan Script");
+    loadGoogleFont("Russo One");
+    loadGoogleFont("Paytone One");
+  }, []);
+
+  useEffect(() => {
+    const bgUrl = result?.data?.backgroundUrl;
+    if (bgUrl && typeof window !== "undefined") {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const palette = sampleImagePalette(img);
+        applyColorsToRoot(palette);
+      };
+      img.src = bgUrl;
+    }
+  }, [result?.data?.backgroundUrl]);
+
+  useEffect(() => {
+    if (!result) {
+      fetch(`${API_BASE}/api/fixture/${templateId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json: { data?: ThumbnailData } | null) => {
+          if (json?.data) {
+            setResult({ data: json.data, warnings: [], mode: "live" });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [templateId]);
+
   // History for undo/redo.
   const [history, setHistory] = useState<{ past: EditorState[]; future: EditorState[] }>({
     past: [],
@@ -66,8 +110,8 @@ export function GeneratorPage() {
   const editorRef = useRef(editor);
   useEffect(() => {
     editorRef.current = editor;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ url, resolution, editor }));
-  }, [url, resolution, editor]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ url, resolution, editor, templateId }));
+  }, [url, resolution, editor, templateId]);
 
   /** Full replacement (reset, undo, redo) - never a partial merge. */
   const replaceEditor = (next: EditorState) => setEditor(next);
@@ -120,7 +164,7 @@ export function GeneratorPage() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
-  const base = Object.values(templates)[0]!;
+  const base = templates[templateId] ?? Object.values(templates)[0]!;
   const template = useMemo(() => applyOverrides(base, editor), [base, editor]);
   const previewData = useMemo(
     () => result ? applyDataOverrides(result.data, editor) : null,
@@ -388,6 +432,17 @@ export function GeneratorPage() {
           </Popover.Root>
         </div>
         <Flex className="toolbar-actions" align="center" gap="2">
+          <Select.Root size="2" value={templateId} onValueChange={(val) => {
+            mutate({ accent: undefined }, true);
+            setTemplateId(val);
+          }}>
+            <Select.Trigger className="toolbar-select" aria-label="Template selector" />
+            <Select.Content position="popper">
+              {Object.entries(templates).map(([id, t]) => (
+                <Select.Item key={id} value={id}>{t.name}</Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
           <Select.Root size="2" value={resolution} onValueChange={(value) => setResolution(value as ResolutionPreset)}>
             <Select.Trigger className="toolbar-select" aria-label="Canvas resolution" />
             <Select.Content position="popper">

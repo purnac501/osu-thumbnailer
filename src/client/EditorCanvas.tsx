@@ -39,6 +39,7 @@ export const LAYER_NAMES: Record<string, string> = {
   leaderboard: "Leaderboard Rank",
   username: "Username",
   "bottom-message": "Bottom Message",
+  sparkles: "Cute Sparkles",
 };
 
 export function getLayerTextStyle(

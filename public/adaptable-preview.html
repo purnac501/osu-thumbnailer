@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adaptable & Customizable osu! Thumbnail — Local Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DynaPuff:wght@600;700&family=Fredoka:wght@600;700&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: "DynaPuff";
+      font-style: normal;
+      font-weight: 700;
+      src: url("/assets/fonts/dynapuff-700.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Fredoka";
+      font-style: normal;
+      font-weight: 700;
+      src: url("/assets/fonts/fredoka-700.woff2") format("woff2");
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --accent-color: #55E6C1;
+      --accent-glow: rgba(85, 230, 193, 0.45);
+      --accent-soft: rgba(85, 230, 193, 0.15);
+      --grad-top: linear-gradient(180deg, #FFEAA7 0%, #55E6C1 50%, #10AC84 100%);
+      --grad-bottom: linear-gradient(180deg, #FFFFFF 0%, #E8EEEA 50%, #B8C8BC 100%);
+      --glass-bg: rgba(18, 24, 20, 0.8);
+      --glass-border: rgba(255, 255, 255, 0.32);
+      --stroke-color: #101612;
+      --bg-blur: 1.5px;
+      --bg-brightness: 1.06;
+      --bg-saturation: 1.2;
+    }
+    body {
+      background: #0B0F0D;
+      color: #F0F6F2;
+      font-family: "DynaPuff", "Fredoka", "Montserrat", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 16px 60px;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      max-width: 1280px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1C2620;
+      padding-bottom: 10px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #fff;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
+      font-weight: 700;
+      border-radius: 12px;
+    }
+    .back-link {
+      font-size: 12px;
+      color: #B8D0C2;
+      text-decoration: none;
+      padding: 6px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+    .back-link:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border-color: var(--accent-color);
+    }
+
+    /* Controls Panel */
+    .controls {
+      width: 100%;
+      max-width: 1280px;
+      background: rgba(18, 26, 21, 0.88);
+      border: 1px solid #23342A;
+      border-radius: 16px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      backdrop-filter: blur(12px);
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    label {
+      color: #A4BFB0;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input[type="text"] {
+      background: rgba(10, 16, 12, 0.85);
+      border: 1.5px solid #283D31;
+      color: #fff;
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      border-radius: 10px;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus {
+      border-color: var(--accent-color);
+    }
+    input[type="range"] {
+      accent-color: var(--accent-color);
+      width: 80px;
+    }
+    .palette-btn {
+      width: 24px;
+      height: 24px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .palette-btn:hover {
+      transform: scale(1.2);
+    }
+    .palette-btn.active {
+      border-color: #fff;
+      box-shadow: 0 0 10px var(--accent-color);
+    }
+    .btn {
+      padding: 6px 16px;
+      background: var(--accent-color);
+      color: #0A120E;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    .mode-btn {
+      padding: 5px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #C0DACB;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+    .mode-btn.active {
+      background: var(--accent-color);
+      color: #0A120E;
+      border-color: var(--accent-color);
+    }
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #D6E8DE;
+    }
+
+    /* 16:9 Thumbnail Canvas */
+    .thumbnail-wrapper {
+      width: 100%;
+      max-width: 1280px;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      overflow: hidden;
+      background: #0E1410;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 40px var(--accent-soft);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      user-select: none;
+    }
+
+    /* 1. Dynamic Background with Depth of Field & Exposure Boost */
+    .bg-image {
+      position: absolute;
+      inset: -10px;
+      background-image: url('/assets/adaptable/lemontree-bg.jpg');
+      background-size: cover;
+      background-position: center 30%;
+      filter: blur(var(--bg-blur)) brightness(var(--bg-brightness)) saturate(var(--bg-saturation)) contrast(1.08);
+      transform: scale(1.03);
+      transition: filter 0.2s ease;
+    }
+
+    /* 2. Multiply Darken Overlay */
+    .darken-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(10, 16, 12, 0.05) 0%, rgba(10, 16, 12, 0.35) 50%, rgba(10, 16, 12, 0.82) 100%);
+      mix-blend-mode: multiply;
+      pointer-events: none;
+    }
+
+    /* 3. Inward Edge Glow & Tutorial Border Frame */
+    .edge-glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px var(--accent-glow);
+      z-index: 5;
+    }
+    .inner-frame {
+      position: absolute;
+      inset: 22px;
+      border: 2.5px solid rgba(255, 255, 255, 0.42);
+      border-radius: 18px;
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.12);
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    /* 4. Top Player Card */
+    .player-card {
+      position: absolute;
+      top: 38px;
+      left: 44px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--glass-bg);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 40px;
+      padding: 6px 18px 6px 8px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      z-index: 20;
+    }
+    .player-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-color);
+      object-fit: cover;
+    }
+    .player-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .player-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .player-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    .player-flag {
+      font-size: 14px;
+    }
+    .player-mods {
+      display: flex;
+      gap: 4px;
+    }
+    .mod-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      background: var(--accent-color);
+      color: #0A120E;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Star Rating Badge (Top Right) */
+    .star-badge {
+      position: absolute;
+      top: 38px;
+      right: 44px;
+      background: var(--glass-bg);
+      border: 1.5px solid #FFD166;
+      border-radius: 20px;
+      padding: 7px 18px;
+      color: #FFFDF9;
+      font-size: 16px;
+      font-weight: 700;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35), 0 0 14px rgba(255, 209, 102, 0.4);
+      z-index: 20;
+    }
+
+    /* 5. Signature Bubbly 3D Typography on Left Side */
+    .title-block {
+      position: absolute;
+      left: 48px;
+      bottom: 44px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    /* Status pill above text */
+    .status-pill {
+      align-self: flex-start;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 5px 18px;
+      background: var(--glass-bg);
+      border: 2px solid var(--accent-color);
+      color: var(--accent-color);
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 14px var(--accent-glow);
+      backdrop-filter: blur(12px);
+      margin-bottom: 6px;
+    }
+
+    /* Line 1: Primary Bubbly 3D Gradient Text */
+    .text-line1 {
+      font-family: "DynaPuff", "Fredoka", sans-serif;
+      font-size: clamp(48px, 8.8vw, 114px);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: 1px;
+      background: var(--grad-top);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      -webkit-text-stroke: 4px var(--stroke-color);
+      paint-order: stroke fill;
+      filter: drop-shadow(-5px 9px 0px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 24px var(--accent-glow));
+      white-space: nowrap;
+    }
+
+    /* Line 2: Secondary Metallic Silver Bubbly Text */
+    .text-line2 {
+      font-family: "DynaPuff", "Fredoka", sans-serif;
+      font-size: clamp(38px, 7.2vw, 92px);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: 1px;
+      background: var(--grad-bottom);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      -webkit-text-stroke: 3.5px var(--stroke-color);
+      paint-order: stroke fill;
+      filter: drop-shadow(-5px 9px 0px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 16px rgba(0, 0, 0, 0.7));
+      white-space: nowrap;
+    }
+
+    /* Meta Badges Row */
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .meta-pill {
+      font-size: 14px;
+      font-weight: 700;
+      padding: 5px 16px;
+      background: var(--glass-bg);
+      border: 1.5px solid var(--glass-border);
+      color: #FFFFFF;
+      border-radius: 12px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+    .meta-pill.highlight {
+      border-color: #FFEAA7;
+      color: #FFEAA7;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 12px rgba(255, 234, 167, 0.35);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <h1>Adaptable osu! Thumbnail Template — Local Preview</h1>
+      <span class="badge">Zyoan Tutorial Style</span>
+    </div>
+    <a href="/" class="back-link">Open Full Editor &rarr;</a>
+  </header>
+
+  <!-- Controls Panel -->
+  <div class="controls">
+    <!-- Row 1: Text & Mode Selection -->
+    <div class="controls-row">
+      <div class="control-group">
+        <label>Preset Mode:</label>
+        <button class="mode-btn active" id="mode-map" onclick="setMode('map')">Map Title</button>
+        <button class="mode-btn" id="mode-perf" onclick="setMode('perf')">Performance PP</button>
+      </div>
+      <div class="control-group">
+        <label>Line 1:</label>
+        <input type="text" id="input-line1" value="LEMON" style="width: 140px;">
+      </div>
+      <div class="control-group">
+        <label>Line 2:</label>
+        <input type="text" id="input-line2" value="TREE" style="width: 140px;">
+      </div>
+      <div class="control-group">
+        <label>Status Pill:</label>
+        <input type="text" id="input-status" value="✦ FULL COMBO ✦" style="width: 150px;">
+      </div>
+    </div>
+
+    <!-- Row 2: Photographic Grading & Palettes -->
+    <div class="controls-row">
+      <div class="control-group">
+        <label>Palette:</label>
+        <button class="palette-btn active" style="background: #55E6C1;" onclick="setPalette('#55E6C1', 'rgba(85, 230, 193, 0.45)', 'rgba(85, 230, 193, 0.15)', 'linear-gradient(180deg, #FFEAA7 0%, #55E6C1 50%, #10AC84 100%)')" title="Lemon & Lime"></button>
+        <button class="palette-btn" style="background: #FF6584;" onclick="setPalette('#FF6584', 'rgba(255, 101, 132, 0.45)', 'rgba(255, 101, 132, 0.15)', 'linear-gradient(180deg, #FFF2F5 0%, #FF6584 50%, #D81B60 100%)')" title="Sakura Strawberry"></button>
+        <button class="palette-btn" style="background: #00D2D3;" onclick="setPalette('#00D2D3', 'rgba(0, 210, 211, 0.45)', 'rgba(0, 210, 211, 0.15)', 'linear-gradient(180deg, #E0F7FA 0%, #00D2D3 50%, #0984E3 100%)')" title="Electric Cyan"></button>
+        <button class="palette-btn" style="background: #FFA801;" onclick="setPalette('#FFA801', 'rgba(255, 168, 1, 0.45)', 'rgba(255, 168, 1, 0.15)', 'linear-gradient(180deg, #FFF9E6 0%, #FFA801 50%, #FF3838 100%)')" title="Sunset Gold"></button>
+        <button class="palette-btn" style="background: #A29BFE;" onclick="setPalette('#A29BFE', 'rgba(162, 155, 254, 0.45)', 'rgba(162, 155, 254, 0.15)', 'linear-gradient(180deg, #F3E8FF 0%, #A29BFE 50%, #6C5CE7 100%)')" title="Neon Violet"></button>
+      </div>
+      <div class="control-group">
+        <label>DoF Blur:</label>
+        <input type="range" id="slider-blur" min="0" max="6" step="0.5" value="1.5">
+        <span id="blur-val" style="font-size: 11px;">1.5px</span>
+      </div>
+      <div class="control-group">
+        <label>Brightness:</label>
+        <input type="range" id="slider-bright" min="80" max="140" step="5" value="106">
+        <span id="bright-val" style="font-size: 11px;">106%</span>
+      </div>
+      <div class="control-group">
+        <label class="toggle-label"><input type="checkbox" id="toggle-frame" checked> Inner Frame</label>
+        <label class="toggle-label"><input type="checkbox" id="toggle-player" checked> Player</label>
+      </div>
+      <div class="control-group" style="margin-left: auto;">
+        <label>Fetch any score:</label>
+        <input type="text" id="input-score-url" placeholder="https://osu.ppy.sh/scores/..." style="width: 180px;">
+        <button id="btn-fetch" class="btn">Fetch</button>
+        <span id="fetch-status" style="font-size: 11px; color: #9EBAAA;"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- The 16:9 Adaptable Canvas -->
+  <div class="thumbnail-wrapper" id="thumbnail-canvas">
+    <!-- 1. Background Image -->
+    <div class="bg-image" id="bg-image"></div>
+
+    <!-- 2. Darkening overlay -->
+    <div class="darken-overlay"></div>
+
+    <!-- 3. Ambient Glow & Inner Frame -->
+    <div class="edge-glow" id="edge-glow"></div>
+    <div class="inner-frame" id="inner-frame"></div>
+
+    <!-- 4. Player Card -->
+    <div class="player-card" id="player-card">
+      <img src="/assets/template/fixture-avatar.jpg" class="player-avatar" id="player-avatar" alt="Avatar">
+      <div class="player-info">
+        <div class="player-name-row">
+          <span class="player-name" id="player-name">Zyoan</span>
+          <span class="player-flag" id="player-flag">🇪🇸</span>
+        </div>
+        <div class="player-mods" id="player-mods">
+          <span class="mod-pill">HD</span>
+          <span class="mod-pill">DT</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Star Rating Badge -->
+    <div class="star-badge" id="star-badge">★ 7.82★</div>
+
+    <!-- 5. Signature Bubbly 3D Title Block -->
+    <div class="title-block">
+      <div class="status-pill" id="display-status">✦ FULL COMBO ✦</div>
+      <div class="text-line1" id="display-line1">LEMON</div>
+      <div class="text-line2" id="display-line2">TREE</div>
+      <div class="meta-row">
+        <div class="meta-pill" id="display-acc">99.12% • S Rank</div>
+        <div class="meta-pill highlight" id="display-lb">#1 Global</div>
+        <div class="meta-pill" id="display-combo">1,540x Max Combo</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const line1 = document.getElementById("display-line1");
+    const line2 = document.getElementById("display-line2");
+    const statusPill = document.getElementById("display-status");
+    const inputLine1 = document.getElementById("input-line1");
+    const inputLine2 = document.getElementById("input-line2");
+    const inputStatus = document.getElementById("input-status");
+    const bgImage = document.getElementById("bg-image");
+    const innerFrame = document.getElementById("inner-frame");
+    const playerCard = document.getElementById("player-card");
+    const sliderBlur = document.getElementById("slider-blur");
+    const sliderBright = document.getElementById("slider-bright");
+    const blurVal = document.getElementById("blur-val");
+    const brightVal = document.getElementById("bright-val");
+
+    inputLine1.addEventListener("input", () => { line1.textContent = inputLine1.value; });
+    inputLine2.addEventListener("input", () => { line2.textContent = inputLine2.value; });
+    inputStatus.addEventListener("input", () => { statusPill.textContent = inputStatus.value; });
+
+    sliderBlur.addEventListener("input", (e) => {
+      document.documentElement.style.setProperty("--bg-blur", e.target.value + "px");
+      blurVal.textContent = e.target.value + "px";
+    });
+    sliderBright.addEventListener("input", (e) => {
+      document.documentElement.style.setProperty("--bg-brightness", (e.target.value / 100).toString());
+      brightVal.textContent = e.target.value + "%";
+    });
+
+    document.getElementById("toggle-frame").addEventListener("change", (e) => {
+      innerFrame.style.display = e.target.checked ? "block" : "none";
+    });
+    document.getElementById("toggle-player").addEventListener("change", (e) => {
+      playerCard.style.display = e.target.checked ? "flex" : "none";
+    });
+
+    function setPalette(accent, glow, soft, grad) {
+      document.documentElement.style.setProperty("--accent-color", accent);
+      document.documentElement.style.setProperty("--accent-glow", glow);
+      document.documentElement.style.setProperty("--accent-soft", soft);
+      document.documentElement.style.setProperty("--grad-top", grad);
+      document.querySelectorAll(".palette-btn").forEach(b => {
+        b.classList.toggle("active", b.style.background === accent || (b.getAttribute("title") && b.getAttribute("title").includes(accent)));
+      });
+    }
+
+    let currentScoreData = null;
+
+    function setMode(mode) {
+      document.getElementById("mode-map").classList.toggle("active", mode === "map");
+      document.getElementById("mode-perf").classList.toggle("active", mode === "perf");
+      if (mode === "map") {
+        if (currentScoreData) {
+          const title = (currentScoreData.title || "LEMON TREE").toUpperCase();
+          const words = title.split(" ");
+          if (words.length > 1) {
+            inputLine1.value = words[0];
+            inputLine2.value = words.slice(1).join(" ");
+          } else {
+            inputLine1.value = title;
+            inputLine2.value = (currentScoreData.artist || "MAP").toUpperCase();
+          }
+        } else {
+          inputLine1.value = "LEMON";
+          inputLine2.value = "TREE";
+        }
+      } else {
+        const pp = currentScoreData?.pp ? Math.round(currentScoreData.pp) : 980;
+        inputLine1.value = `${pp.toLocaleString()} PP`;
+        const isFc = currentScoreData?.isFullCombo || currentScoreData?.status?.kind === "fc";
+        inputLine2.value = isFc ? "FULL COMBO" : "CHOKE";
+      }
+      line1.textContent = inputLine1.value;
+      line2.textContent = inputLine2.value;
+    }
+
+    // Score fetcher via local API
+    const btnFetch = document.getElementById("btn-fetch");
+    const inputScore = document.getElementById("input-score-url");
+    const statusText = document.getElementById("fetch-status");
+    const displayAcc = document.getElementById("display-acc");
+    const displayLb = document.getElementById("display-lb");
+    const displayCombo = document.getElementById("display-combo");
+    const starBadge = document.getElementById("star-badge");
+    const playerName = document.getElementById("player-name");
+    const playerAvatar = document.getElementById("player-avatar");
+    const playerMods = document.getElementById("player-mods");
+
+    btnFetch.addEventListener("click", async () => {
+      const url = inputScore.value.trim();
+      if (!url) return;
+      statusText.textContent = "Fetching...";
+      try {
+        const res = await fetch(`/api/thumbnail?url=${encodeURIComponent(url)}`);
+        if (!res.ok) throw new Error("API request failed");
+        const json = await res.json();
+        const data = json.data;
+        if (data) {
+          currentScoreData = data;
+          if (data.backgroundUrl) {
+            bgImage.style.backgroundImage = `url("${data.backgroundUrl}")`;
+          }
+          if (data.avatarUrl) {
+            playerAvatar.src = data.avatarUrl;
+          }
+          if (data.username) {
+            playerName.textContent = data.username;
+          }
+          if (data.mods && data.mods.length) {
+            playerMods.innerHTML = data.mods.map(m => `<span class="mod-pill">${m.acronym}</span>`).join("");
+          }
+          const isFc = data.isFullCombo || data.status.kind === "fc";
+          statusPill.textContent = isFc ? "✦ FULL COMBO ✦" : `★ ${data.missCount || 1}x MISS ★`;
+          inputStatus.value = statusPill.textContent;
+
+          // Set text according to active mode
+          const isMapMode = document.getElementById("mode-map").classList.contains("active");
+          setMode(isMapMode ? "map" : "perf");
+
+          const acc = (data.accuracy * 100).toFixed(2);
+          displayAcc.textContent = `${acc}% • ${data.grade} Rank`;
+          if (data.maxCombo) {
+            displayCombo.textContent = `${data.maxCombo.toLocaleString()}x Max Combo`;
+          }
+          if (data.leaderboardPosition) {
+            displayLb.textContent = `#${data.leaderboardPosition} Global`;
+            displayLb.style.display = "block";
+          } else {
+            displayLb.style.display = "none";
+          }
+          const sr = data.moddedStarRating || data.baseStarRating;
+          if (sr) starBadge.textContent = `★ ${sr.toFixed(2)}★`;
+          statusText.textContent = "Loaded!";
+        }
+      } catch (err) {
+        statusText.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

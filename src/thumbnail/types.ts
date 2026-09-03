@@ -19,11 +19,14 @@ export interface LayerBase {
 export interface TextEffect {
   /** Simple drop shadow. */
   shadow?: { offsetX: number; offsetY: number; blur: number; color: string };
-  /**
-   * Soft outer glow (layered text-shadow). When color is omitted the glow
-   * automatically matches the text color.
-   */
+  /** Soft outer glow (layered text-shadow). */
   glow?: { color?: string; blur: number; layers?: number };
+  /** Optional gradient text fill (e.g. linear-gradient(180deg, ...)). */
+  gradient?: string;
+  /** Optional text stroke outline. */
+  stroke?: { width: number; color: string };
+  /** Solid 3D stepped block extrusion. */
+  extrusion?: { depth: number; color?: string; offsetX?: number; offsetY?: number };
 }
 
 export interface TextLayerConfig extends LayerBase, TextEffect {
@@ -40,6 +43,12 @@ export interface TextLayerConfig extends LayerBase, TextEffect {
   color: string;
   align?: "left" | "center" | "right";
   valign?: "top" | "center" | "bottom";
+  transform?: string;
+  background?: string;
+  border?: string;
+  borderRadius?: number | string;
+  padding?: string;
+  boxShadow?: string;
 }
 
 export interface CustomTextLayerConfig extends TextLayerConfig {
@@ -102,12 +111,14 @@ export interface PanelLayerConfig extends LayerBase {
 
 export interface OverlayConfig {
   visible: boolean;
-  kind: "solid" | "linear-gradient";
+  kind?: "solid" | "linear-gradient" | "radial-gradient";
   color?: string;
   /** CSS gradient string, e.g. "180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 100%". */
   gradient?: string;
   opacity: number;
   blendMode?: string;
+  boxShadow?: string;
+  border?: string;
 }
 
 export interface BackgroundConfig {
@@ -266,6 +277,8 @@ export interface ReferenceTemplateComponents {
   modList: ModListConfig;
   twitchLogo: TwitchLogoConfig;
   bottomMessage: BottomMessageConfig;
+  sparkles?: LayerBase & { color?: string; count?: number };
+  innerBorder?: LayerBase & { inset?: number; border?: string; borderRadius?: number };
 }
 
 export interface ThumbnailTemplate {

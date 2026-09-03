@@ -92,6 +92,7 @@ export const COMPONENT_BY_LAYER: Record<string, string> = {
   "mod-list": "modList",
   "twitch-logo": "twitchLogo",
   "bottom-message": "bottomMessage",
+  sparkles: "sparkles",
 };
 
 /**
@@ -138,11 +139,16 @@ export function applyOverrides(
       next.components[key].borderColor = withAlpha(accent, 1);
     }
     // Username panel: spine + dark gradient tinted with the accent (semi-transparent).
-    next.components.usernamePanel.leftAccent = {
-      ...next.components.usernamePanel.leftAccent!,
-      color: mixColors(accent, "#1A0D0F", 0.35) + "D9",
-    };
-    next.components.usernamePanel.background = `linear-gradient(180deg, ${mixColors(accent, "#1A0D0F", 0.7)}D9 0%, ${mixColors(accent, "#1A0D0F", 0.85)}B3 100%)`;
+    if (next.components.usernamePanel.leftAccent) {
+      next.components.usernamePanel.leftAccent = {
+        ...next.components.usernamePanel.leftAccent,
+        color: mixColors(accent, "#1A0D0F", 0.35) + "D9",
+      };
+      next.components.usernamePanel.background = `linear-gradient(180deg, ${mixColors(accent, "#1A0D0F", 0.7)}D9 0%, ${mixColors(accent, "#1A0D0F", 0.85)}B3 100%)`;
+    }
+    if (next.components.sparkles) {
+      next.components.sparkles.color = accent;
+    }
   }
 
   if (twitchVisible !== undefined) {

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Showcase Typography Thumbnail Pipeline — Local Benchmark Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Kaushan+Script&family=Paytone+One&family=Russo+One&family=Teko:wght@700&family=Montserrat:wght@600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --accent-color: #00F0FF;
+      --shadow-color: #06070C;
+      --vignette-opacity: 0.20;
+      --stroke-width: 4px;
+      --extrusion-depth: 6px;
+      --font-family: "Teko", "Bebas Neue", sans-serif;
+    }
+    body {
+      background: #08090D;
+      color: #E6EDF3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 20px 60px;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      max-width: 1280px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1E232B;
+      padding-bottom: 12px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h1 {
+      font-size: 19px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.2px;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid rgba(0, 240, 255, 0.5);
+      color: #00F0FF;
+      font-weight: 700;
+      border-radius: 12px;
+    }
+    .back-link {
+      font-size: 12px;
+      color: #9AA7B4;
+      text-decoration: none;
+      padding: 6px 14px;
+      border: 1px solid #29323D;
+      border-radius: 14px;
+      background: #12171E;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+    .back-link:hover {
+      background: #1B222D;
+      color: #fff;
+      border-color: #00F0FF;
+    }
+
+    /* Benchmark Selector Tabs */
+    .benchmark-tabs {
+      width: 100%;
+      max-width: 1280px;
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 16px;
+      background: #12161D;
+      border: 1.5px solid #222B37;
+      color: #8E9CA8;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover {
+      background: #171E28;
+      color: #fff;
+      border-color: #384656;
+    }
+    .tab-btn.active {
+      background: #1A222D;
+      color: #fff;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.2);
+    }
+
+    /* Controls Bar */
+    .controls {
+      width: 100%;
+      max-width: 1280px;
+      background: #10141B;
+      border: 1px solid #1F2733;
+      border-radius: 14px;
+      padding: 12px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    label {
+      color: #7A8999;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input[type="text"] {
+      background: #090B0F;
+      border: 1.5px solid #232D3B;
+      color: #fff;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      outline: none;
+      border-radius: 8px;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus {
+      border-color: var(--accent-color);
+    }
+    input[type="range"] {
+      accent-color: var(--accent-color);
+      width: 80px;
+    }
+    .color-swatch-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #090B0F;
+      padding: 3px 8px 3px 4px;
+      border: 1px solid #232D3B;
+      border-radius: 8px;
+    }
+    input[type="color"] {
+      border: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+    }
+    .color-hex {
+      font-family: monospace;
+      font-size: 11px;
+      color: #CED6DE;
+      font-weight: 600;
+    }
+    .btn {
+      padding: 5px 14px;
+      background: var(--accent-color);
+      color: #06080C;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: opacity 0.15s;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    .file-label {
+      padding: 5px 12px;
+      background: #171E28;
+      color: #9DB0C2;
+      border: 1px solid #283544;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .file-label:hover {
+      background: #202B39;
+      color: #fff;
+    }
+    input[type="file"] {
+      display: none;
+    }
+
+    /* 16:9 Thumbnail Canvas (Strict graphic restraint, zero clutter) */
+    .thumbnail-wrapper {
+      width: 100%;
+      max-width: 1280px;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      overflow: hidden;
+      background: #050608;
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.9);
+      border: 1.5px solid #1C2430;
+      user-select: none;
+    }
+
+    /* Background Artwork - vector sharp, preserved */
+    .bg-art {
+      position: absolute;
+      inset: 0;
+      background-image: url("/assets/benchmarks/kocmoc.jpg");
+      background-size: cover;
+      background-position: center center;
+    }
+
+    /* Subtle Dark Vignette Overlay (15-25% opacity) purely for text legibility */
+    .vignette-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.85) 100%);
+      opacity: var(--vignette-opacity);
+      pointer-events: none;
+    }
+
+    /* Center/Lower-third Title Block */
+    .title-container {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+      padding: 40px;
+      text-align: center;
+    }
+
+    /* High-Impact Showcase Title Text */
+    .showcase-title {
+      font-family: var(--font-family);
+      font-size: clamp(64px, 11vw, 150px);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      line-height: 0.95;
+      white-space: nowrap;
+      
+      /* Vertical linear gradient fill: White at top to --accent-color at bottom */
+      background: linear-gradient(180deg, #FFFFFF 0%, var(--accent-color) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+
+      /* Sharp, solid outer stroke */
+      -webkit-text-stroke: var(--stroke-width) var(--shadow-color);
+      paint-order: stroke fill;
+
+      /* Solid, sharp 3D stepped extrusion + deep ground shadow */
+      filter:
+        drop-shadow(1.5px 1.5px 0px var(--shadow-color))
+        drop-shadow(3px 3px 0px var(--shadow-color))
+        drop-shadow(4.5px 4.5px 0px var(--shadow-color))
+        drop-shadow(6px 6px 0px var(--shadow-color))
+        drop-shadow(0px 16px 28px rgba(0, 0, 0, 0.85));
+
+      transition: filter 0.15s ease, font-size 0.15s ease;
+    }
+
+    /* Minimal Subtitle */
+    .showcase-subtitle {
+      font-family: var(--font-family);
+      font-size: clamp(16px, 2.5vw, 32px);
+      font-weight: 700;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: #FFFFFF;
+      margin-top: 14px;
+      -webkit-text-stroke: 1.5px var(--shadow-color);
+      paint-order: stroke fill;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.85));
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <h1>Showcase Thumbnail Pipeline</h1>
+      <span class="badge">KOCMOC • Angelicide • Tidal Wave</span>
+    </div>
+    <a href="/" class="back-link">Open Generator &rarr;</a>
+  </header>
+
+  <!-- Benchmark Selector Tabs -->
+  <div class="benchmark-tabs">
+    <button class="tab-btn active" id="tab-kocmoc" onclick="loadBenchmark('kocmoc')">
+      <span>🌌 Benchmark 1: KOCMOC</span>
+    </button>
+    <button class="tab-btn" id="tab-angelicide" onclick="loadBenchmark('angelicide')">
+      <span>🌸 Benchmark 2: Angelicide</span>
+    </button>
+    <button class="tab-btn" id="tab-tidalwave" onclick="loadBenchmark('tidalwave')">
+      <span>🌊 Benchmark 3: Tidal Wave</span>
+    </button>
+  </div>
+
+  <!-- Controls Bar -->
+  <div class="controls">
+    <!-- Row 1: Title, Subtitle, Google Fonts & Local Fonts -->
+    <div class="controls-row">
+      <div class="control-group">
+        <label>Title:</label>
+        <input type="text" id="input-title" value="KOCMOC" style="width: 140px;">
+      </div>
+      <div class="control-group">
+        <label>Subtitle:</label>
+        <input type="text" id="input-subtitle" value="[ CHERRY ]" style="width: 130px;">
+      </div>
+      <div class="control-group">
+        <label>Google Font:</label>
+        <input type="text" id="input-font" value="Teko" style="width: 110px;" placeholder="e.g. Teko, Russo One">
+        <button class="btn" onclick="applyGoogleFont()">Load</button>
+      </div>
+      <div class="control-group">
+        <label class="file-label">
+          📁 Custom .ttf/.otf
+          <input type="file" id="font-file" accept=".ttf,.otf,.woff2" onchange="uploadCustomFont(event)">
+        </label>
+      </div>
+      <div class="control-group" style="margin-left: auto;">
+        <label>Fetch score URL:</label>
+        <input type="text" id="input-score" placeholder="https://osu.ppy.sh/scores/..." style="width: 180px;">
+        <button class="btn" onclick="fetchOsuScore()">Fetch</button>
+        <span id="fetch-msg" style="font-size: 11px; color: #8A99A8;"></span>
+      </div>
+    </div>
+
+    <!-- Row 2: Automatic 2-Color Sampling & Graphic Restraint Controls -->
+    <div class="controls-row">
+      <div class="control-group">
+        <label>Sampled --accent-color:</label>
+        <div class="color-swatch-wrap">
+          <input type="color" id="picker-accent" value="#00F0FF" oninput="updateAccent(this.value)">
+          <span class="color-hex" id="hex-accent">#00F0FF</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>Sampled --shadow-color:</label>
+        <div class="color-swatch-wrap">
+          <input type="color" id="picker-shadow" value="#06070C" oninput="updateShadow(this.value)">
+          <span class="color-hex" id="hex-shadow">#06070C</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>3D Extrusion:</label>
+        <input type="range" id="slider-extrusion" min="0" max="14" step="1" value="6" oninput="updateExtrusion(this.value)">
+        <span id="val-extrusion" style="font-size: 11px;">6px</span>
+      </div>
+      <div class="control-group">
+        <label>Stroke:</label>
+        <input type="range" id="slider-stroke" min="1" max="8" step="0.5" value="4" oninput="updateStroke(this.value)">
+        <span id="val-stroke" style="font-size: 11px;">4px</span>
+      </div>
+      <div class="control-group">
+        <label>Vignette:</label>
+        <input type="range" id="slider-vignette" min="15" max="25" step="1" value="20" oninput="updateVignette(this.value)">
+        <span id="val-vignette" style="font-size: 11px;">20%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 16:9 Thumbnail Canvas -->
+  <div class="thumbnail-wrapper" id="thumbnail-canvas">
+    <!-- Background Image -->
+    <div class="bg-art" id="bg-art"></div>
+
+    <!-- Subtle Dark Vignette Overlay (15-25%) purely for text legibility -->
+    <div class="vignette-overlay" id="vignette-overlay"></div>
+
+    <!-- Center/Lower-third Title Block -->
+    <div class="title-container" id="title-container">
+      <div class="showcase-title" id="display-title">KOCMOC</div>
+      <div class="showcase-subtitle" id="display-subtitle">[ CHERRY ]</div>
+    </div>
+  </div>
+
+  <script>
+    const benchmarks = {
+      kocmoc: {
+        bg: "/assets/benchmarks/kocmoc.jpg",
+        title: "KOCMOC",
+        subtitle: "[ CHERRY ]",
+        font: "'Teko', sans-serif",
+        fontName: "Teko",
+        accent: "#00F0FF",
+        shadow: "#06070C",
+        stroke: "4px",
+        extrusion: "6px"
+      },
+      angelicide: {
+        bg: "/assets/benchmarks/angelicide.jpg",
+        title: "angelicide",
+        subtitle: "you are an angel",
+        font: "'Kaushan Script', cursive",
+        fontName: "Kaushan Script",
+        accent: "#FF0099",
+        shadow: "#0D0314",
+        stroke: "3.5px",
+        extrusion: "4px"
+      },
+      tidalwave: {
+        bg: "/assets/benchmarks/tidal_wave.jpg",
+        title: "Tidal Wave",
+        subtitle: "[ TOP 1 DEMON ]",
+        font: "'Russo One', sans-serif",
+        fontName: "Russo One",
+        accent: "#00F0FF",
+        shadow: "#030C1A",
+        stroke: "4px",
+        extrusion: "7px"
+      }
+    };
+
+    const bgArt = document.getElementById("bg-art");
+    const displayTitle = document.getElementById("display-title");
+    const displaySubtitle = document.getElementById("display-subtitle");
+    const inputTitle = document.getElementById("input-title");
+    const inputSubtitle = document.getElementById("input-subtitle");
+    const inputFont = document.getElementById("input-font");
+    const pickerAccent = document.getElementById("picker-accent");
+    const pickerShadow = document.getElementById("picker-shadow");
+    const hexAccent = document.getElementById("hex-accent");
+    const hexShadow = document.getElementById("hex-shadow");
+    const sliderExtrusion = document.getElementById("slider-extrusion");
+    const sliderStroke = document.getElementById("slider-stroke");
+    const sliderVignette = document.getElementById("slider-vignette");
+    const valExtrusion = document.getElementById("val-extrusion");
+    const valStroke = document.getElementById("val-stroke");
+    const valVignette = document.getElementById("val-vignette");
+
+    inputTitle.addEventListener("input", (e) => { displayTitle.textContent = e.target.value; });
+    inputSubtitle.addEventListener("input", (e) => { 
+      displaySubtitle.textContent = e.target.value; 
+      displaySubtitle.style.display = e.target.value.trim() ? "block" : "none";
+    });
+
+    function updateAccent(val) {
+      document.documentElement.style.setProperty("--accent-color", val);
+      pickerAccent.value = val;
+      hexAccent.textContent = val.toUpperCase();
+      render3DShadow();
+    }
+
+    function updateShadow(val) {
+      document.documentElement.style.setProperty("--shadow-color", val);
+      pickerShadow.value = val;
+      hexShadow.textContent = val.toUpperCase();
+      render3DShadow();
+    }
+
+    function updateExtrusion(val) {
+      document.documentElement.style.setProperty("--extrusion-depth", val + "px");
+      valExtrusion.textContent = val + "px";
+      render3DShadow();
+    }
+
+    function updateStroke(val) {
+      document.documentElement.style.setProperty("--stroke-width", val + "px");
+      valStroke.textContent = val + "px";
+    }
+
+    function updateVignette(val) {
+      document.documentElement.style.setProperty("--vignette-opacity", (val / 100).toString());
+      valVignette.textContent = val + "%";
+    }
+
+    function render3DShadow() {
+      const depth = parseInt(sliderExtrusion.value, 10);
+      const shadowColor = pickerShadow.value;
+      if (depth === 0) {
+        displayTitle.style.filter = "drop-shadow(0px 14px 28px rgba(0, 0, 0, 0.85))";
+        return;
+      }
+      let filters = [];
+      const step = Math.max(1, depth / 4);
+      for (let d = step; d <= depth; d += step) {
+        filters.push(`drop-shadow(${d.toFixed(1)}px ${d.toFixed(1)}px 0px ${shadowColor})`);
+      }
+      filters.push("drop-shadow(0px 16px 28px rgba(0, 0, 0, 0.85))");
+      displayTitle.style.filter = filters.join(" ");
+    }
+
+    function loadBenchmark(key) {
+      const b = benchmarks[key];
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.getElementById(`tab-${key}`).classList.add("active");
+
+      bgArt.style.backgroundImage = `url("${b.bg}")`;
+      inputTitle.value = b.title;
+      displayTitle.textContent = b.title;
+      inputSubtitle.value = b.subtitle;
+      displaySubtitle.textContent = b.subtitle;
+      displaySubtitle.style.display = "block";
+
+      inputFont.value = b.fontName;
+      document.documentElement.style.setProperty("--font-family", b.font);
+
+      updateAccent(b.accent);
+      updateShadow(b.shadow);
+
+      sliderStroke.value = parseFloat(b.stroke);
+      valStroke.textContent = b.stroke;
+      document.documentElement.style.setProperty("--stroke-width", b.stroke);
+
+      sliderExtrusion.value = parseFloat(b.extrusion);
+      valExtrusion.textContent = b.extrusion;
+      document.documentElement.style.setProperty("--extrusion-depth", b.extrusion);
+
+      // Trigger automatic 2-color extraction from the background image
+      sampleColorsFromImage(b.bg);
+    }
+
+    // Dynamic Google Fonts Loader API
+    function applyGoogleFont() {
+      const fontName = inputFont.value.trim();
+      if (!fontName) return;
+      const cleanFont = fontName.replace(/ /g, "+");
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = `https://fonts.googleapis.com/css2?family=${cleanFont}:wght@400;700;800;900&display=swap`;
+      document.head.appendChild(link);
+      document.documentElement.style.setProperty("--font-family", `"${fontName}", sans-serif`);
+    }
+
+    // Custom Font File Upload via @font-face
+    function uploadCustomFont(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const fontName = "CustomUserFont_" + Date.now();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const font = new FontFace(fontName, e.target.result);
+        font.load().then((loaded) => {
+          document.fonts.add(loaded);
+          document.documentElement.style.setProperty("--font-family", `"${fontName}", sans-serif`);
+          inputFont.value = file.name.replace(/\.[^/.]+$/, "");
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Client-side Color Sampling (Canvas + HSV analysis)
+    function sampleColorsFromImage(src) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        canvas.width = 100;
+        canvas.height = 56;
+        ctx.drawImage(img, 0, 0, 100, 56);
+        const { data } = ctx.getImageData(0, 0, 100, 56);
+
+        let bestScore = -1;
+        let vibrantRgb = [0, 240, 255];
+        const shadowList = [];
+
+        for (let i = 0; i < data.length; i += 16) {
+          const r = data[i], g = data[i+1], b = data[i+2];
+          // HSV conversion
+          const rNorm = r/255, gNorm = g/255, bNorm = b/255;
+          const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+          const d = max - min;
+          const s = max === 0 ? 0 : d / max;
+          const v = max;
+
+          const score = Math.pow(s, 1.4) * Math.pow(v, 1.1);
+          if (score > bestScore && s > 0.45 && v > 0.35) {
+            bestScore = score;
+            vibrantRgb = [r, g, b];
+          }
+          if (v < 0.22) {
+            shadowList.push([r, g, b]);
+          }
+        }
+
+        const toHex = (r,g,b) => "#" + [r,g,b].map(x => Math.round(x).toString(16).padStart(2, "0")).join("");
+        const accentHex = toHex(...vibrantRgb);
+
+        let shadowHex = "#06070c";
+        if (shadowList.length > 0) {
+          const avgR = shadowList.reduce((a,c) => a + c[0], 0) / shadowList.length;
+          const avgG = shadowList.reduce((a,c) => a + c[1], 0) / shadowList.length;
+          const avgB = shadowList.reduce((a,c) => a + c[2], 0) / shadowList.length;
+          shadowHex = toHex(avgR, avgG, avgB);
+        }
+
+        updateAccent(accentHex);
+        updateShadow(shadowHex);
+      };
+      img.src = src;
+    }
+
+    // Score Link Fetcher using local API
+    async function fetchOsuScore() {
+      const url = document.getElementById("input-score").value.trim();
+      const statusMsg = document.getElementById("fetch-msg");
+      if (!url) return;
+      statusMsg.textContent = "Fetching...";
+      try {
+        const res = await fetch(`/api/thumbnail?url=${encodeURIComponent(url)}`);
+        if (!res.ok) throw new Error("Fetch failed");
+        const json = await res.json();
+        const data = json.data;
+        if (data) {
+          if (data.backgroundUrl) {
+            bgArt.style.backgroundImage = `url("${data.backgroundUrl}")`;
+            sampleColorsFromImage(data.backgroundUrl);
+          }
+          if (data.title) {
+            inputTitle.value = data.title;
+            displayTitle.textContent = data.title;
+          }
+          const subtitleText = `[ ${(data.artist || "MAP").toUpperCase()} ]`;
+          inputSubtitle.value = subtitleText;
+          displaySubtitle.textContent = subtitleText;
+          displaySubtitle.style.display = "block";
+          statusMsg.textContent = "Loaded!";
+        }
+      } catch (err) {
+        statusMsg.textContent = "Error: " + err.message;
+      }
+    }
+
+    // Initialize 3D shadow on load
+    render3DShadow();
+  </script>
+</body>
+</html>
