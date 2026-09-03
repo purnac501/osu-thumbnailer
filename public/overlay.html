@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lifeline osu! Stream Overlay Animation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --bg-canvas: transparent;
+      --cyan-accent: #00D2FF;
+      --card-teal-top: #093448;
+      --card-teal-bottom: #052332;
+      --bottom-lip-color: #0d4663;
+      --card-border: rgba(0, 210, 255, 0.35);
+      --card-shadow-glow: rgba(0, 210, 255, 0.16);
+      --text-muted: #7aa5bd;
+      --text-dim: #4f7387;
+      --font-main: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+      font-family: var(--font-main);
+      color: #FFFFFF;
+      perspective: 1200px;
+    }
+
+    /* Top Floating Controls Dock (Press "H" to toggle) */
+    .control-dock {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(4, 14, 22, 0.94);
+      border: 1px solid var(--card-border);
+      border-radius: 32px;
+      padding: 7px 16px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      z-index: 9999;
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.88), 0 0 24px var(--card-shadow-glow);
+      backdrop-filter: blur(16px);
+      transition: opacity 0.25s, transform 0.25s;
+    }
+    .control-dock.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(-30px);
+    }
+    .dock-btn {
+      padding: 5.5px 12px;
+      background: var(--cyan-accent);
+      color: #04121B;
+      font-weight: 800;
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      font-family: var(--font-main);
+      font-size: 11px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    .dock-btn:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+      box-shadow: 0 0 14px var(--cyan-accent);
+    }
+    .dock-btn:active {
+      transform: translateY(1px);
+    }
+    .dock-btn.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFF;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .dock-btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.16);
+      box-shadow: none;
+    }
+    .dock-btn.download-btn {
+      background: linear-gradient(135deg, #FFB703 0%, #FB8500 100%);
+      color: #000;
+    }
+    .dock-btn.download-btn:hover {
+      box-shadow: 0 0 14px #FFB703;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #8C9BAE;
+    }
+    input[type="text"] {
+      background: #02090F;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFF;
+      padding: 4.5px 10px;
+      border-radius: 14px;
+      font-family: var(--font-main);
+      font-size: 11px;
+      outline: none;
+      width: 170px;
+    }
+    select {
+      background: #02090F;
+      color: #FFF;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 4px 7px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-family: var(--font-main);
+      outline: none;
+    }
+    input[type="color"] {
+      -webkit-appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      background: none;
+      padding: 0;
+      overflow: hidden;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 50%;
+    }
+
+    /* Notification Toast */
+    .dock-toast {
+      position: fixed;
+      top: 66px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--cyan-accent);
+      color: #04121B;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 6px 18px;
+      border-radius: 20px;
+      box-shadow: 0 4px 16px var(--card-shadow-glow);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 10000;
+    }
+    .dock-toast.active {
+      opacity: 1;
+      transform: translateX(-50%) translateY(4px);
+    }
+
+    /* ==========================================================================
+       THE STREAM OVERLAY WIDGET (Exact 1:1 Reference Match & Professional Motion)
+       ========================================================================== */
+    .overlay-widget-wrap {
+      width: 470px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      transform-origin: center center;
+      will-change: transform, opacity;
+    }
+
+    /* Common Card Appearance: 3D Glossy Beveled Dark Teal Containers */
+    .beveled-card {
+      width: 100%;
+      background: linear-gradient(180deg, var(--card-teal-top) 0%, var(--card-teal-bottom) 100%);
+      border: 1.5px solid var(--card-border);
+      border-radius: 14px;
+      box-shadow: 
+        0 16px 36px rgba(0, 0, 0, 0.88),
+        0 0 24px var(--card-shadow-glow),
+        inset 0 1px 1.5px rgba(255, 255, 255, 0.35);
+      position: relative;
+      overflow: hidden;
+      transform-origin: center center;
+      will-change: transform, opacity, height;
+    }
+
+    /* ---------------- 1. TOP HEADER CONTAINER (62px) ---------------- */
+    .top-header-card {
+      height: 62px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      position: relative;
+    }
+    .top-banner-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center 38%;
+      opacity: 0.55;
+      mask-image: linear-gradient(90deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.8) 32%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.85) 100%);
+      -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.8) 32%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.85) 100%);
+      transition: opacity 0.3s ease;
+    }
+    .top-banner-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(4, 18, 28, 0.88) 0%, rgba(4, 18, 28, 0.5) 30%, rgba(4, 18, 28, 0.1) 60%, rgba(4, 18, 28, 0.78) 100%);
+      pointer-events: none;
+    }
+
+    /* Content Cross-fade Layers */
+    .top-view-layer {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      z-index: 3;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .top-view-layer.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Player Profile Header (Image 1) */
+    .player-avatar-thumb {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      flex-shrink: 0;
+      margin-right: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+    }
+    .player-title-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      flex-grow: 1;
+    }
+    .player-name-line {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .player-username-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: 0.2px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+    }
+    .heart-pill {
+      background: #ff5277;
+      color: #FFF;
+      font-size: 9px;
+      padding: 1px 5.5px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-shadow: 0 1px 4px rgba(255, 82, 119, 0.5);
+    }
+    .player-country-line {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .player-header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1px;
+      flex-shrink: 0;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    }
+    .rank-big-num {
+      font-size: 21px;
+      font-weight: 800;
+      color: #FFFFFF;
+      line-height: 1;
+    }
+    .pp-sub-num {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+      letter-spacing: 0.2px;
+    }
+
+    /* Map Details Header (Image 3) */
+    .map-cover-thumb {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      flex-shrink: 0;
+      margin-right: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+    }
+    .map-title-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      flex-grow: 1;
+      min-width: 0;
+    }
+    .map-name-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFFFFF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    }
+    .map-artist-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .map-chevron-icon {
+      color: var(--cyan-accent);
+      font-size: 17px;
+      font-weight: 800;
+      margin-left: 8px;
+      letter-spacing: -2px;
+      animation: chevronFloat 1.8s ease-in-out infinite;
+      filter: drop-shadow(0 0 6px var(--cyan-accent));
+    }
+    @keyframes chevronFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    /* ---------------- 2. BOTTOM DETAILS CONTAINER (228px) ---------------- */
+    .bottom-details-card {
+      height: 228px;
+      position: relative;
+    }
+
+    /* Top Lip Highlight Bar (Image 2) */
+    .bottom-card-top-lip {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 22px;
+      background: var(--bottom-lip-color);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .lip-shine-sweep {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 80px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      transform: skewX(-25deg) translateX(-100px);
+      transition: transform 0.6s ease-out;
+    }
+
+    /* Content Views */
+    .bottom-view-layer {
+      position: absolute;
+      inset: 22px 16px 12px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 3;
+    }
+    .bottom-view-layer.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    /* ===== A. PLAYER VIEW DETAILS (Image 1) ===== */
+    .player-badges-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1px;
+    }
+    .badges-left-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-label-stack {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--cyan-accent);
+      line-height: 1.1;
+      text-align: center;
+    }
+    .badges-image-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 250px;
+      overflow-x: auto;
+    }
+    .badge-item-img {
+      height: 19px;
+      border-radius: 3px;
+      object-fit: contain;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .badges-right-meta {
+      text-align: right;
+    }
+    .playcount-over-time-lbl {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .playcount-peak-lbl {
+      font-size: 8.5px;
+      color: var(--text-dim);
+    }
+
+    /* Historical Chart (Image 1) */
+    .history-chart-wrap {
+      width: 100%;
+      height: 112px;
+      position: relative;
+    }
+    .history-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .chart-grid-h {
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 1;
+    }
+    .chart-label-axis {
+      font-size: 8.5px;
+      fill: var(--text-dim);
+      font-weight: 600;
+      font-family: var(--font-main);
+    }
+    .chart-curve-path {
+      fill: none;
+      stroke: var(--cyan-accent);
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 1200;
+      stroke-dashoffset: 1200;
+      transition: stroke-dashoffset 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+      filter: drop-shadow(0 0 6px var(--card-shadow-glow));
+    }
+
+    /* Clean, static peak dot */
+    .peak-dot-static {
+      fill: #FFFFFF;
+      stroke: var(--cyan-accent);
+      stroke-width: 1.8;
+      filter: drop-shadow(0 0 4px #FFFFFF);
+    }
+
+    /* Player Bottom Row */
+    .player-info-bottom-bar {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .player-info-bottom-bar span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .cyan-icon {
+      color: var(--cyan-accent);
+    }
+
+    /* ===== B. MAP VIEW DETAILS (Image 3) ===== */
+    /* 4 Stat Glowing Progress Bars (AR, OD, CS, HP) */
+    .map-stat-bars-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 14px;
+      row-gap: 6px;
+      margin-top: 1px;
+    }
+    .stat-pill-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-code-label {
+      width: 16px;
+      font-size: 9.5px;
+      font-weight: 800;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .stat-pill-track {
+      flex: 1;
+      height: 14px;
+      background: rgba(4, 15, 22, 0.7);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      padding: 0 5px;
+      justify-content: space-between;
+    }
+    .stat-pill-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      border-radius: 4px;
+      transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .stat-pill-fill.ar { background: #7ECE75; box-shadow: 0 0 10px #7ECE75; }
+    .stat-pill-fill.od { background: #AF6EF0; box-shadow: 0 0 10px #AF6EF0; }
+    .stat-pill-fill.cs { background: #CF666B; box-shadow: 0 0 10px #CF666B; }
+    .stat-pill-fill.hp { background: #667DED; box-shadow: 0 0 10px #667DED; }
+
+    .stat-pill-left-text {
+      position: relative;
+      font-size: 8.5px;
+      font-weight: 800;
+      color: #04121B;
+      z-index: 2;
+    }
+    .stat-pill-right-text {
+      position: relative;
+      font-size: 8.5px;
+      font-weight: 800;
+      color: #FFFFFF;
+      z-index: 2;
+    }
+
+    /* 30-Day Activity Chart */
+    .map-chart-caption {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: -2px;
+      font-style: italic;
+    }
+    .activity-chart-wrap {
+      width: 100%;
+      height: 92px;
+      position: relative;
+    }
+
+    /* Map Bottom Row */
+    .map-info-bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .map-stats-counts {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .map-stats-counts span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .mapper-pill-card {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mapper-avatar-mini {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      object-fit: cover;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+    .mapper-text-col {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+    .mapper-name-title {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+    .mapper-sub-role {
+      font-size: 8px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ---------------- 3. FLOATING STAR RATING & BPM FOOTER (Image 2 & 3) ---------------- */
+    .floating-star-footer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #FFFFFF;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-top: -2px;
+    }
+    .floating-star-footer.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .star-gold-icon {
+      color: #FFB703;
+      font-size: 15px;
+      filter: drop-shadow(0 0 8px rgba(255, 183, 3, 0.9));
+      animation: starShine 2.5s ease-in-out infinite;
+    }
+    @keyframes starShine {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Floating Controls Dock -->
+  <div class="control-dock" id="control-dock">
+    <button class="dock-btn" onclick="triggerSequence()">
+      ▶ Replay
+    </button>
+    
+    <div class="control-group">
+      <button class="dock-btn secondary" onclick="switchPhase(0)">1. Player</button>
+      <button class="dock-btn secondary" onclick="switchPhase(1)">2. Transition</button>
+      <button class="dock-btn secondary" onclick="switchPhase(2)">3. Map</button>
+    </div>
+
+    <!-- Tweakable Color Controls -->
+    <div class="control-group" style="padding: 0 4px; border-left: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15);">
+      <span style="font-weight: 700; color: #FFF;">🎨</span>
+      <select id="select-theme" onchange="applyColorTheme(this.value)">
+        <option value="cyan">Lifeline Cyan</option>
+        <option value="purple">Midnight Purple</option>
+        <option value="magenta">Cyber Magenta</option>
+        <option value="gold">Golden Champion</option>
+        <option value="emerald">Emerald Matrix</option>
+        <option value="crimson">Dark Crimson</option>
+        <option value="custom">Custom</option>
+      </select>
+      <input type="color" id="picker-accent" title="Tweak Accent Color" value="#00D2FF" oninput="setCustomAccent(this.value)">
+    </div>
+
+    <div class="control-group">
+      <select id="select-bg" onchange="setCanvasBackground(this.value)">
+        <option value="transparent">OBS Transparent</option>
+        <option value="#00FF00">Chroma Green</option>
+        <option value="#050C14">Stream Dark</option>
+      </select>
+      <label style="cursor: pointer; display: flex; align-items: center; gap: 3px;">
+        <input type="checkbox" id="check-loop" checked> Loop
+      </label>
+    </div>
+
+    <div class="control-group">
+      <button class="dock-btn download-btn" onclick="downloadAnimation('gif')">
+        💾 Download GIF
+      </button>
+      <button class="dock-btn download-btn" style="background: linear-gradient(135deg, #00D2FF 0%, #0077B6 100%); color: #FFF;" onclick="downloadAnimation('webm')">
+        🎥 Download Video
+      </button>
+    </div>
+
+    <div class="control-group">
+      <input type="text" id="input-score" placeholder="Paste user or score URL..." value="https://osu.ppy.sh/users/11367222">
+      <button class="dock-btn secondary" onclick="loadDataFromUrl()">Fetch</button>
+      <span id="fetch-msg" style="font-size: 11px; color: var(--cyan-accent);"></span>
+    </div>
+  </div>
+
+  <div class="dock-toast" id="dock-toast">Rendering animation...</div>
+
+  <!-- THE STREAM OVERLAY WIDGET -->
+  <div class="overlay-widget-wrap" id="overlay-widget">
+    
+    <!-- 1. TOP CARD (Header) -->
+    <div class="beveled-card top-header-card" id="top-card">
+      <div class="top-banner-bg" id="top-banner"></div>
+      <div class="top-banner-overlay"></div>
+      
+      <!-- Top View 1: Player Header (Image 1) -->
+      <div class="top-view-layer" id="layer-top-player">
+        <img class="player-avatar-thumb" id="p-avatar" src="/assets/overlay_ref/lifeline_avatar_hd.jpg" alt="Avatar">
+        <div class="player-title-col">
+          <div class="player-name-line">
+            <span class="player-username-text" id="p-name">lifeline</span>
+            <span class="heart-pill">♥</span>
+          </div>
+          <div class="player-country-line">
+            <span id="p-flag">🇮🇩</span>
+            <span id="p-crank">— #1</span>
+          </div>
+        </div>
+        <div class="player-header-right">
+          <div class="rank-big-num" id="p-grank">#7</div>
+          <div class="pp-sub-num" id="p-pp">25 838pp</div>
+        </div>
+      </div>
+
+      <!-- Top View 2: Map Header (Image 3) -->
+      <div class="top-view-layer" id="layer-top-map">
+        <img class="map-cover-thumb" id="m-cover" src="/assets/overlay_ref/map_cover_hd.jpg" alt="Cover">
+        <div class="map-title-col">
+          <div class="map-name-text" id="m-title">I thought I was an angel [Fallen]</div>
+          <div class="map-artist-text" id="m-artist">by Utsu-P</div>
+        </div>
+        <div class="map-chevron-icon">︽</div>
+      </div>
+    </div>
+
+    <!-- 2. BOTTOM CARD (Details & Charts) -->
+    <div class="beveled-card bottom-details-card" id="bottom-card">
+      <!-- Top Glossy Bevel Lip (Image 2) -->
+      <div class="bottom-card-top-lip">
+        <div class="lip-shine-sweep" id="lip-shine"></div>
+      </div>
+
+      <!-- Bottom View 1: Player Badges & Playcount History (Image 1) -->
+      <div class="bottom-view-layer" id="layer-bottom-player">
+        <!-- Badges Row -->
+        <div class="player-badges-strip">
+          <div class="badges-left-group">
+            <div class="badge-label-stack"><span id="p-badge-count">6</span><br><span style="font-size: 7.5px; color: rgba(255,255,255,0.45);">badges</span></div>
+            <div class="badges-image-row" id="p-badges-container">
+              <!-- Dynamically populated from API -->
+            </div>
+          </div>
+          <div class="badges-right-meta">
+            <div class="playcount-over-time-lbl">Playcount over time</div>
+            <div class="playcount-peak-lbl" id="p-peak-text">peak: 7457 (June 2020)</div>
+          </div>
+        </div>
+
+        <!-- Historical Playcount SVG Chart -->
+        <div class="history-chart-wrap">
+          <svg class="history-svg" viewBox="0 0 430 105">
+            <!-- Grid Lines -->
+            <line class="chart-grid-h" x1="20" y1="20" x2="425" y2="20"/>
+            <text class="chart-label-axis" x="5" y="23">8k</text>
+            <line class="chart-grid-h" x1="20" y1="45" x2="425" y2="45"/>
+            <text class="chart-label-axis" x="5" y="48">6k</text>
+            <line class="chart-grid-h" x1="20" y1="70" x2="425" y2="70"/>
+            <text class="chart-label-axis" x="5" y="73">4k</text>
+            <line class="chart-grid-h" x1="20" y1="92" x2="425" y2="92"/>
+            <text class="chart-label-axis" x="5" y="95">2k</text>
+
+            <!-- Peak Reference Dashed Line -->
+            <line id="p-peak-line" x1="20" y1="25.1" x2="425" y2="25.1" stroke="rgba(255,255,255,0.4)" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- Playcount Curve Path -->
+            <path id="svg-player-path" class="chart-curve-path" d=""/>
+            
+            <!-- Clean Static Peak Dot (No floating back to front) -->
+            <circle class="peak-dot-static" id="p-peak-dot" cx="134" cy="25.1" r="2.8"/>
+
+            <!-- X Axis Years (2018 - 2026) -->
+            <text class="chart-label-axis" x="20" y="104">2018</text>
+            <text class="chart-label-axis" x="72" y="104">2019</text>
+            <text class="chart-label-axis" x="126" y="104">2020</text>
+            <text class="chart-label-axis" x="178" y="104">2021</text>
+            <text class="chart-label-axis" x="228" y="104">2022</text>
+            <text class="chart-label-axis" x="278" y="104">2023</text>
+            <text class="chart-label-axis" x="328" y="104">2024</text>
+            <text class="chart-label-axis" x="378" y="104">2025</text>
+            <text class="chart-label-axis" x="412" y="104">2026</text>
+          </svg>
+        </div>
+
+        <!-- Bottom Stats Row -->
+        <div class="player-info-bottom-bar">
+          <span><strong class="cyan-icon">⌛</strong> <span id="p-hours">3 664</span> hours</span>
+          <span><strong class="cyan-icon">▶</strong> Playcount: <span id="p-playcount">301 395</span></span>
+        </div>
+      </div>
+
+      <!-- Bottom View 2: Map Stats & 30-Day Activity (Image 3) -->
+      <div class="bottom-view-layer" id="layer-bottom-map">
+        <!-- 4 Stat Glowing Progress Bars (AR, OD, CS, HP) -->
+        <div class="map-stat-bars-2x2">
+          <!-- AR Bar -->
+          <div class="stat-pill-row">
+            <span class="stat-code-label">AR</span>
+            <div class="stat-pill-track">
+              <div class="stat-pill-fill ar" id="fill-ar"></div>
+              <span class="stat-pill-left-text" id="ms-ar">349ms</span>
+              <span class="stat-pill-right-text" id="val-ar">10.67</span>
+            </div>
+          </div>
+          <!-- CS Bar -->
+          <div class="stat-pill-row">
+            <span class="stat-code-label">CS</span>
+            <div class="stat-pill-track">
+              <div class="stat-pill-fill cs" id="fill-cs"></div>
+              <span></span>
+              <span class="stat-pill-right-text" id="val-cs">4.00</span>
+            </div>
+          </div>
+          <!-- OD Bar -->
+          <div class="stat-pill-row">
+            <span class="stat-code-label">OD</span>
+            <div class="stat-pill-track">
+              <div class="stat-pill-fill od" id="fill-od"></div>
+              <span class="stat-pill-left-text" id="ms-od">16.5ms</span>
+              <span class="stat-pill-right-text" id="val-od">10.58</span>
+            </div>
+          </div>
+          <!-- HP Bar -->
+          <div class="stat-pill-row">
+            <span class="stat-code-label">HP</span>
+            <div class="stat-pill-track">
+              <div class="stat-pill-fill hp" id="fill-hp"></div>
+              <span></span>
+              <span class="stat-pill-right-text" id="val-hp">4.50</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="map-chart-caption">Playcount per day for past 30 days</div>
+
+        <!-- 30-Day Playcount Curve SVG Chart -->
+        <div class="activity-chart-wrap">
+          <svg class="history-svg" viewBox="0 0 430 85">
+            <!-- Grid Lines -->
+            <line class="chart-grid-h" x1="20" y1="12" x2="425" y2="12"/>
+            <text class="chart-label-axis" x="4" y="15">300</text>
+            <line class="chart-grid-h" x1="20" y1="35" x2="425" y2="35"/>
+            <text class="chart-label-axis" x="4" y="38">200</text>
+            <line class="chart-grid-h" x1="20" y1="58" x2="425" y2="58"/>
+            <text class="chart-label-axis" x="4" y="61">100</text>
+            <line class="chart-grid-h" x1="20" y1="76" x2="425" y2="76"/>
+            <text class="chart-label-axis" x="10" y="79">0</text>
+
+            <!-- 30-Day Spline Wave Curve -->
+            <path id="svg-map-path" class="chart-curve-path" d="M 25,55 C 27.5,53.2 35.0,47.8 40,44 C 45.0,40.2 50.0,30.3 55,32 C 60.0,33.7 65.0,48.7 70,54 C 75.0,59.3 80.0,65.0 85,64 C 90.0,63.0 95.0,47.7 100,48 C 105.0,48.3 110.0,65.3 115,66 C 120.0,66.7 125.0,52.2 130,52 C 135.0,51.8 140.0,66.0 145,65 C 150.0,64.0 155.0,51.2 160,46 C 165.0,40.8 170.0,32.3 175,34 C 180.0,35.7 185.0,52.3 190,56 C 195.0,59.7 200.0,57.3 205,56 C 210.0,54.7 215.0,47.0 220,48 C 225.0,49.0 230.0,62.3 235,62 C 240.0,61.7 245.0,47.7 250,46 C 255.0,44.3 260.0,51.3 265,52 C 270.0,52.7 275.0,48.3 280,50 C 285.0,51.7 290.0,60.0 295,62 C 300.0,64.0 305.0,61.3 310,62 C 315.0,62.7 320.0,69.0 325,66 C 330.0,63.0 335.0,47.7 340,44 C 345.0,40.3 350.0,40.7 355,44 C 360.0,47.3 365.0,64.0 370,64 C 375.0,64.0 380.0,47.3 385,44 C 390.0,40.7 394.5,38.7 400,44 C 405.5,49.3 415.0,70.7 418,76"/>
+
+            <!-- X Axis Dates -->
+            <text class="chart-label-axis" x="25" y="84">Aug 4</text>
+            <text class="chart-label-axis" x="105" y="84">Aug 10</text>
+            <text class="chart-label-axis" x="180" y="84">Aug 15</text>
+            <text class="chart-label-axis" x="255" y="84">Aug 21</text>
+            <text class="chart-label-axis" x="325" y="84">Aug 26</text>
+            <text class="chart-label-axis" x="385" y="84">Sep 2026</text>
+          </svg>
+        </div>
+
+        <!-- Map Bottom Stats Row -->
+        <div class="map-info-bottom-bar">
+          <div class="map-stats-counts">
+            <span><strong class="cyan-icon">♥</strong> Favs: <span id="m-favs">138</span></span>
+            <span><strong class="cyan-icon">▶</strong> Plays: <span id="m-plays">17 632</span></span>
+          </div>
+          <div class="mapper-pill-card">
+            <img class="mapper-avatar-mini" id="m-avatar" src="/assets/overlay_ref/mapper_avatar_hd.jpg" alt="Mapper">
+            <div class="mapper-text-col">
+              <span class="mapper-name-title" id="m-mapper">-cy</span>
+              <span class="mapper-sub-role">mapper</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3. FLOATING STAR RATING & BPM FOOTER (Image 2 & 3) -->
+    <div class="floating-star-footer" id="star-footer">
+      <span class="star-gold-icon">★</span>
+      <span id="f-sr">11.49</span>
+      <span>•</span>
+      <span id="f-bpm">300bpm</span>
+    </div>
+
+  </div>
+
+  <script>
+    const widget = document.getElementById("overlay-widget");
+    const topCard = document.getElementById("top-card");
+    const bottomCard = document.getElementById("bottom-card");
+    const topBanner = document.getElementById("top-banner");
+    const topPlayer = document.getElementById("layer-top-player");
+    const topMap = document.getElementById("layer-top-map");
+    const bottomPlayer = document.getElementById("layer-bottom-player");
+    const bottomMap = document.getElementById("layer-bottom-map");
+    const starFooter = document.getElementById("star-footer");
+    const lipShine = document.getElementById("lip-shine");
+    const checkLoop = document.getElementById("check-loop");
+    const dockToast = document.getElementById("dock-toast");
+
+    // Player Elements
+    const pAvatar = document.getElementById("p-avatar");
+    const pName = document.getElementById("p-name");
+    const pFlag = document.getElementById("p-flag");
+    const pCrank = document.getElementById("p-crank");
+    const pGrank = document.getElementById("p-grank");
+    const pPp = document.getElementById("p-pp");
+    const pHours = document.getElementById("p-hours");
+    const pPlaycount = document.getElementById("p-playcount");
+    const pBadgeCount = document.getElementById("p-badge-count");
+    const pBadgesContainer = document.getElementById("p-badges-container");
+    const pPeakText = document.getElementById("p-peak-text");
+    const pPeakLine = document.getElementById("p-peak-line");
+    const pPeakDot = document.getElementById("p-peak-dot");
+    const svgPlayerPath = document.getElementById("svg-player-path");
+
+    // Map Elements
+    const mCover = document.getElementById("m-cover");
+    const mTitle = document.getElementById("m-title");
+    const mArtist = document.getElementById("m-artist");
+    const mAvatar = document.getElementById("m-avatar");
+    const mMapper = document.getElementById("m-mapper");
+    const mFavs = document.getElementById("m-favs");
+    const mPlays = document.getElementById("m-plays");
+    const fSr = document.getElementById("f-sr");
+    const fBpm = document.getElementById("f-bpm");
+
+    const fillAr = document.getElementById("fill-ar");
+    const valAr = document.getElementById("val-ar");
+    const msAr = document.getElementById("ms-ar");
+    const fillOd = document.getElementById("fill-od");
+    const valOd = document.getElementById("val-od");
+    const msOd = document.getElementById("ms-od");
+    const fillCs = document.getElementById("fill-cs");
+    const valCs = document.getElementById("val-cs");
+    const fillHp = document.getElementById("fill-hp");
+    const valHp = document.getElementById("val-hp");
+    const svgMapPath = document.getElementById("svg-map-path");
+
+    // Color Theme Presets
+    const THEMES = {
+      cyan: { accent: "#00D2FF", top: "#093448", bottom: "#052332", lip: "#0d4663" },
+      purple: { accent: "#C084FC", top: "#20113A", bottom: "#100822", lip: "#321B59" },
+      magenta: { accent: "#FF2E93", top: "#360E2A", bottom: "#1E0717", lip: "#521640" },
+      gold: { accent: "#FFB703", top: "#2E240D", bottom: "#171204", lip: "#483915" },
+      emerald: { accent: "#10B981", top: "#0B2E24", bottom: "#041813", lip: "#104838" },
+      crimson: { accent: "#EF4444", top: "#350F14", bottom: "#1F070A", lip: "#541820" },
+    };
+
+    function applyColorTheme(themeKey) {
+      if (themeKey === "custom") return;
+      const t = THEMES[themeKey] || THEMES.cyan;
+      document.getElementById("picker-accent").value = t.accent;
+      applyPalette(t.accent, t.top, t.bottom, t.lip);
+    }
+
+    function setCustomAccent(color) {
+      document.getElementById("select-theme").value = "custom";
+      // Generate harmonious dark top, bottom and lip colors
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      const top = `rgb(${Math.round(r * 0.18 + 5)}, ${Math.round(g * 0.18 + 8)}, ${Math.round(b * 0.18 + 12)})`;
+      const bottom = `rgb(${Math.round(r * 0.08 + 2)}, ${Math.round(g * 0.08 + 4)}, ${Math.round(b * 0.08 + 6)})`;
+      const lip = `rgb(${Math.round(r * 0.28 + 8)}, ${Math.round(g * 0.28 + 12)}, ${Math.round(b * 0.28 + 18)})`;
+      applyPalette(color, top, bottom, lip);
+    }
+
+    function applyPalette(accent, top, bottom, lip) {
+      document.documentElement.style.setProperty("--cyan-accent", accent);
+      document.documentElement.style.setProperty("--card-teal-top", top);
+      document.documentElement.style.setProperty("--card-teal-bottom", bottom);
+      document.documentElement.style.setProperty("--bottom-lip-color", lip);
+      document.documentElement.style.setProperty("--card-border", `${accent}55`);
+      document.documentElement.style.setProperty("--card-shadow-glow", `${accent}28`);
+    }
+
+    function setCanvasBackground(bg) {
+      document.body.style.backgroundColor = bg;
+    }
+
+    function showToast(text, duration = 3000) {
+      dockToast.textContent = text;
+      dockToast.classList.add("active");
+      setTimeout(() => dockToast.classList.remove("active"), duration);
+    }
+
+    // Default stateData
+    let stateData = {
+      player: {
+        username: "lifeline",
+        flag: "🇮🇩",
+        countryCode: "ID",
+        crank: "— #1",
+        grank: "#7",
+        pp: "25 838pp",
+        hours: 3664,
+        playcount: 301395,
+        badgeCount: 6,
+        badges: [
+          { url: "/assets/overlay_ref/badge_oit15.png", title: "osu! Indonesia Tournament #15 Winner" },
+          { url: "/assets/overlay_ref/badge_oit13.jpg", title: "osu! Indonesia Tournament #13 Winner" },
+          { url: "/assets/overlay_ref/badge_4s.png", title: "SEA Summer Suiji Showdown 2 Winning Team" },
+          { url: "/assets/overlay_ref/badge_oit22.png", title: "osu! Indonesia Tournament 2022 Winner" },
+          { url: "/assets/overlay_ref/badge_seat.png", title: "osu! South East Asia Tournament 5 Winner" },
+          { url: "/assets/overlay_ref/badge_ucup.png", title: "Ulat Cup 2021 Winning Team" }
+        ],
+        avatar: "/assets/overlay_ref/lifeline_avatar_hd.jpg",
+        banner: "/assets/overlay_ref/lifeline_banner_hd.jpg",
+        monthlyPlaycounts: []
+      },
+      map: {
+        title: "I thought I was an angel [Fallen]",
+        artist: "by Utsu-P",
+        cover: "/assets/overlay_ref/map_cover_hd.jpg",
+        mapper: "-cy",
+        mapperAvatar: "/assets/overlay_ref/mapper_avatar_hd.jpg",
+        favs: "138",
+        plays: "17 632",
+        sr: "11.49",
+        bpm: "300bpm",
+        ar: 10.67,
+        arMs: "349ms",
+        od: 10.58,
+        odMs: "16.5ms",
+        cs: 4.00,
+        hp: 4.50
+      }
+    };
+
+    // Asset Preloading Barrier for Export & Screen Capture
+    window.waitForAllAssetsReady = async function() {
+      const imgs = Array.from(document.querySelectorAll("img"));
+      await Promise.all(imgs.map(img => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.addEventListener("load", () => resolve(), { once: true });
+          img.addEventListener("error", () => resolve(), { once: true });
+        });
+      }));
+      await document.fonts.ready;
+    };
+
+    // Build SVG Spline from Monthly Data
+    function buildPlaycountSpline(counts) {
+      if (!counts || counts.length < 2) {
+        return {
+          d: "M 20,90.9 C 20.6,87.7 22.6,75.6 23.9,71.5 C 25.2,67.4 26.6,65.1 27.9,66.1 C 29.2,67.1 30.5,74.1 31.8,77.7 C 33.1,81.3 34.4,85.2 35.7,87.8 C 37.0,90.4 38.4,92.4 39.7,93.5 C 41.0,94.6 42.3,94.2 43.6,94.3 C 44.9,94.4 46.2,95.4 47.5,94.1 C 48.8,92.8 50.2,86.5 51.5,86.4 C 52.8,86.3 54.1,92.5 55.4,93.7 C 56.7,94.9 58.0,99.2 59.3,93.4 C 60.6,87.7 62.0,63.8 63.3,59.2 C 64.6,54.6 65.9,63.2 67.2,65.7 C 68.5,68.2 69.8,70.2 71.1,74.2 C 72.4,78.3 73.7,90.7 75,90 C 76.3,89.3 77.7,75.8 79,70.1 C 80.3,64.4 81.6,60.8 82.9,56 C 84.2,51.2 85.5,41.0 86.8,41.3 C 88.1,41.6 89.5,56.3 90.8,57.9 C 92.1,59.5 93.4,52.2 94.7,50.6 C 96.0,49.0 97.3,49.0 98.6,48.5 C 99.9,48.0 101.3,48.6 102.6,47.7 C 103.9,46.8 105.2,44.4 106.5,43 C 107.8,41.6 109.1,38.3 110.4,39.3 C 111.7,40.3 113.1,46.2 114.4,49.1 C 115.7,52.0 117.0,53.8 118.3,56.9 C 119.6,60.0 120.9,69.9 122.2,67.6 C 123.5,65.3 124.9,48.1 126.2,42.8 C 127.5,37.5 128.8,39.0 130.1,36 C 131.4,33.0 132.7,24.3 134,25.1 C 135.3,25.9 136.7,37.5 138,41 C 139.3,44.5 140.6,46.0 141.9,46.4 C 143.2,46.8 144.5,41.8 145.8,43.6 C 147.1,45.4 148.5,55.5 149.8,57.2 C 151.1,59.0 152.4,52.8 153.7,54.1 C 155.0,55.4 156.3,63.4 157.6,65 C 158.9,66.6 160.3,64.3 161.6,63.5 C 162.9,62.7 164.2,59.5 165.5,60.2 C 166.8,60.9 168.1,67.4 169.4,67.6 C 170.7,67.8 172.0,65.2 173.3,61.5 C 174.6,57.8 176.0,48.6 177.3,45.4 C 178.6,42.2 179.9,43.9 181.2,42.5 C 182.5,41.1 183.8,35.7 185.1,37.3 C 186.4,38.9 187.8,48.9 189.1,52.2 C 190.4,55.6 191.7,56.1 193,57.4 C 194.3,58.7 195.6,60.4 196.9,60 C 198.2,59.6 199.6,56.5 200.9,55.2 C 202.2,53.9 203.5,51.5 204.8,52 C 206.1,52.5 207.4,54.1 208.7,58 C 210.0,61.9 211.4,74.6 212.7,75.1 C 214.0,75.6 215.3,63.1 216.6,61 C 217.9,58.9 219.2,61.4 220.5,62.3 C 221.8,63.2 223.2,64.7 224.5,66.5 C 225.8,68.3 227.1,70.9 228.4,73.4 C 229.7,75.9 231.0,78.7 232.3,81.5 C 233.6,84.3 235.0,88.5 236.3,90.5 C 237.6,92.5 238.9,99.4 240.2,93.5 C 241.5,87.6 242.8,61.9 244.1,55.2 C 245.4,48.5 246.8,54.0 248.1,53.4 C 249.4,52.8 250.7,50.6 252,51.8 C 253.3,52.9 254.6,58.3 255.9,60.3 C 257.2,62.3 258.6,63.1 259.9,63.9 C 261.2,64.7 262.5,65.4 263.8,65.2 C 265.1,65.0 266.4,62.0 267.7,63 C 269.0,64.0 270.4,69.6 271.7,70.9 C 273.0,72.2 274.3,69.9 275.6,70.9 C 276.9,72.0 278.2,77.8 279.5,77.2 C 280.8,76.6 282.1,68.1 283.4,67.2 C 284.7,66.3 286.1,69.4 287.4,71.7 C 288.7,74.0 290.0,80.4 291.3,81.1 C 292.6,81.8 293.9,76.5 295.2,75.6 C 296.5,74.7 297.9,76.0 299.2,75.8 C 300.5,75.5 301.8,75.6 303.1,74.1 C 304.4,72.6 305.7,67.2 307,66.8 C 308.3,66.4 309.7,70.6 311,71.8 C 312.3,73.0 313.6,73.0 314.9,73.8 C 316.2,74.6 317.5,76.3 318.8,76.4 C 320.1,76.5 321.5,75.9 322.8,74.6 C 324.1,73.3 325.4,68.6 326.7,68.7 C 328.0,68.8 329.3,73.5 330.6,75.3 C 331.9,77.1 333.3,80.5 334.6,79.6 C 335.9,78.7 337.2,71.4 338.5,70.1 C 339.8,68.8 341.1,72.0 342.4,71.7 C 343.7,71.4 345.1,68.3 346.4,68.4 C 347.7,68.5 349.0,71.1 350.3,72.4 C 351.6,73.7 352.9,77.3 354.2,76.2 C 355.5,75.2 356.9,67.1 358.2,66.1 C 359.5,65.1 360.8,68.5 362.1,70 C 363.4,71.5 364.7,74.9 366,75.1 C 367.3,75.3 368.7,73.5 370,71.2 C 371.3,68.9 372.6,60.8 373.9,61.3 C 375.2,61.8 376.5,71.2 377.8,74.3 C 379.1,77.4 380.4,79.4 381.7,79.9 C 383.0,80.5 384.4,78.7 385.7,77.6 C 387.0,76.5 388.3,72.8 389.6,73.2 C 390.9,73.6 392.2,78.8 393.5,79.9 C 394.8,81.0 396.2,80.0 397.5,80 C 398.8,80.0 400.1,79.2 401.4,79.9 C 402.7,80.6 404.0,83.6 405.3,84 C 406.6,84.4 408.0,82.0 409.3,82.4 C 410.6,82.9 411.9,85.8 413.2,86.7 C 414.5,87.6 415.8,88.3 417.1,87.7 C 418.4,87.1 419.8,82.4 421.1,83.3 C 422.4,84.2 424.4,91.4 425,93",
+          peakX: 134,
+          peakY: 25.1
+        };
+      }
+
+      let maxCount = 0;
+      counts.forEach(c => { if (c.count > maxCount) maxCount = c.count; });
+      const maxCap = Math.max(8000, maxCount * 1.1);
+
+      const pts = counts.map((m, i) => {
+        const x = 20 + (i / (counts.length - 1)) * 405;
+        const y = 95 - (Math.min(maxCap, m.count) / maxCap) * 75;
+        return { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)), count: m.count };
+      });
+
+      let peak = pts[0];
+      pts.forEach(p => { if (p.count > peak.count) peak = p; });
+
+      let d = `M ${pts[0].x},${pts[0].y}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[Math.max(0, i - 1)];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[Math.min(pts.length - 1, i + 2)];
+        const cp1x = (p1.x + (p2.x - p0.x) / 6).toFixed(1);
+        const cp1y = (p1.y + (p2.y - p0.y) / 6).toFixed(1);
+        const cp2x = (p2.x - (p3.x - p1.x) / 6).toFixed(1);
+        const cp2y = (p2.y - (p3.y - p1.y) / 6).toFixed(1);
+        d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+      }
+
+      return { d, peakX: peak.x, peakY: peak.y };
+    }
+
+    function renderBadges(badges) {
+      pBadgesContainer.innerHTML = "";
+      if (!badges || badges.length === 0) {
+        pBadgesContainer.innerHTML = `<span style="font-size: 8.5px; color: var(--text-dim);">No tournament badges</span>`;
+        return;
+      }
+      badges.forEach(b => {
+        const img = document.createElement("img");
+        img.className = "badge-item-img";
+        img.src = b.url;
+        img.alt = b.title || "Badge";
+        img.title = b.title || "Badge";
+        img.onerror = () => { img.style.display = "none"; };
+        pBadgesContainer.appendChild(img);
+      });
+    }
+
+    function applyStateData() {
+      // Player
+      pAvatar.src = stateData.player.avatar;
+      pName.textContent = stateData.player.username;
+      pFlag.textContent = stateData.player.flag;
+      pCrank.textContent = stateData.player.crank;
+      pGrank.textContent = stateData.player.grank;
+      pPp.textContent = stateData.player.pp;
+      pBadgeCount.textContent = stateData.player.badgeCount;
+      renderBadges(stateData.player.badges);
+
+      const spline = buildPlaycountSpline(stateData.player.monthlyPlaycounts);
+      svgPlayerPath.setAttribute("d", spline.d);
+      pPeakDot.setAttribute("cx", spline.peakX);
+      pPeakDot.setAttribute("cy", spline.peakY);
+      pPeakLine.setAttribute("y1", spline.peakY);
+      pPeakLine.setAttribute("y2", spline.peakY);
+      if (stateData.player.peakCount && stateData.player.peakMonth) {
+        pPeakText.textContent = `peak: ${stateData.player.peakCount} (${stateData.player.peakMonth})`;
+      }
+
+      // Map
+      mCover.src = stateData.map.cover;
+      mTitle.textContent = stateData.map.title;
+      mArtist.textContent = stateData.map.artist;
+      mMapper.textContent = stateData.map.mapper;
+      mAvatar.src = stateData.map.mapperAvatar;
+      mFavs.textContent = stateData.map.favs;
+      mPlays.textContent = stateData.map.plays;
+      fSr.textContent = stateData.map.sr;
+      fBpm.textContent = stateData.map.bpm;
+      valAr.textContent = stateData.map.ar.toFixed(2);
+      msAr.textContent = stateData.map.arMs;
+      valOd.textContent = stateData.map.od.toFixed(2);
+      msOd.textContent = stateData.map.odMs;
+      valCs.textContent = stateData.map.cs.toFixed(2);
+      valHp.textContent = stateData.map.hp.toFixed(2);
+    }
+
+    // =========================================================================
+    // PROFESSIONAL TIMELINE ANIMATION: START NOTHING -> OPEN PLAYER -> CLOSE -> OPEN MAP -> CLOSE
+    // Total Duration: 9.0s
+    // =========================================================================
+    function seekAnimation(t) {
+      const easeOutBack = (x) => {
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+      };
+      const easeInOutCubic = (x) => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+      // 1. Stage 0: Start from Nothing -> Player Display Opens Up (0.0s to 0.7s)
+      if (t < 0.7) {
+        const p = Math.min(1, Math.max(0, t / 0.7));
+        const eased = easeOutBack(p);
+
+        widget.style.opacity = String(Math.min(1, p * 1.8));
+        widget.style.transform = `perspective(1000px) translateY(${Math.round(24 * (1 - p))}px) scale(${0.86 + 0.14 * p}) scaleY(${0.08 + 0.92 * eased})`;
+        
+        topPlayer.classList.toggle("visible", p > 0.35);
+        bottomPlayer.classList.toggle("visible", p > 0.35);
+        topMap.classList.remove("visible");
+        bottomMap.classList.remove("visible");
+        starFooter.classList.remove("visible");
+        topBanner.style.backgroundImage = `url("${stateData.player.banner}")`;
+
+        svgPlayerPath.style.strokeDashoffset = "1200";
+        pHours.textContent = "0";
+        pPlaycount.textContent = "0";
+      }
+      // 2. Stage 1: Player Display Open, Drawing Lines & Counting Up (0.7s to 3.8s)
+      else if (t < 3.8) {
+        widget.style.opacity = "1";
+        widget.style.transform = "perspective(1000px) translateY(0) scale(1) scaleY(1)";
+
+        topPlayer.classList.add("visible");
+        bottomPlayer.classList.add("visible");
+        topMap.classList.remove("visible");
+        bottomMap.classList.remove("visible");
+        starFooter.classList.remove("visible");
+        topBanner.style.backgroundImage = `url("${stateData.player.banner}")`;
+
+        // Smooth line drawing
+        const lineDrawP = Math.min(1, Math.max(0, (t - 0.7) / 1.2));
+        const lineEase = 1 - Math.pow(1 - lineDrawP, 3);
+        svgPlayerPath.style.strokeDashoffset = String(Math.round(1200 * (1 - lineEase)));
+
+        // Numeric counters count up
+        const numP = Math.min(1, Math.max(0, (t - 0.7) / 1.0));
+        const numEase = 1 - Math.pow(1 - numP, 3);
+        pHours.textContent = Math.round(stateData.player.hours * numEase).toLocaleString();
+        pPlaycount.textContent = Math.round(stateData.player.playcount * numEase).toLocaleString();
+      }
+      // 3. Stage 2: Player Display Closes Shut (3.8s to 4.8s)
+      else if (t < 4.8) {
+        const p = (t - 3.8) / 1.0; // 0 to 1
+        topPlayer.classList.remove("visible");
+        bottomPlayer.classList.remove("visible");
+        topMap.classList.remove("visible");
+        bottomMap.classList.remove("visible");
+        starFooter.classList.add("visible");
+        topBanner.style.backgroundImage = "none";
+
+        // Containers close shut into the sleek beveled transition shells (Image 2)
+        const compress = Math.sin(p * Math.PI) * 0.08;
+        widget.style.opacity = "1";
+        widget.style.transform = `perspective(1000px) translateY(0) scale(${1 - compress}) scaleY(1)`;
+
+        // Light sweep across top lip
+        if (p > 0.15 && p < 0.85) {
+          lipShine.style.transform = `skewX(-25deg) translateX(${((p - 0.15) / 0.7) * 520}px)`;
+        } else {
+          lipShine.style.transform = "skewX(-25deg) translateX(-100px)";
+        }
+      }
+      // 4. Stage 3: Map Display Opens Up Again (4.8s to 7.8s)
+      else if (t < 7.8) {
+        const openP = Math.min(1, Math.max(0, (t - 4.8) / 0.6));
+        const eased = easeOutBack(openP);
+
+        widget.style.opacity = "1";
+        widget.style.transform = `perspective(1000px) translateY(0) scale(1) scaleY(${0.92 + 0.08 * eased})`;
+
+        topPlayer.classList.remove("visible");
+        bottomPlayer.classList.remove("visible");
+        topMap.classList.add("visible");
+        bottomMap.classList.add("visible");
+        starFooter.classList.add("visible");
+        topBanner.style.backgroundImage = `url("${stateData.map.cover}")`;
+
+        // Sequential Stat progress bar fills
+        const arP = Math.min(1, Math.max(0, (t - 4.9) / 0.7));
+        const csP = Math.min(1, Math.max(0, (t - 5.0) / 0.7));
+        const odP = Math.min(1, Math.max(0, (t - 5.1) / 0.7));
+        const hpP = Math.min(1, Math.max(0, (t - 5.2) / 0.7));
+
+        fillAr.style.width = (arP * Math.min(100, (stateData.map.ar / 11) * 100)) + "%";
+        fillCs.style.width = (csP * Math.min(100, (stateData.map.cs / 10) * 100)) + "%";
+        fillOd.style.width = (odP * Math.min(100, (stateData.map.od / 11) * 100)) + "%";
+        fillHp.style.width = (hpP * Math.min(100, (stateData.map.hp / 10) * 100)) + "%";
+
+        const mapLineP = Math.min(1, Math.max(0, (t - 4.9) / 0.9));
+        svgMapPath.style.strokeDashoffset = String(Math.round(1200 * (1 - mapLineP)));
+      }
+      // 5. Stage 4: Map Display Closes Shut Back to Nothing (7.8s to 9.0s)
+      else {
+        const p = Math.min(1, Math.max(0, (t - 7.8) / 1.0));
+        widget.style.opacity = String(Math.max(0, 1 - p * 1.3));
+        widget.style.transform = `perspective(1000px) translateY(${Math.round(22 * p)}px) scale(${1 - 0.12 * p}) scaleY(${Math.max(0.05, 1 - 0.95 * p)})`;
+        
+        topMap.classList.remove("visible");
+        bottomMap.classList.remove("visible");
+        starFooter.classList.remove("visible");
+      }
+    }
+
+    // Manual Phase Selection
+    function switchPhase(phase) {
+      stopLiveLoop();
+      widget.style.opacity = "1";
+      widget.style.transform = "perspective(1000px) translateY(0) scale(1) scaleY(1)";
+
+      if (phase === 0) {
+        seekAnimation(2.0); // Freeze on Player Info
+      } else if (phase === 1) {
+        seekAnimation(4.2); // Freeze on Transition Shells
+      } else if (phase === 2) {
+        seekAnimation(6.2); // Freeze on Map Details
+      }
+    }
+
+    // Live 60fps Animation Loop
+    let animRaf = null;
+    let animStart = null;
+    const TOTAL_CYCLE = 9.0;
+
+    function stopLiveLoop() {
+      if (animRaf) {
+        cancelAnimationFrame(animRaf);
+        animRaf = null;
+      }
+    }
+
+    function triggerSequence() {
+      stopLiveLoop();
+      animStart = performance.now();
+
+      function step(now) {
+        const elapsed = (now - animStart) / 1000;
+        if (elapsed >= TOTAL_CYCLE) {
+          if (checkLoop.checked) {
+            animStart = now;
+            seekAnimation(0);
+            animRaf = requestAnimationFrame(step);
+          } else {
+            seekAnimation(TOTAL_CYCLE);
+            stopLiveLoop();
+          }
+          return;
+        }
+        seekAnimation(elapsed);
+        animRaf = requestAnimationFrame(step);
+      }
+      animRaf = requestAnimationFrame(step);
+    }
+
+    // Fetch User or Score URL via /api/overlay-data
+    window.loadDataFromUrlPromise = null;
+    async function loadDataFromUrl() {
+      const url = document.getElementById("input-score").value.trim();
+      const msg = document.getElementById("fetch-msg");
+      if (!url) return;
+      msg.textContent = "Fetching...";
+      try {
+        window.loadDataFromUrlPromise = fetch(`/api/overlay-data?url=${encodeURIComponent(url)}`).then(r => r.json());
+        const json = await window.loadDataFromUrlPromise;
+        if (json.data) {
+          stateData = json.data;
+          applyStateData();
+          await window.waitForAllAssetsReady();
+          msg.textContent = "Synced!";
+          triggerSequence();
+        } else {
+          throw new Error("No data returned");
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        msg.textContent = "Err: " + err.message;
+      }
+    }
+
+    // Direct Native Download (GIF or WebM Video)
+    function downloadAnimation(format = "gif") {
+      const bg = document.getElementById("select-bg").value;
+      const score = document.getElementById("input-score").value.trim();
+      const accent = document.getElementById("picker-accent").value;
+      const theme = document.getElementById("select-theme").value;
+
+      showToast(`Generating high-quality ${format.toUpperCase()} export... (~4s)`);
+
+      const exportUrl = `/api/export-animation?format=${format}&bg=${encodeURIComponent(bg)}&score=${encodeURIComponent(score)}&accent=${encodeURIComponent(accent)}&theme=${encodeURIComponent(theme)}`;
+      
+      const a = document.createElement("a");
+      a.href = exportUrl;
+      a.download = `osu-stream-overlay.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      setTimeout(() => {
+        showToast(`Download started! If not prompted, check browser downloads.`);
+      }, 4500);
+    }
+
+    // Toggle dock with "H" key
+    window.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "h") {
+        document.getElementById("control-dock").classList.toggle("hidden");
+      }
+    });
+
+    // Expose globals
+    window.seekAnimation = seekAnimation;
+    window.triggerSequence = triggerSequence;
+    window.switchPhase = switchPhase;
+    window.stopLiveLoop = stopLiveLoop;
+
+    // Initialization
+    applyStateData();
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("bg")) {
+      document.getElementById("select-bg").value = q.get("bg");
+      setCanvasBackground(q.get("bg"));
+    }
+    if (q.get("theme")) {
+      document.getElementById("select-theme").value = q.get("theme");
+      applyColorTheme(q.get("theme"));
+    }
+    if (q.get("accent")) {
+      document.getElementById("picker-accent").value = q.get("accent");
+      setCustomAccent(q.get("accent"));
+    }
+    if (q.get("url")) {
+      document.getElementById("input-score").value = q.get("url");
+      loadDataFromUrl();
+    } else {
+      if (!q.get("exportMode")) {
+        triggerSequence();
+      }
+    }
+  </script>
+</body>
+</html>

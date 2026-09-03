@@ -104,7 +104,7 @@ export function createOsuClient(credentials: OsuCredentials) {
     }
   };
 
-  return { fetchScore, getModdedBeatmapAttributes, fetchLeaderboardPosition };
+  return { fetchScore, getModdedBeatmapAttributes, fetchLeaderboardPosition, apiGet };
 }
 
 export type OsuClient = ReturnType<typeof createOsuClient>;

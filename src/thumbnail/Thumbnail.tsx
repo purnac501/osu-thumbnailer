@@ -8,6 +8,7 @@ import { TextLayer } from "./components/Text/TextLayer";
 import { ModList } from "./components/Mods/ModList";
 import { Avatar, CountryFlag, UsernamePanel } from "./components/Player/PlayerSection";
 import { BottomMessage, TwitchLogo } from "./components/Branding/Branding";
+import { CuteSparkles } from "./components/Decorations/CuteSparkles";
 
 declare global {
   interface Window {
@@ -210,6 +211,25 @@ export function Thumbnail({
       <ModList mods={data.mods} config={c.modList} />
 
       <TwitchLogo config={c.twitchLogo} />
+
+      {c.innerBorder?.visible ? (
+        <div
+          data-layer="inner-border"
+          style={{
+            position: "absolute",
+            inset: c.innerBorder.inset ?? 18,
+            border: c.innerBorder.border ?? "2px solid rgba(255, 255, 255, 0.35)",
+            borderRadius: c.innerBorder.borderRadius ?? 20,
+            boxShadow: "0 0 16px rgba(255, 255, 255, 0.12)",
+            pointerEvents: "none",
+            zIndex: 15,
+          }}
+        />
+      ) : null}
+
+      {c.sparkles?.visible ? (
+        <CuteSparkles config={c.sparkles} color={template.theme.accent} />
+      ) : null}
 
       {/* Bottom message: manual text with the accent-colored substring
           highlighted wherever it appears. */}

@@ -56,9 +56,20 @@ function Overlay({ config }: { config: BackgroundConfig["overlays"][number] }) {
         position: "absolute",
         inset: 0,
         background:
-          config.kind === "solid" ? config.color : `linear-gradient(${config.gradient})`,
+          config.boxShadow || config.border
+            ? undefined
+            : config.kind === "solid"
+              ? config.color
+              : config.kind === "radial-gradient" && config.gradient
+                ? `radial-gradient(${config.gradient})`
+                : config.gradient
+                  ? `linear-gradient(${config.gradient})`
+                  : undefined,
+        boxShadow: config.boxShadow,
+        border: config.border,
         opacity: config.opacity,
         mixBlendMode: config.blendMode as never,
+        pointerEvents: "none",
       }}
     />
   );

@@ -1,8 +1,14 @@
 import type { ThumbnailTemplate } from "../types";
 import { referenceTemplate } from "./reference/template";
+import { cuteTemplate } from "./cute/template";
+import { showcaseTemplate } from "./showcase/template";
+import { adaptableTemplate } from "./adaptable/template";
 
 /** Template registry. Add new templates here; nothing else needs to change. */
 export const templates: Record<string, ThumbnailTemplate> = {
+  showcase: showcaseTemplate,
+  adaptable: adaptableTemplate,
+  cute: cuteTemplate,
   reference: referenceTemplate,
 };
 
