@@ -107,11 +107,12 @@ export function OverlayWidget({ data, spline, setRef, }: {
                   </span>) : null}
               </div>
             </div>)}
-            <div className="badges-right-meta">
-              <div className="playcount-over-time-lbl">Playcount over time</div>
-              <div className="playcount-peak-lbl">
-                peak: {data.player.peakCount} ({data.player.peakMonth})
-              </div>
+          </div>
+
+          <div className="badges-right-meta playcount-meta-row">
+            <div className="playcount-over-time-lbl">Playcount over time</div>
+            <div className="playcount-peak-lbl">
+              peak: {data.player.peakCount} ({data.player.peakMonth})
             </div>
           </div>
 

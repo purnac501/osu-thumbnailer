@@ -12,7 +12,7 @@ export const DEFAULT_OVERLAY_DATA: OverlayData = {
         username: "lifeline",
         flag: "🇮🇩",
         countryCode: "ID",
-        crank: "- #1",
+        crank: "#1",
         grank: "#7",
         pp: "25 838pp",
         hours: 3664,

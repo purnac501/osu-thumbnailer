@@ -248,7 +248,7 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         // Container B (Graph Panel) - Delayed entrance (+100ms delay, 350ms duration)
         if (t < 0.10) {
             if (bottomCard) {
-                bottomCard.style.clipPath = "inset(0 0 100% 0)";
+                bottomCard.style.clipPath = "inset(0 0 100% 0 round 14px)";
                 bottomCard.style.opacity = "0";
                 bottomCard.style.transform = "scale(1)";
             }
@@ -262,7 +262,7 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
             const pB = easeMotionDecel(Math.min(1, Math.max(0, (t - 0.10) / 0.35)));
             const curtainPercent = Math.max(0, (1 - pB) * 100).toFixed(1);
             if (bottomCard) {
-                bottomCard.style.clipPath = `inset(0 0 ${curtainPercent}% 0)`;
+                bottomCard.style.clipPath = `inset(0 0 ${curtainPercent}% 0 round 14px)`;
                 bottomCard.style.opacity = String(pB);
                 bottomCard.style.transform = "scale(1)";
             }
@@ -311,7 +311,7 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
             topCard.style.boxShadow = "";
         }
         if (bottomCard) {
-            bottomCard.style.clipPath = "inset(0 0 0% 0)";
+            bottomCard.style.clipPath = "";
             bottomCard.style.opacity = "1";
             bottomCard.style.transform = "scale(1)";
             bottomCard.style.boxShadow = "";
@@ -368,7 +368,7 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
             topCard.style.boxShadow = `0 16px 36px rgba(0, 0, 0, 0.88), inset 0 1px 1.5px rgba(255, 255, 255, ${innerGlow})`;
         }
         if (bottomCard) {
-            bottomCard.style.clipPath = "inset(0 0 0% 0)";
+            bottomCard.style.clipPath = "";
             bottomCard.style.opacity = "1";
             bottomCard.style.transform = `scale(${cardScale})`;
             bottomCard.style.boxShadow = `0 16px 36px rgba(0, 0, 0, 0.88), inset 0 1px 1.5px rgba(255, 255, 255, ${innerGlow})`;
@@ -424,7 +424,7 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
             topCard.style.boxShadow = "";
         }
         if (bottomCard) {
-            bottomCard.style.clipPath = "inset(0 0 0% 0)";
+            bottomCard.style.clipPath = "";
             bottomCard.style.opacity = "1";
             bottomCard.style.transform = "scale(1)";
             bottomCard.style.boxShadow = "";
