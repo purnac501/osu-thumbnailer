@@ -14,10 +14,12 @@ import {
     buildAnimationExportPageUrl,
     type AnimationExportFormat,
     type AnimationExportPreset,
+    type AnimationStyle,
 } from "../shared/animation-export";
 export interface RenderAnimationOptions {
     format: AnimationExportFormat;
     preset?: AnimationExportPreset;
+    style?: AnimationStyle;
     score: string;
     theme: string;
     accent: string;
@@ -113,8 +115,8 @@ export function gifsicleArgs(inFile: string, outFile: string, preset?: "compact"
     }
     return ["--optimize=3", "--colors", "256", "-o", outFile, inFile];
 }
-export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent"> & { preset?: string }): string {
-    return createHash("sha1").update(JSON.stringify(["v20", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.score, options.theme, options.accent])).digest("hex");
+export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent"> & { preset?: string; style?: string }): string {
+    return createHash("sha1").update(JSON.stringify(["v21", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.style ?? "card", options.score, options.theme, options.accent])).digest("hex");
 }
 export function exportCacheDir(): string {
     return path.join(os.tmpdir(), "osu-overlay-cache");
@@ -154,7 +156,7 @@ async function prepareExportPage(page: Page, pageUrl: string): Promise<void> {
             await window.waitForAllAssetsReady();
         }
     });
-    await page.waitForSelector("#overlay-widget", { state: "visible" });
+    await page.waitForSelector("#overlay-widget, .showcase-intro-container", { state: "visible" });
     await page.waitForTimeout(350);
     await page.evaluate(() => {
         if (window.stopLiveLoop)
@@ -170,13 +172,18 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
         return {
             bytes: cached,
             contentType: ANIMATION_EXPORT_MIME[options.format],
-            fileName: animationExportFileName(options.format),
+            fileName: animationExportFileName(options.format, options.preset, options.style),
         };
     }
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "osu-overlay-"));
     try {
+        const isShowcase = options.style === "showcase";
+        const viewport = isShowcase ? { width: 960, height: 540 } : EXPORT_VIEWPORT;
+        const deviceScale = isShowcase ? 1.0 : EXPORT_DEVICE_SCALE;
         const pageUrl = buildAnimationExportPageUrl(options.baseUrl, {
             format: options.format,
+            preset: options.preset,
+            style: options.style,
             score: options.score,
             theme: options.theme,
             accent: options.accent,
@@ -185,13 +192,16 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
         try {
             const pages = await Promise.all(Array.from({ length: EXPORT_SHARD_COUNT }, async () => {
                 const page = await browser.newPage({
-                    viewport: EXPORT_VIEWPORT,
-                    deviceScaleFactor: EXPORT_DEVICE_SCALE,
+                    viewport,
+                    deviceScaleFactor: deviceScale,
                 });
                 await prepareExportPage(page, pageUrl);
                 return page;
             }));
-            const clip = await pages[0]!.evaluate(({ padding, viewport }) => {
+            const clip = await pages[0]!.evaluate(({ padding, viewport, isShowcase }) => {
+                if (isShowcase) {
+                    return { x: 0, y: 0, width: 960, height: 540 };
+                }
                 const widget = document.getElementById("overlay-widget");
                 if (!widget)
                     return null;
@@ -201,12 +211,12 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
                 const width = Math.min(viewport.width - x, Math.ceil(rect.right - x + padding));
                 const height = Math.min(viewport.height - y, Math.ceil(rect.bottom - y + padding));
                 return { x, y, width, height };
-            }, { padding: EXPORT_CLIP_PADDING, viewport: EXPORT_VIEWPORT });
+            }, { padding: EXPORT_CLIP_PADDING, viewport, isShowcase });
             const shot = clip ?? {
                 x: 0,
                 y: 0,
-                width: EXPORT_VIEWPORT.width,
-                height: EXPORT_VIEWPORT.height,
+                width: viewport.width,
+                height: viewport.height,
             };
             let done = 0;
             await Promise.all(pages.map((page, shard) => (async () => {

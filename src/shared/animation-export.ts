@@ -7,11 +7,13 @@ export const ANIMATION_EXPORT_MIME: Record<AnimationExportFormat, string> = {
     gif: "image/gif",
     mov: "video/quicktime",
 };
-export function animationExportFileName(format: AnimationExportFormat, preset?: AnimationExportPreset): string {
+export type AnimationStyle = "card" | "showcase";
+export function animationExportFileName(format: AnimationExportFormat, preset?: AnimationExportPreset, style?: AnimationStyle): string {
+    const prefix = style === "showcase" ? "osu-showcase-intro" : "osu-score-card";
     if (preset === "compact") {
-        return `osu-score-card-compact.${format}`;
+        return `${prefix}-compact.${format}`;
     }
-    return `osu-score-card.${format}`;
+    return `${prefix}.${format}`;
 }
 export function animationExportBackground(format: AnimationExportFormat): string {
     return "transparent";
@@ -19,6 +21,7 @@ export function animationExportBackground(format: AnimationExportFormat): string
 export interface AnimationExportParams {
     format: AnimationExportFormat;
     preset?: AnimationExportPreset;
+    style?: AnimationStyle;
     score: string;
     theme: string;
     accent: string;
@@ -30,6 +33,8 @@ export function exportQuery(params: AnimationExportParams): URLSearchParams {
     });
     if (params.preset && params.preset !== "hq")
         query.set("preset", params.preset);
+    if (params.style && params.style !== "card")
+        query.set("style", params.style);
     if (params.score)
         query.set("score", params.score);
     if (params.theme)
@@ -50,6 +55,8 @@ export function buildAnimationExportPageUrl(baseUrl: string, params: AnimationEx
     });
     if (params.preset && params.preset !== "hq")
         query.set("preset", params.preset);
+    if (params.style && params.style !== "card")
+        query.set("style", params.style);
     if (params.score)
         query.set("url", params.score);
     if (params.theme)
@@ -63,4 +70,7 @@ export function parseAnimationExportFormat(value: string | null): AnimationExpor
 }
 export function parseAnimationExportPreset(value: string | null): AnimationExportPreset {
     return value === "compact" || value === "small" ? "compact" : "hq";
+}
+export function parseAnimationStyle(value: string | null): AnimationStyle {
+    return value === "showcase" ? "showcase" : "card";
 }

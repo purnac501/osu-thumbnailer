@@ -1,0 +1,515 @@
+/* ==========================================================================
+   Showcase Intro Animation Styles (Center Lens & Flyout Stats)
+   ========================================================================== */
+
+.showcase-intro-container {
+  width: 960px;
+  height: 540px;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+/* Background wallpaper with cinematic dimming */
+.showcase-bg-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.18) saturate(1.2);
+  transform: scale(1.04);
+}
+
+.showcase-bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.75) 85%, #000 100%);
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Top Bar: Star Rating Ribbon & Difficulty Gauge Bars
+   ========================================================================== */
+.showcase-top-bar {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  z-index: 20;
+}
+
+.showcase-gauge-group {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.showcase-gauge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.showcase-gauge-track {
+  width: 96px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.showcase-gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.showcase-gauge-fill.cs {
+  background: linear-gradient(90deg, #FF6B6B, #FA5252);
+  box-shadow: 0 0 6px rgba(255, 107, 107, 0.6);
+}
+
+.showcase-gauge-fill.ar {
+  background: linear-gradient(90deg, #51CF66, #40C057);
+  box-shadow: 0 0 6px rgba(81, 207, 102, 0.6);
+}
+
+.showcase-gauge-fill.od {
+  background: linear-gradient(90deg, #CC5DE8, #B197FC);
+  box-shadow: 0 0 6px rgba(204, 93, 232, 0.6);
+}
+
+.showcase-gauge-fill.hp {
+  background: linear-gradient(90deg, #4DABF7, #748FFC);
+  box-shadow: 0 0 6px rgba(77, 171, 247, 0.6);
+}
+
+.showcase-gauge-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.showcase-gauge-name {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.showcase-gauge-val {
+  color: #fff;
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Center Golden Star Rating Badge */
+.showcase-star-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  top: -14px;
+}
+
+.showcase-star-ribbon {
+  width: 32px;
+  height: 24px;
+  background: linear-gradient(180deg, #F59F00 0%, #FCC419 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 75%, 50% 100%, 0 75%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 2px;
+  box-shadow: 0 2px 10px rgba(245, 159, 0, 0.5);
+}
+
+.showcase-star-icon {
+  width: 14px;
+  height: 14px;
+  fill: #fff;
+  color: #fff;
+}
+
+.showcase-sr-value {
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #F8D153;
+  margin-top: 1px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 16px rgba(248, 209, 83, 0.7), 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* ==========================================================================
+   Center Circular Lens
+   ========================================================================== */
+.showcase-lens-wrap {
+  position: absolute;
+  top: 51%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 290px;
+  height: 290px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), inset 0 0 16px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+}
+
+.showcase-lens-artwork {
+  position: absolute;
+  inset: -15px;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.75) contrast(1.1);
+  transform: scale(1.05);
+}
+
+.showcase-lens-dim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+.showcase-grade-rank {
+  position: relative;
+  z-index: 3;
+  font-family: "Teko", "Impact", -apple-system, sans-serif;
+  font-size: 190px;
+  font-weight: 800;
+  line-height: 1;
+  color: #E2BC43;
+  text-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.85),
+    0 0 28px rgba(226, 188, 67, 0.55),
+    0 0 50px rgba(226, 188, 67, 0.25);
+  transform: translateY(-4px);
+}
+
+.showcase-grade-rank.rank-silver {
+  color: #E6EDF2;
+  text-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.85),
+    0 0 28px rgba(230, 237, 242, 0.55);
+}
+
+.showcase-grade-rank.rank-a {
+  color: #51CF66;
+  text-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.85),
+    0 0 28px rgba(81, 207, 102, 0.55);
+}
+
+.showcase-grade-rank.rank-b {
+  color: #339AF0;
+  text-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.85),
+    0 0 28px rgba(51, 154, 240, 0.55);
+}
+
+/* ==========================================================================
+   Left Flyout: Player Card & Top Plays Stack
+   ========================================================================== */
+.showcase-left-flyout {
+  position: absolute;
+  top: 50%;
+  left: 92px;
+  transform: translateY(-50%);
+  width: 250px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.showcase-player-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(235, 130, 150, 0.42), rgba(30, 16, 22, 0.82));
+  border: 1px solid rgba(255, 180, 200, 0.28);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%);
+}
+
+.showcase-player-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.showcase-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.showcase-player-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.showcase-player-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.showcase-top-plays-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.showcase-play-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: rgba(14, 16, 22, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.showcase-play-rank {
+  width: 17px;
+  height: 17px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.showcase-play-rank.rank-s {
+  color: #ECC748;
+  background: rgba(236, 199, 72, 0.2);
+}
+
+.showcase-play-rank.rank-x {
+  color: #E6EDF2;
+  background: rgba(230, 237, 242, 0.2);
+}
+
+.showcase-play-rank.rank-a {
+  color: #51CF66;
+  background: rgba(81, 207, 102, 0.2);
+}
+
+.showcase-play-title {
+  flex: 1;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.showcase-play-mods {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.showcase-mod-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  line-height: 1;
+}
+
+.showcase-play-time {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
+}
+
+.showcase-play-pp {
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Right Flyout: Score, Combo, PP Badge, Accuracy, Hit Judgments
+   ========================================================================== */
+.showcase-right-flyout {
+  position: absolute;
+  top: 50%;
+  right: 120px;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.showcase-score-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.showcase-score-label {
+  align-self: flex-start;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #E06277;
+  color: #fff;
+  letter-spacing: 0.4px;
+}
+
+.showcase-score-val {
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.showcase-combo-row {
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 0.8px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* Angled Rose/Coral PP Badge */
+.showcase-pp-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, #D9546B 0%, #EA7A8E 100%);
+  transform: skewX(-16deg);
+  padding: 4px 24px;
+  border-radius: 3px;
+  box-shadow: 0 3px 12px rgba(217, 84, 107, 0.45);
+}
+
+.showcase-pp-text {
+  transform: skewX(16deg);
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.8px;
+  line-height: 1;
+}
+
+.showcase-acc-row {
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 23px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.6px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* Hit Counts Parallelogram Strip */
+.showcase-hits-strip {
+  display: flex;
+  align-items: center;
+  transform: skewX(-16deg);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
+.showcase-hit-box {
+  padding: 3px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.showcase-hit-box span {
+  transform: skewX(16deg);
+  font-family: "Teko", -apple-system, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.showcase-hit-box.h300 {
+  background: #51CF66;
+}
+
+.showcase-hit-box.h100 {
+  background: #94D82D;
+}
+
+.showcase-hit-box.h0 {
+  background: #FA5252;
+}
+
+/* Bottom relative time */
+.showcase-bottom-time {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.2px;
+  z-index: 20;
+}
