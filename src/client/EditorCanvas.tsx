@@ -12,7 +12,7 @@ const UNSELECTABLE = new Set([
 const TEXT_KEYS: Record<string, string> = {
     status: "status", "status-miss": "status", "status-sb": "status-sb",
     "star-rating": "star-rating", pp: "pp", combo: "combo",
-    difficulty: "difficulty", bpm: "bpm", "map-title": "map-title", grade: "grade",
+    difficulty: "difficulty", bpm: "bpm", "map-artist": "map-artist", "map-title": "map-title", grade: "grade",
     accuracy: "accuracy", leaderboard: "leaderboard", username: "username",
     "bottom-message": "bottom-text",
 };
@@ -31,6 +31,7 @@ export const LAYER_NAMES: Record<string, string> = {
     difficulty: "Difficulty Badge",
     bpm: "BPM Badge",
     "map-title": "Map Title",
+    "map-artist": "Map Artist",
     grade: "Grade / Rank",
     accuracy: "Accuracy",
     leaderboard: "Leaderboard Rank",
@@ -47,6 +48,7 @@ const STYLE_COMPONENT: Record<string, keyof ReferenceTemplateComponents> = {
     difficulty: "difficultyBadge",
     bpm: "bpmBadge",
     "map-title": "mapTitle",
+    "map-artist": "mapArtist",
     grade: "grade",
     accuracy: "accuracy",
     leaderboard: "leaderboard",

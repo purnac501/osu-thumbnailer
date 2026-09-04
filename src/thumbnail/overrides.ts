@@ -4,6 +4,7 @@ import { mixColors, withAlpha } from "../shared/formatting/color";
 export interface EditorState {
     accent?: string;
     twitchVisible?: boolean;
+    classicVisible?: boolean;
     sliderBreakCount?: number;
     missCount?: number;
     statusKind?: "fc" | "miss" | "unknown";
@@ -50,6 +51,9 @@ export function applyDataOverrides(data: ThumbnailData, state: EditorState | und
     const isFullCombo = status.kind === "fc" && sbCount === 0 && missCount === 0;
     return {
         ...data,
+        mods: state.classicVisible === false
+            ? data.mods.filter((mod) => mod.acronym !== "CL")
+            : data.mods,
         missCount,
         sbCount,
         status,
@@ -67,6 +71,7 @@ export const COMPONENT_BY_LAYER: Record<string, string> = {
     combo: "comboBadge",
     difficulty: "difficultyBadge",
     bpm: "bpmBadge",
+    "map-artist": "mapArtist",
     "map-title": "mapTitle",
     grade: "grade",
     accuracy: "accuracy",
@@ -108,6 +113,16 @@ export function applyOverrides(template: ThumbnailTemplate, state: EditorState |
         }
         if (next.components.sparkles) {
             next.components.sparkles.color = accent;
+        }
+        const tint = next.background.overlays?.find((overlay) => overlay.boxShadow?.startsWith("inset"));
+        if (tint) {
+            tint.boxShadow = `inset 0 0 100px ${withAlpha(accent, 0.25)}`;
+        }
+        if (next.components.innerBorder) {
+            next.components.innerBorder.border = `1.5px solid ${withAlpha(accent, 0.55)}`;
+        }
+        if (next.components.avatar.border) {
+            next.components.avatar.border.color = accent;
         }
     }
     if (twitchVisible !== undefined) {

@@ -16,7 +16,7 @@ function MapStatusIcon({ status }: { status?: string }) {
     }
     return <ChevronsUp size={17} strokeWidth={2.4} />;
 }
-export type OverlayNode = "widget" | "topCard" | "bottomCard" | "topBanner" | "topBannerMap" | "topPlayer" | "playerHeaderLeft" | "playerHeaderRight" | "topMap" | "mapHeaderLeft" | "bottomPlayer" | "bottomMap" | "starFooter" | "starIcon" | "mapChevron" | "svgPlayerPath" | "pPeakDot" | "pPeakLine" | "pHours" | "pPlaycount" | "fillAr" | "fillCs" | "fillOd" | "fillHp" | "mFavs" | "mPlays" | "svgMapPath" | "chartYearsGroup";
+export type OverlayNode = "widget" | "topCard" | "bottomCard" | "topBanner" | "topBannerMap" | "topPlayer" | "playerHeaderLeft" | "playerHeaderRight" | "topMap" | "mapHeaderLeft" | "bottomPlayer" | "bottomMap" | "starFooter" | "starIcon" | "mapChevron" | "lipShine" | "svgPlayerPath" | "pPeakDot" | "pPeakLine" | "pHours" | "pPlaycount" | "fillAr" | "fillCs" | "fillOd" | "fillHp" | "mFavs" | "mPlays" | "svgMapPath" | "chartYearsGroup";
 export type OverlayRefSetter = (name: OverlayNode) => RefCallback<Element>;
 const MAX_BADGES = 5;
 function StatPill({ code, fill, fillId, node, left, right, setRef, }: {
@@ -56,7 +56,7 @@ export function OverlayWidget({ data, spline, setRef, }: {
             <div className="player-title-col">
               <div className="player-name-line">
                 <span className="player-username-text">{data.player.username}</span>
-                <span className="heart-pill"><Heart size={10} color="#fff" fill="#fff"/></span>
+                {data.player.isSupporter ? <span className="heart-pill"><Heart size={10} color="#fff" fill="#fff"/></span> : null}
               </div>
               <div className="player-country-line">
                 <span>{data.player.flag}</span>
@@ -87,7 +87,9 @@ export function OverlayWidget({ data, spline, setRef, }: {
       </div>
 
       <div className="beveled-card bottom-details-card" id="bottom-card" ref={setRef("bottomCard") as RefCallback<HTMLDivElement>}>
-        <div className="bottom-card-top-lip" />
+        <div className="bottom-card-top-lip">
+          <div className="bottom-card-lip-shine" ref={setRef("lipShine") as RefCallback<HTMLDivElement>} />
+        </div>
 
         <div className="bottom-view-layer" id="layer-bottom-player" ref={setRef("bottomPlayer") as RefCallback<HTMLDivElement>}>
           <div className="player-badges-strip">
@@ -126,8 +128,8 @@ export function OverlayWidget({ data, spline, setRef, }: {
               <path id="svg-player-path" className="chart-curve-path" d={spline.d} ref={setRef("svgPlayerPath") as RefCallback<SVGPathElement>}/>
               <circle className="peak-dot-static" id="p-peak-dot" cx={spline.peakX} cy={spline.peakY} r="2.8" ref={setRef("pPeakDot") as RefCallback<SVGCircleElement>}/>
               <g id="chart-years-group" ref={setRef("chartYearsGroup") as RefCallback<SVGGElement>}>
-                {[2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026].map((year, index) => (
-                  <text key={year} className="chart-label-axis chart-label-x" data-year-index={index} x={20 + index * 50.625} y="104">{year}</text>
+                {spline.yearTicks.map(({ year, x }, index) => (
+                  <text key={year} className="chart-label-axis chart-label-x" data-year-index={index} x={x} y="104">{year}</text>
                 ))}
               </g>
             </svg>

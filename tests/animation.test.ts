@@ -50,6 +50,15 @@ describe("playcount spline", () => {
         expect(spline.d).toContain("C");
         expect(spline.peakY).toBeLessThan(50);
     });
+    it("derives graph years from the playcount date range", () => {
+        const spline = buildPlaycountSpline([
+            { date: "2022-06-01", count: 100 },
+            { date: "2023-01-01", count: 200 },
+            { date: "2024-08-01", count: 150 },
+        ]);
+        expect(spline.yearTicks.map((tick) => tick.year)).toEqual([2022, 2023, 2024]);
+        expect(spline.yearTicks.every((tick) => tick.x >= 20 && tick.x <= 425)).toBe(true);
+    });
 });
 describe("overlay themes", () => {
     it("ships seven themes with distinct accents", () => {
@@ -114,6 +123,29 @@ describe("overlay timeline", () => {
         expect(mapOpacity).toBeGreaterThan(0);
         expect(mapOpacity).toBeLessThan(1);
     });
+    it("keeps player and map banners on their own layers after data changes", () => {
+        const { els, source } = makeSource();
+        seekOverlay(3.8, source, data);
+        expect(els.get("topBanner")!.style.backgroundImage).toBe(`url("${data.player.banner}")`);
+        expect(els.get("topBannerMap")!.style.backgroundImage).toBe(`url("${data.map.cover}")`);
+
+        const next = {
+            ...data,
+            map: { ...data.map, cover: "https://example.com/new-map.jpg" },
+        };
+        seekOverlay(3.8, source, next);
+        expect(els.get("topBannerMap")!.style.backgroundImage).toBe('url("https://example.com/new-map.jpg")');
+    });
+    it("sweeps a highlight across the map card lip during the transition", () => {
+        const { els, source } = makeSource();
+        seekOverlay(2.3, source, data);
+        expect(els.get("lipShine")!.style.opacity).toBe("0");
+        seekOverlay(2.68, source, data);
+        expect(Number(els.get("lipShine")!.style.opacity)).toBeGreaterThan(0.8);
+        expect(els.get("lipShine")!.style.transform).toContain("translateX(140.0%)");
+        seekOverlay(3.2, source, data);
+        expect(els.get("lipShine")!.style.opacity).toBe("0");
+    });
     it("counts player numbers up and draws the line", () => {
         const { els, source } = makeSource();
         seekOverlay(0.6, source, data);
@@ -161,6 +193,10 @@ describe("overlay timeline", () => {
         seekOverlay(5, source, data);
         expect(Number(els.get("widget")!.style.opacity)).toBeLessThan(1);
         expect(Number(els.get("starFooter")!.style.opacity)).toBeLessThan(1);
+        expect(els.get("fillAr")!.style.width).not.toBe("0%");
+        expect(els.get("fillCs")!.style.width).not.toBe("0%");
+        expect(digits(els.get("mFavs")!.textContent)).toBe(138);
+        expect(digits(els.get("mPlays")!.textContent)).toBe(17632);
     });
     it("draws graph lines along their measured length", () => {
         const { els, source } = makeSource();

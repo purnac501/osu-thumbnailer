@@ -248,6 +248,7 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
     return {
         player: {
             username: u.username || "Player",
+            isSupporter: u.is_supporter === true,
             flag: getFlagEmoji(u.country_code),
             countryCode: u.country_code || "ID",
             crank: stats.country_rank ? `#${stats.country_rank}` : "#1",

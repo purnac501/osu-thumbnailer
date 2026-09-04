@@ -44,7 +44,7 @@ export function gifFfmpegArgs(framePattern: string, outFile: string, preset?: "c
             "-i",
             framePattern,
             "-vf",
-            "fps=20,scale=420:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle:alpha_threshold=128",
+            "fps=30,split[s0][s1];[s0]palettegen=max_colors=256:reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle:alpha_threshold=128",
             outFile,
         ];
     }
@@ -55,7 +55,7 @@ export function gifFfmpegArgs(framePattern: string, outFile: string, preset?: "c
         "-i",
         framePattern,
         "-vf",
-        "scale=600:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256:reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle:alpha_threshold=128",
+        "fps=30,split[s0][s1];[s0]palettegen=max_colors=256:reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle:alpha_threshold=128",
         outFile,
     ];
 }
@@ -111,12 +111,12 @@ export function gifsicleBin(): string {
 }
 export function gifsicleArgs(inFile: string, outFile: string, preset?: "compact" | "hq"): string[] {
     if (preset === "compact") {
-        return ["--optimize=3", "--lossy=80", "--colors", "128", "-o", outFile, inFile];
+        return ["--optimize=3", "--lossy=10", "--colors", "256", "-o", outFile, inFile];
     }
     return ["--optimize=3", "--colors", "256", "-o", outFile, inFile];
 }
 export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent"> & { preset?: string; style?: string }): string {
-    return createHash("sha1").update(JSON.stringify(["v21", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.style ?? "card", options.score, options.theme, options.accent])).digest("hex");
+    return createHash("sha1").update(JSON.stringify(["v30", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.style ?? "card", options.score, options.theme, options.accent])).digest("hex");
 }
 export function exportCacheDir(): string {
     return path.join(os.tmpdir(), "osu-overlay-cache");

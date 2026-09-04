@@ -3,18 +3,21 @@ export interface SplineTick {
     label: string;
     y: number;
 }
+export interface SplineYearTick {
+    year: number;
+    x: number;
+}
 export interface PlaycountSpline {
     d: string;
     peakX: number;
     peakY: number;
     yTicks: SplineTick[];
+    yearTicks: SplineYearTick[];
 }
 export const SPLINE_X0 = 20;
 export const SPLINE_X1 = 425;
 export const SPLINE_TOP = 20;
 export const SPLINE_BOTTOM = 95;
-const DOMAIN_START = Date.UTC(2018, 0, 1);
-const DOMAIN_END = Date.UTC(2027, 0, 1);
 function monthTime(date: string): number {
     const match = /^(\d{4})-(\d{2})/.exec(date);
     if (!match)
@@ -31,16 +34,42 @@ export function buildPlaycountSpline(counts: OverlayMonthlyCount[] | undefined):
         y: SPLINE_BOTTOM - (SPLINE_BOTTOM - SPLINE_TOP) * part,
     }));
     if (!counts || counts.length < 2) {
-        return { d: FALLBACK_SPLINE, peakX: 134, peakY: 25.1, yTicks: yTicks(8000) };
+        return {
+            d: FALLBACK_SPLINE,
+            peakX: 134,
+            peakY: 25.1,
+            yTicks: yTicks(8000),
+            yearTicks: Array.from({ length: 9 }, (_, i) => ({ year: 2018 + i, x: SPLINE_X0 + i * 50.625 })),
+        };
     }
+    const dated = counts
+        .map((count) => ({ ...count, time: monthTime(count.date) }))
+        .filter((count) => Number.isFinite(count.time))
+        .sort((a, b) => a.time - b.time);
+    if (dated.length < 2)
+        return buildPlaycountSpline(undefined);
+    const start = dated[0]!.time;
+    const end = dated[dated.length - 1]!.time;
+    const position = (time: number) => SPLINE_X0 + ((time - start) / (end - start)) * (SPLINE_X1 - SPLINE_X0);
+    const firstYear = new Date(start).getUTCFullYear();
+    const lastYear = new Date(end).getUTCFullYear();
+    const allYears = Array.from({ length: lastYear - firstYear + 1 }, (_, i) => firstYear + i);
+    const yearStep = Math.max(1, Math.ceil(allYears.length / 9));
+    const visibleYears = allYears.filter((_, i) => i % yearStep === 0);
+    if (visibleYears.at(-1) !== lastYear)
+        visibleYears.push(lastYear);
+    const yearTicks = visibleYears.map((year) => ({
+        year,
+        x: Number(Math.min(SPLINE_X1, Math.max(SPLINE_X0, position(Date.UTC(year, 0, 1)))).toFixed(1)),
+    }));
     let maxCount = 0;
-    counts.forEach((c) => {
+    dated.forEach((c) => {
         if (c.count > maxCount)
             maxCount = c.count;
     });
     const maxCap = Math.max(8000, maxCount * 1.1);
-    const pts = counts.map((m, i) => {
-        const x = 20 + (i / (counts.length - 1)) * 405;
+    const pts = dated.map((m) => {
+        const x = position(m.time);
         const y = 95 - (Math.min(maxCap, m.count) / maxCap) * 75;
         return { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)), count: m.count };
     });
@@ -61,5 +90,5 @@ export function buildPlaycountSpline(counts: OverlayMonthlyCount[] | undefined):
         const cp2y = (p2.y - (p3.y - p1.y) / 6).toFixed(1);
         d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
     }
-    return { d, peakX: peak.x, peakY: peak.y, yTicks: yTicks(maxCap) };
+    return { d, peakX: peak.x, peakY: peak.y, yTicks: yTicks(maxCap), yearTicks };
 }

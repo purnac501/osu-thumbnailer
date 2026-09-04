@@ -10,6 +10,7 @@ import {
 export const DEFAULT_OVERLAY_DATA: OverlayData = {
     player: {
         username: "worst hr player",
+        isSupporter: true,
         flag: "🇰🇷",
         countryCode: "KR",
         crank: "#4",

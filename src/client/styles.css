@@ -94,7 +94,56 @@ body {
 }
 
 .toolbar-download {
+  min-width: 84px;
+}
+
+.thumbnail-download {
   width: 156px;
+  white-space: nowrap;
+}
+
+.toolbar-download-label {
+  white-space: nowrap;
+}
+
+.toolbar-export-status {
+  display: grid;
+  grid-template-columns: auto 72px;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar-export-progress {
+  width: 72px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--gray-a5);
+}
+
+.toolbar-export-progress > div {
+  height: 100%;
+  background: var(--gray-11);
+}
+
+.toolbar-save-prompt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.toolbar-save {
+  white-space: nowrap;
+}
+
+.layer-inspector-header .quiet-button {
+  width: 52px;
 }
 
 .help-trigger {
@@ -433,6 +482,7 @@ body {
 
   .toolbar-download {
     width: 36px;
+    min-width: 36px;
     padding: 0;
   }
 

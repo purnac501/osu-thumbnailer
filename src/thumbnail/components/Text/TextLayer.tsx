@@ -9,8 +9,12 @@ export function TextLayer({ config, children, testId, }: {
 }) {
     if (!config.visible || children === "")
         return null;
-    const fontSize = config.maxWidth !== undefined
-        ? fitFontSize(children, config, config.maxWidth)
+    const fitWidth = config.maxWidth ?? config.width;
+    const fitText = config.maxLines
+        ? children.split("\n").reduce((longest, line) => line.length > longest.length ? line : longest, "")
+        : children;
+    const fontSize = fitWidth !== undefined
+        ? fitFontSize(fitText, config, fitWidth, config.maxLines ? 32 : 20)
         : config.fontSize;
     const glow = config.glow
         ? softGlow(config.glow.color ?? config.color, config.glow.blur, config.glow.layers ?? 3)
@@ -60,9 +64,12 @@ export function TextLayer({ config, children, testId, }: {
         filter: [
             extrusionFilters,
             config.shadow ? `drop-shadow(${config.shadow.offsetX}px ${config.shadow.offsetY}px ${config.shadow.blur}px ${config.shadow.color})` : "",
-            config.glow ? `drop-shadow(0 0 ${config.glow.blur}px ${config.glow.color ?? config.color})` : "",
         ].filter(Boolean).join(" ") || undefined,
-        whiteSpace: "pre",
+        whiteSpace: config.maxLines ? "pre-line" : "pre",
+        overflow: config.maxLines ? "hidden" : undefined,
+        WebkitBoxOrient: config.maxLines ? "vertical" : undefined,
+        WebkitLineClamp: config.maxLines,
+        display: config.maxLines ? "-webkit-box" : undefined,
         ...(config.valign === "center" && config.height
             ? { display: "flex", alignItems: "center", justifyContent: config.align === "center" ? "center" : config.align === "right" ? "flex-end" : "flex-start" }
             : {}),

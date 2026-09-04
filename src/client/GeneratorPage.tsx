@@ -46,7 +46,7 @@ function loadSaved(): SavedState {
         url: "",
         resolution: "1280x720",
         editor: { twitchVisible: false, accent: "#00F0FF" },
-        templateId: "showcase",
+        templateId: "reference",
     };
 }
 const EMPTY_EDITOR: EditorState = { twitchVisible: false };
@@ -56,8 +56,8 @@ const ANIMATION_EXPORT_OPTIONS: Record<"gif" | "video", {
     description: string;
 }[]> = {
     gif: [
-        { preset: "compact", label: "Small (~1MB)", description: "Optimized for Discord and web" },
-        { preset: "hq", label: "HQ 60fps", description: "Full quality 60fps master GIF" },
+        { preset: "compact", label: "Small (~3-4MB)", description: "Native-resolution 30fps GIF" },
+        { preset: "hq", label: "HQ 30fps", description: "Native-resolution GIF" },
     ],
     video: [
         { preset: "compact", label: "Small", description: "Compressed video with transparency" },
@@ -75,6 +75,8 @@ export function GeneratorPage() {
     });
     const animApi = useRef<AnimationApi | null>(null);
     const [animCanDownload, setAnimCanDownload] = useState(false);
+    const [animRenderProgress, setAnimRenderProgress] = useState<number | null>(null);
+    const [animDownloadReady, setAnimDownloadReady] = useState<AnimationApi["downloadReady"]>(null);
     const [url, setUrl] = useState(saved.url);
     const [resolution, setResolution] = useState<ResolutionPreset>(saved.resolution);
     const [editor, setEditor] = useState<EditorState>(saved.editor ?? EMPTY_EDITOR);
@@ -86,7 +88,7 @@ export function GeneratorPage() {
     const [sliderBreakDraft, setSliderBreakDraft] = useState("0");
     const [missDraft, setMissDraft] = useState("0");
     const [sidebarAccentText, setSidebarAccentText] = useState("");
-    const [templateId, setTemplateId] = useState<string>(saved.templateId ?? "showcase");
+    const [templateId, setTemplateId] = useState<string>(saved.templateId && saved.templateId in templates ? saved.templateId : "reference");
     const [exportDialog, setExportDialog] = useState<"gif" | "video" | null>(null);
     useEffect(() => {
         loadGoogleFont("Teko");
@@ -180,7 +182,8 @@ export function GeneratorPage() {
         return () => window.removeEventListener("keydown", onKey, true);
     }, []);
     const base = templates[templateId] ?? Object.values(templates)[0]!;
-    const template = useMemo(() => applyOverrides(base, editor), [base, editor]);
+    const activeAccent = editor.accent ?? "#B8B8B8";
+    const template = useMemo(() => applyOverrides(base, { ...editor, accent: activeAccent }), [base, editor, activeAccent]);
     const previewData = useMemo(() => result ? applyDataOverrides(result.data, editor) : null, [result, editor]);
     useEffect(() => {
         setSliderBreakDraft(String(editor.sliderBreakCount ?? result?.data.sbCount ?? 0));
@@ -199,7 +202,7 @@ export function GeneratorPage() {
                 throw new Error(body?.error ?? `Score request failed (${res.status})`);
             }
             setResult((await res.json()) as ThumbnailResult);
-            replaceEditor(EMPTY_EDITOR);
+            replaceEditor({ ...EMPTY_EDITOR, accent: editorRef.current.accent });
             setHistory({ past: [], future: [] });
             setSelected(null);
             setEditingLayer(null);
@@ -490,7 +493,19 @@ export function GeneratorPage() {
               {RESOLUTIONS.map((r) => <Select.Item key={r} value={r}>{r}</Select.Item>)}
             </Select.Content>
           </Select.Root>) : null}
-          {activeTab === "thumbnails" && result ? (<Button type="button" onClick={download} disabled={busy} className="toolbar-download" size="2" variant="solid" color="gray" highContrast aria-label={busy ? "Preparing PNG" : "Download PNG"}>
+          {activeTab === "animation" && animRenderProgress !== null ? (<div className="toolbar-export-status" role="progressbar" aria-label="Export progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(animRenderProgress * 100)}>
+            <span>{Math.round(animRenderProgress * 100)}%</span>
+            <div className="toolbar-export-progress"><div style={{ width: `${Math.round(animRenderProgress * 100)}%` }}/></div>
+          </div>) : null}
+          {activeTab === "animation" && animDownloadReady ? (<div className="toolbar-save-prompt" role="status">
+            <span>Didn't start?</span>
+            <Button asChild size="1" variant="soft" color="gray" highContrast className="toolbar-save">
+              <a href={animDownloadReady.url} download={animDownloadReady.filename} title={animDownloadReady.filename}>
+                <DownloadIcon /> Save
+              </a>
+            </Button>
+          </div>) : null}
+          {activeTab === "thumbnails" && result ? (<Button type="button" onClick={download} disabled={busy} className="toolbar-download thumbnail-download" size="2" variant="solid" color="gray" highContrast aria-label={busy ? "Preparing PNG" : "Download PNG"}>
               <DownloadIcon />
               <span className="toolbar-download-label">{busy ? "Preparing..." : "Download PNG"}</span>
             </Button>) : null}
@@ -534,6 +549,8 @@ export function GeneratorPage() {
       {activeTab === "animation" ? (<AnimationTab theme={animTheme} onThemeChange={setAnimTheme} scoreUrl={url} onScoreUrlChange={setUrl} onReady={(api) => {
                 animApi.current = api;
                 setAnimCanDownload(api.canDownload);
+                setAnimRenderProgress(api.renderProgress);
+                setAnimDownloadReady(api.downloadReady);
             }}/>) : null}
 
       {activeTab === "thumbnails" ? (<>
@@ -582,14 +599,18 @@ export function GeneratorPage() {
           <div className="setting-row">
             <div className="setting-copy">
               <span className="setting-label">Accent color</span>
-              <span className="setting-value">{(editor.accent ?? "#B8B8B8").toUpperCase()}</span>
+              <span className="setting-value">{activeAccent.toUpperCase()}</span>
             </div>
-            <AccentPicker color={editor.accent ?? "#B8B8B8"} onChange={(accent) => set({ accent })} align="right"/>
+            <AccentPicker color={activeAccent} onChange={(accent) => set({ accent })} align="right"/>
           </div>
           <div className="setting-row switch-setting">
             <span className="setting-label">Twitch logo</span>
             <Switch className="switch-control" size="2" radius="full" checked={editor.twitchVisible ?? false} onCheckedChange={(checked) => set({ twitchVisible: checked }, true)} aria-label="Twitch logo"/>
           </div>
+          {result.data.mods.some((mod) => mod.acronym === "CL") ? (<div className="setting-row switch-setting">
+            <span className="setting-label">Classic mod</span>
+            <Switch className="switch-control" size="2" radius="full" checked={editor.classicVisible ?? true} onCheckedChange={(checked) => set({ classicVisible: checked }, true)} aria-label="Classic mod"/>
+          </div>) : null}
           <Button type="button" onClick={addCustomText} className="add-layer-button" size="2" variant="soft" color="gray">
             <PlusIcon /> Add text
           </Button>

@@ -59,26 +59,15 @@ function paintLayer(
     }
 }
 
-function setBanner(nodes: OverlayNodeSource, image: string): void {
-    const topBanner = styled(nodes, "topBanner") as HTMLElement | null;
-    if (topBanner) {
-        topBanner.style.backgroundImage = image;
-    }
-}
-
 function setBanners(nodes: OverlayNodeSource, data: OverlayData, playerOpacity: number, mapOpacity: number): void {
     const playerBanner = styled(nodes, "topBanner") as HTMLElement | null;
     if (playerBanner) {
-        if (!playerBanner.style.backgroundImage || playerBanner.style.backgroundImage === "none") {
-            playerBanner.style.backgroundImage = `url("${data.player.banner}")`;
-        }
+        playerBanner.style.backgroundImage = `url("${data.player.banner}")`;
         playerBanner.style.opacity = String(playerOpacity);
     }
     const mapBanner = styled(nodes, "topBannerMap") as HTMLElement | null;
     if (mapBanner) {
-        if (!mapBanner.style.backgroundImage || mapBanner.style.backgroundImage === "none") {
-            mapBanner.style.backgroundImage = `url("${data.map.cover}")`;
-        }
+        mapBanner.style.backgroundImage = `url("${data.map.cover}")`;
         mapBanner.style.opacity = String(mapOpacity);
     }
 }
@@ -206,6 +195,7 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
     const widget = styled(nodes, "widget");
     const topCard = styled(nodes, "topCard");
     const bottomCard = styled(nodes, "bottomCard");
+    const lipShine = styled(nodes, "lipShine");
     const playerHeaderLeft = styled(nodes, "playerHeaderLeft");
     const playerHeaderRight = styled(nodes, "playerHeaderRight");
     const pHours = nodes.get("pHours");
@@ -214,6 +204,7 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
     const fillCs = styled(nodes, "fillCs");
     const fillOd = styled(nodes, "fillOd");
     const fillHp = styled(nodes, "fillHp");
+    if (lipShine) lipShine.style.opacity = "0";
 
     // =========================================================================
     // 1. OPENING SEQUENCE (0.0s - 0.50s)
@@ -244,7 +235,6 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         paintLayer(nodes, "topPlayer", pA);
         paintLayer(nodes, "topMap", 0);
         setBanners(nodes, data, 0.55 * pA, 0);
-        setBanner(nodes, `url("${data.player.banner}")`);
 
         // Container B (Graph Panel) - Delayed entrance (+100ms delay, 350ms duration)
         if (t < 0.10) {
@@ -327,7 +317,6 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         paintLayer(nodes, "starFooter", 0);
 
         setBanners(nodes, data, 0.55, 0);
-        setBanner(nodes, `url("${data.player.banner}")`);
 
         // Graph line smoothly completes the full graph line from 0% to 100%
         const lineDrawP = Math.min(1, Math.max(0, (t - 0.25) / 1.35));
@@ -363,16 +352,21 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         const cardScale = (1 - 0.012 * easeMotionDecel(squeezeP)).toFixed(4);
         const glowP = Math.sin(Math.min(1, Math.max(0, (t - 2.35) / 0.50)) * Math.PI);
         const innerGlow = (0.35 + 0.35 * glowP).toFixed(2);
+        const shineP = Math.min(1, Math.max(0, (t - 2.30) / 0.76));
+        if (lipShine) {
+            lipShine.style.opacity = String(Math.sin(Math.PI * shineP) * 0.9);
+            lipShine.style.transform = `translateX(${(-120 + shineP * 520).toFixed(1)}%) skewX(-18deg)`;
+        }
         if (topCard) {
             topCard.style.opacity = "1";
             topCard.style.transform = `scale(${cardScale})`;
-            topCard.style.boxShadow = `0 16px 36px rgba(0, 0, 0, 0.88), inset 0 1px 1.5px rgba(255, 255, 255, ${innerGlow})`;
+            topCard.style.boxShadow = `0 12px 18px -8px rgba(0, 0, 0, 0.88), inset 0 1px 1.5px rgba(255, 255, 255, ${innerGlow})`;
         }
         if (bottomCard) {
             bottomCard.style.clipPath = "";
             bottomCard.style.opacity = "1";
             bottomCard.style.transform = `scale(${cardScale})`;
-            bottomCard.style.boxShadow = `0 16px 36px rgba(0, 0, 0, 0.88), inset 0 1px 1.5px rgba(255, 255, 255, ${innerGlow})`;
+            bottomCard.style.boxShadow = `0 12px 18px -8px rgba(0, 0, 0, 0.88), inset 0 1px 1.5px rgba(255, 255, 255, ${innerGlow})`;
         }
 
         // Screen A exits: slides left (-22px) and fades out smoothly
@@ -402,7 +396,6 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         const playerBannerOpacity = 0.55 * (1 - bannerCrossDecel);
         const mapBannerOpacity = 0.55 * bannerCrossDecel;
         setBanners(nodes, data, playerBannerOpacity, mapBannerOpacity);
-        setBanner(nodes, bannerCrossP > 0.5 ? `url("${data.map.cover}")` : `url("${data.player.banner}")`);
 
         clearMapSide(nodes);
     }
@@ -446,7 +439,6 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         paintLayer(nodes, "starFooter", detailsEase, 0, (1 - detailsEase) * 6);
 
         setBanners(nodes, data, 0, 0.55);
-        setBanner(nodes, `url("${data.map.cover}")`);
 
         // Stat bars fill sequentially with clean stagger: AR -> CS -> OD -> HP
         const arP = easeOutCubic(Math.min(1, Math.max(0, (t - 2.94) / 0.85)));
@@ -505,7 +497,13 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
             widget.style.opacity = String(groupOpacity);
         }
 
-        clearMapSide(nodes);
+        if (fillAr) fillAr.style.width = `${Math.min(100, (data.map.ar / 11) * 100)}%`;
+        if (fillCs) fillCs.style.width = `${Math.min(100, (data.map.cs / 10) * 100)}%`;
+        if (fillOd) fillOd.style.width = `${Math.min(100, (data.map.od / 11) * 100)}%`;
+        if (fillHp) fillHp.style.width = `${Math.min(100, (data.map.hp / 10) * 100)}%`;
+        drawPath(nodes, "svgMapPath", 1);
+        setCounter(nodes.get("mFavs"), parseCount(data.map.favs));
+        setCounter(nodes.get("mPlays"), parseCount(data.map.plays));
     }
 }
 
