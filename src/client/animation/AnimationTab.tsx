@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, SegmentedControl, Switch, TextField } from "@radix-ui/themes";
-import { PlayIcon } from "@radix-ui/react-icons";
+import { DownloadIcon, PlayIcon } from "@radix-ui/react-icons";
 import "./overlay.css";
 import "./animation-tab.css";
 import { DEFAULT_OVERLAY_DATA, type OverlayData } from "./types";
-import { animationExportFileName, buildAnimationExportStartPath, type AnimationExportFormat, } from "../../shared/animation-export";
+import { animationExportFileName, buildAnimationExportStartPath, type AnimationExportFormat, type AnimationExportPreset, } from "../../shared/animation-export";
 import { OVERLAY_THEMES, applyOverlayPalette, customAccentPalette, type OverlayThemeId } from "./themes";
 import { buildPlaycountSpline } from "./spline";
 import { OVERLAY_TOTAL_CYCLE, seekOverlay } from "./timeline";
@@ -33,7 +33,7 @@ function cacheOverlay(url: string, value: OverlayData): void {
     overlayCache.set(url, value);
 }
 export interface AnimationApi {
-    download: (format: AnimationExportFormat) => void;
+    download: (format: AnimationExportFormat, preset?: AnimationExportPreset) => void;
     canDownload: boolean;
 }
 export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUrl, onScoreUrlChange, onReady, }: {
@@ -49,7 +49,8 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
     const [loop, setLoop] = useState(true);
     const [busy, setBusy] = useState(false);
     const [fetchMsg, setFetchMsg] = useState<string | null>(null);
-    const [hasData, setHasData] = useState(false);
+    const [hasData, setHasData] = useState(true);
+    const [downloadReady, setDownloadReady] = useState<{ url: string; filename: string; label: string } | null>(null);
     const [exportQuery] = useState(() => exportMode && typeof window !== "undefined"
         ? new URLSearchParams(window.location.search)
         : null);
@@ -206,7 +207,8 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
                 })));
             await document.fonts.ready;
         };
-        window.seekAnimation = (t: number) => seekOverlay(t, source, dataRef.current);
+        window.seekAnimation = (t: number) =>
+            seekOverlay(t, source, dataRef.current);
         window.triggerSequence = replay;
         window.switchPhase = (index: number) => selectPhase(index === 1 ? "map" : "player");
         window.stopLiveLoop = stopLiveLoop;
@@ -233,18 +235,21 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         };
     }, []);
     const [renderProgress, setRenderProgress] = useState<number | null>(null);
-    const download = (format: AnimationExportFormat) => {
+    const download = (format: AnimationExportFormat, preset: AnimationExportPreset = "compact") => {
         void (async () => {
-            if (!hasData || !parseScoreUrl(scoreUrl.trim())) {
-                setFetchMsg("Fetch a score first, then download.");
-                return;
-            }
+            setDownloadReady(null);
+            const cleanUrl = scoreUrl.trim();
+            const effectiveScore = cleanUrl && parseScoreUrl(cleanUrl)
+                ? cleanUrl
+                : "https://osu.ppy.sh/scores/2026000001";
             setRenderProgress(0);
-            setFetchMsg(`Rendering ${format.toUpperCase()}...`);
+            const label = format.toUpperCase() + (preset === "compact" ? " (Small)" : " (HD)");
+            setFetchMsg(`Rendering ${label}...`);
             try {
                 const started = await (await fetch(buildAnimationExportStartPath({
                     format,
-                    score: scoreUrl,
+                    preset,
+                    score: effectiveScore,
                     theme,
                     accent,
                 }))).json() as {
@@ -262,17 +267,26 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
                         throw new Error(job.error ?? "Render failed");
                     const total = Math.max(1, job.total);
                     setRenderProgress(Math.min(1, job.done / total));
-                    setFetchMsg(`Rendering ${format.toUpperCase()} ${Math.round((100 * job.done) / total)}%`);
+                    setFetchMsg(`Rendering ${label} ${Math.round((100 * job.done) / total)}%`);
                     if (job.state === "done")
                         break;
                 }
-                const a = document.createElement("a");
-                a.href = `/api/export-animation/file?id=${started.id}`;
-                a.download = animationExportFileName(format);
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setFetchMsg("Synced!");
+                const downloadUrl = `/api/export-animation/file?id=${started.id}`;
+                const filename = animationExportFileName(format, preset);
+                setDownloadReady({ url: downloadUrl, filename, label });
+                setFetchMsg("Render ready! Tap below or check your downloads.");
+
+                const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isMobile) {
+                    window.location.href = downloadUrl;
+                } else {
+                    const a = document.createElement("a");
+                    a.href = downloadUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
             }
             catch (err) {
                 setFetchMsg(`Error: ${err instanceof Error ? err.message : String(err)}`);
@@ -309,6 +323,26 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
           {renderProgress !== null ? (<div className="render-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(renderProgress * 100)}>
             <div className="render-progress-fill" style={{ width: `${Math.round(renderProgress * 100)}%` }}/>
           </div>) : null}
+          {downloadReady ? (
+            <div className="download-ready-card">
+              <div className="download-ready-info">
+                <span className="download-ready-title">🎉 {downloadReady.label} ready!</span>
+                <span className="download-ready-hint">Tap below if download didn't start automatically:</span>
+              </div>
+              <a
+                href={downloadReady.url}
+                download={downloadReady.filename}
+                className="download-direct-btn"
+                onClick={() => {
+                  setTimeout(() => {
+                    window.location.href = downloadReady.url;
+                  }, 150);
+                }}
+              >
+                <DownloadIcon /> Save {downloadReady.filename}
+              </a>
+            </div>
+          ) : null}
         </section>
 
         <section className="sidebar-section animation-group" aria-label="Playback">
@@ -332,6 +366,75 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
               <span className="setting-value">{accent.toUpperCase()}</span>
             </div>
             <AccentPicker color={accent} onChange={onAccentInput} align="right"/>
+          </div>
+
+          <div className="setting-row" style={{ marginTop: "8px", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
+            <div className="setting-copy">
+              <span className="setting-label">Beatmap status</span>
+              <span className="setting-value" style={{ textTransform: "capitalize" }}>{data.map.status || "ranked"}</span>
+            </div>
+            <SegmentedControl.Root
+              size="1"
+              className="segmented-control"
+              style={{ width: "100%" }}
+              value={data.map.status || "ranked"}
+              onValueChange={(status) => setData((prev) => ({ ...prev, map: { ...prev.map, status } }))}
+            >
+              <SegmentedControl.Item value="ranked">Ranked</SegmentedControl.Item>
+              <SegmentedControl.Item value="loved">Loved</SegmentedControl.Item>
+              <SegmentedControl.Item value="qualified">Qualified</SegmentedControl.Item>
+              <SegmentedControl.Item value="graveyard">Graveyard</SegmentedControl.Item>
+            </SegmentedControl.Root>
+          </div>
+        </section>
+
+        <section className="sidebar-section animation-group" aria-label="Export">
+          <span className="field-label">Export & Download</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <Button
+              type="button"
+              size="2"
+              color="gray"
+              highContrast
+              disabled={!hasData || renderProgress !== null}
+              onClick={() => download("gif", "compact")}
+              title="Compact ~1MB GIF optimized for Discord and web"
+            >
+              ⚡ Download GIF (Small ~1MB)
+            </Button>
+            <Button
+              type="button"
+              size="2"
+              color="gray"
+              variant="soft"
+              disabled={!hasData || renderProgress !== null}
+              onClick={() => download("gif", "hq")}
+              title="Full 60fps high quality master GIF"
+            >
+              🎨 Download GIF (HQ 60fps)
+            </Button>
+            <Button
+              type="button"
+              size="2"
+              color="gray"
+              variant="soft"
+              disabled={!hasData || renderProgress !== null}
+              onClick={() => download("mov", "compact")}
+              title="Compressed small transparent video"
+            >
+              🎥 Download Video (Small)
+            </Button>
+            <Button
+              type="button"
+              size="2"
+              color="gray"
+              variant="soft"
+              disabled={!hasData || renderProgress !== null}
+              onClick={() => download("mov", "hq")}
+              title="Lossless ProRes 4444 master video for editors"
+            >
+              🎬 Download Video (ProRes Master)
+            </Button>
           </div>
         </section>
       </aside>

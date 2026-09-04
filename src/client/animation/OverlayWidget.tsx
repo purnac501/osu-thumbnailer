@@ -1,8 +1,22 @@
 import type { RefCallback } from "react";
-import { ChevronsUp, Heart, Hourglass, Play, Star } from "lucide-react";
+import { CheckCheck, ChevronsUp, CircleHelp, Heart, Hourglass, Play, Star } from "lucide-react";
 import type { OverlayData } from "./types";
 import type { PlaycountSpline } from "./spline";
-export type OverlayNode = "widget" | "topBanner" | "topPlayer" | "topMap" | "bottomPlayer" | "bottomMap" | "starFooter" | "starIcon" | "mapChevron" | "lipShine" | "svgPlayerPath" | "pPeakDot" | "pPeakLine" | "pHours" | "pPlaycount" | "fillAr" | "fillCs" | "fillOd" | "fillHp" | "mFavs" | "mPlays" | "svgMapPath";
+
+function MapStatusIcon({ status }: { status?: string }) {
+    const s = (status || "ranked").toLowerCase();
+    if (s === "loved") {
+        return <Heart size={15} fill="currentColor" strokeWidth={2.4} />;
+    }
+    if (s === "qualified") {
+        return <CheckCheck size={16} strokeWidth={2.4} />;
+    }
+    if (s === "graveyard" || s === "grave" || s === "pending" || s === "wip" || s === "unranked") {
+        return <CircleHelp size={16} strokeWidth={2.4} />;
+    }
+    return <ChevronsUp size={17} strokeWidth={2.4} />;
+}
+export type OverlayNode = "widget" | "topCard" | "bottomCard" | "topBanner" | "topBannerMap" | "topPlayer" | "playerHeaderLeft" | "playerHeaderRight" | "topMap" | "mapHeaderLeft" | "bottomPlayer" | "bottomMap" | "starFooter" | "starIcon" | "mapChevron" | "svgPlayerPath" | "pPeakDot" | "pPeakLine" | "pHours" | "pPlaycount" | "fillAr" | "fillCs" | "fillOd" | "fillHp" | "mFavs" | "mPlays" | "svgMapPath" | "chartYearsGroup";
 export type OverlayRefSetter = (name: OverlayNode) => RefCallback<Element>;
 const MAX_BADGES = 5;
 function StatPill({ code, fill, fillId, node, left, right, setRef, }: {
@@ -31,42 +45,49 @@ export function OverlayWidget({ data, spline, setRef, }: {
     const visibleBadges = data.player.badges.slice(0, MAX_BADGES);
     const extraBadges = data.player.badges.length - visibleBadges.length;
     return (<div className="overlay-widget-wrap" id="overlay-widget" ref={setRef("widget") as RefCallback<HTMLDivElement>}>
-      <div className="beveled-card top-header-card" id="top-card">
-        <div className="top-banner-bg" id="top-banner" ref={setRef("topBanner") as RefCallback<HTMLDivElement>}/>
+      <div className="beveled-card top-header-card" id="top-card" ref={setRef("topCard") as RefCallback<HTMLDivElement>}>
+        <div className="top-banner-bg player-banner-bg" id="top-banner" ref={setRef("topBanner") as RefCallback<HTMLDivElement>}/>
+        <div className="top-banner-bg map-banner-bg" id="top-banner-map" ref={setRef("topBannerMap") as RefCallback<HTMLDivElement>}/>
         <div className="top-banner-overlay"/>
 
         <div className="top-view-layer" id="layer-top-player" ref={setRef("topPlayer") as RefCallback<HTMLDivElement>}>
-          <img className="player-avatar-thumb" src={data.player.avatar} alt="Avatar"/>
-          <div className="player-title-col">
-            <div className="player-name-line">
-              <span className="player-username-text">{data.player.username}</span>
-              <span className="heart-pill"><Heart size={10} color="#fff" fill="#fff"/></span>
-            </div>
-            <div className="player-country-line">
-              <span>{data.player.flag}</span>
-              <span>{data.player.crank}</span>
+          <div className="player-header-left" id="player-header-left" ref={setRef("playerHeaderLeft") as RefCallback<HTMLDivElement>}>
+            <img className="player-avatar-thumb" src={data.player.avatar} alt="Avatar"/>
+            <div className="player-title-col">
+              <div className="player-name-line">
+                <span className="player-username-text">{data.player.username}</span>
+                <span className="heart-pill"><Heart size={10} color="#fff" fill="#fff"/></span>
+              </div>
+              <div className="player-country-line">
+                <span>{data.player.flag}</span>
+                <span>{data.player.crank}</span>
+              </div>
             </div>
           </div>
-          <div className="player-header-right">
+          <div className="player-header-right" id="player-header-right" ref={setRef("playerHeaderRight") as RefCallback<HTMLDivElement>}>
             <div className="rank-big-num">{data.player.grank}</div>
             <div className="pp-sub-num">{data.player.pp}</div>
           </div>
         </div>
 
         <div className="top-view-layer" id="layer-top-map" ref={setRef("topMap") as RefCallback<HTMLDivElement>}>
-          <img className="map-cover-thumb" src={data.map.cover} alt="Cover"/>
-          <div className="map-title-col">
-            <div className="map-name-text">{data.map.title}</div>
-            <div className="map-artist-text">{data.map.artist}</div>
+          <div className="map-header-left" id="map-header-left" ref={setRef("mapHeaderLeft") as RefCallback<HTMLDivElement>}>
+            <img className="map-cover-thumb" src={data.map.cover} alt="Cover"/>
+            <div className="map-title-col">
+              <div className="map-name-text">{data.map.title}</div>
+              <div className="map-artist-text">{data.map.artist}</div>
+            </div>
           </div>
-          <div className="map-chevron-icon" ref={setRef("mapChevron") as RefCallback<HTMLDivElement>}><ChevronsUp size={17}/></div>
+          <div className="map-chevron-icon" ref={setRef("mapChevron") as RefCallback<HTMLDivElement>}>
+            <div className={`map-status-badge status-${(data.map.status || "ranked").toLowerCase()}`} title={`Status: ${(data.map.status || "Ranked").toUpperCase()}`}>
+              <MapStatusIcon status={data.map.status} />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="beveled-card bottom-details-card" id="bottom-card">
-        <div className="bottom-card-top-lip">
-          <div className="lip-shine-sweep" id="lip-shine" ref={setRef("lipShine") as RefCallback<HTMLDivElement>}/>
-        </div>
+      <div className="beveled-card bottom-details-card" id="bottom-card" ref={setRef("bottomCard") as RefCallback<HTMLDivElement>}>
+        <div className="bottom-card-top-lip" />
 
         <div className="bottom-view-layer" id="layer-bottom-player" ref={setRef("bottomPlayer") as RefCallback<HTMLDivElement>}>
           <div className="player-badges-strip">
@@ -103,9 +124,11 @@ export function OverlayWidget({ data, spline, setRef, }: {
               <line id="p-peak-line" x1="20" y1={spline.peakY} x2="425" y2={spline.peakY} stroke="rgba(255,255,255,0.4)" strokeWidth="1" strokeDasharray="2 2" ref={setRef("pPeakLine") as RefCallback<SVGLineElement>}/>
               <path id="svg-player-path" className="chart-curve-path" d={spline.d} ref={setRef("svgPlayerPath") as RefCallback<SVGPathElement>}/>
               <circle className="peak-dot-static" id="p-peak-dot" cx={spline.peakX} cy={spline.peakY} r="2.8" ref={setRef("pPeakDot") as RefCallback<SVGCircleElement>}/>
-              {[2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026].map((year, index) => (
-                <text key={year} className="chart-label-axis chart-label-x" x={20 + index * 50.625} y="104">{year}</text>
-              ))}
+              <g id="chart-years-group" ref={setRef("chartYearsGroup") as RefCallback<SVGGElement>}>
+                {[2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026].map((year, index) => (
+                  <text key={year} className="chart-label-axis chart-label-x" data-year-index={index} x={20 + index * 50.625} y="104">{year}</text>
+                ))}
+              </g>
             </svg>
           </div>
 

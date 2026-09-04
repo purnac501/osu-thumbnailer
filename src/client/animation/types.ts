@@ -41,5 +41,6 @@ export const DEFAULT_OVERLAY_DATA: OverlayData = {
         odMs: "16.5ms",
         cs: 4.0,
         hp: 4.5,
+        status: "ranked",
     },
 };

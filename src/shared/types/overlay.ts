@@ -40,6 +40,7 @@ export interface OverlayData {
         odMs: string;
         cs: number;
         hp: number;
+        status?: string;
     };
 }
 export const LIFELINE_USER_ID = 11367222;

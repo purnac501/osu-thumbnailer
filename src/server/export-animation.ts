@@ -5,9 +5,19 @@ import { createRequire } from "module";
 import os from "os";
 import path from "path";
 import { chromium, type Page } from "playwright";
-import { ANIMATION_EXPORT_DURATION, ANIMATION_EXPORT_FRAMES, ANIMATION_EXPORT_FPS, ANIMATION_EXPORT_MIME, animationExportFileName, buildAnimationExportPageUrl, type AnimationExportFormat, } from "../shared/animation-export";
+import {
+    ANIMATION_EXPORT_DURATION,
+    ANIMATION_EXPORT_FRAMES,
+    ANIMATION_EXPORT_FPS,
+    ANIMATION_EXPORT_MIME,
+    animationExportFileName,
+    buildAnimationExportPageUrl,
+    type AnimationExportFormat,
+    type AnimationExportPreset,
+} from "../shared/animation-export";
 export interface RenderAnimationOptions {
     format: AnimationExportFormat;
+    preset?: AnimationExportPreset;
     score: string;
     theme: string;
     accent: string;
@@ -23,7 +33,19 @@ export const EXPORT_DEVICE_SCALE = 1.5;
 export const EXPORT_CLIP_PADDING = 56;
 export const EXPORT_SHARD_COUNT = 4;
 export const EXPORT_CACHE_TTL_MS = 30 * 60 * 1000;
-export function gifFfmpegArgs(framePattern: string, outFile: string): string[] {
+export function gifFfmpegArgs(framePattern: string, outFile: string, preset?: "compact" | "hq"): string[] {
+    if (preset === "compact") {
+        return [
+            "-y",
+            "-framerate",
+            String(ANIMATION_EXPORT_FPS),
+            "-i",
+            framePattern,
+            "-vf",
+            "fps=20,scale=420:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle:alpha_threshold=128",
+            outFile,
+        ];
+    }
     return [
         "-y",
         "-framerate",
@@ -35,7 +57,27 @@ export function gifFfmpegArgs(framePattern: string, outFile: string): string[] {
         outFile,
     ];
 }
-export function movFfmpegArgs(framePattern: string, outFile: string): string[] {
+export function movFfmpegArgs(framePattern: string, outFile: string, preset?: "compact" | "hq"): string[] {
+    if (preset === "compact") {
+        return [
+            "-y",
+            "-framerate",
+            String(ANIMATION_EXPORT_FPS),
+            "-i",
+            framePattern,
+            "-vf",
+            "fps=30,scale=420:-1:flags=lanczos,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuva444p10le",
+            "-c:v",
+            "prores_ks",
+            "-profile:v",
+            "4444",
+            "-qscale:v",
+            "34",
+            "-movflags",
+            "+faststart",
+            outFile,
+        ];
+    }
     return [
         "-y",
         "-framerate",
@@ -65,11 +107,14 @@ export function gifsicleBin(): string {
     const entry = createRequire(import.meta.url).resolve("gifsicle");
     return path.join(path.dirname(entry), "vendor", "gifsicle");
 }
-export function gifsicleArgs(inFile: string, outFile: string): string[] {
+export function gifsicleArgs(inFile: string, outFile: string, preset?: "compact" | "hq"): string[] {
+    if (preset === "compact") {
+        return ["--optimize=3", "--lossy=80", "--colors", "128", "-o", outFile, inFile];
+    }
     return ["--optimize=3", "--colors", "256", "-o", outFile, inFile];
 }
-export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent">): string {
-    return createHash("sha1").update(JSON.stringify(["v15", ANIMATION_EXPORT_FRAMES, options.format, options.score, options.theme, options.accent])).digest("hex");
+export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent"> & { preset?: string }): string {
+    return createHash("sha1").update(JSON.stringify(["v20", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.score, options.theme, options.accent])).digest("hex");
 }
 export function exportCacheDir(): string {
     return path.join(os.tmpdir(), "osu-overlay-cache");
@@ -187,12 +232,12 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
         }
         const outFile = path.join(tempDir, options.format === "gif" ? "output.gif" : "output.mov");
         execFileSync("ffmpeg", options.format === "gif"
-            ? gifFfmpegArgs(framePattern(tempDir), outFile)
-            : movFfmpegArgs(framePattern(tempDir), outFile), { stdio: "pipe" });
+            ? gifFfmpegArgs(framePattern(tempDir), outFile, options.preset)
+            : movFfmpegArgs(framePattern(tempDir), outFile, options.preset), { stdio: "pipe" });
         if (options.format === "gif") {
             try {
                 const optimized = path.join(tempDir, "optimized.gif");
-                execFileSync(gifsicleBin(), gifsicleArgs(outFile, optimized), { stdio: "pipe" });
+                execFileSync(gifsicleBin(), gifsicleArgs(outFile, optimized, options.preset), { stdio: "pipe" });
                 fs.renameSync(optimized, outFile);
             }
             catch {
@@ -208,7 +253,7 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
         return {
             bytes,
             contentType: ANIMATION_EXPORT_MIME[options.format],
-            fileName: animationExportFileName(options.format),
+            fileName: animationExportFileName(options.format, options.preset),
         };
     }
     finally {
