@@ -128,7 +128,7 @@ describe("resolveOverlayData", () => {
         expect(data.map.ar).toBe(10.3);
         expect(data.map.od).toBe(10.2);
         expect(data.map.bpm).toBe("300bpm");
-        expect(data.score.maxCombo).toBe(1250);
+        expect(data.score?.maxCombo).toBe(1250);
     });
     it("applies HR transforms modifying CS and HP accurately", async () => {
         const data = await resolveOverlayData("https://osu.ppy.sh/scores/5500357550", clientWith(["HR"]), identity);
