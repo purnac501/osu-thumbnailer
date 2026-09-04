@@ -127,9 +127,9 @@ describe("seekShowcaseIntro timeline", () => {
         expect(elements.lensWrap.style.opacity).toBe("1");
         expect(elements.gradeRank.style.opacity).toBe("1");
         expect(elements.leftFlyout.style.opacity).toBe("1");
-        expect(elements.leftFlyout.style.transform).toBe("translateY(-50%) translateX(0)");
+        expect(elements.leftFlyout.style.transform).toBe("translateX(0)");
         expect(elements.rightFlyout.style.opacity).toBe("1");
-        expect(elements.rightFlyout.style.transform).toBe("translateY(-50%) translateX(0)");
+        expect(elements.rightFlyout.style.transform).toBe("translateX(0)");
         expect(elements.bottomTime.style.opacity).toBe("1");
         expect(elements.container.style.opacity).toBe("1");
     });

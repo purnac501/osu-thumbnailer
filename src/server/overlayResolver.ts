@@ -174,12 +174,14 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
                 const modsArr: string[] = (item.mods || [])
                     .map((m: any) => (typeof m === "string" ? m : m?.acronym))
                     .filter(Boolean);
+                const coverUrl = bms.covers?.cover || bms.covers?.['list@2x'] || bms.covers?.list || (bms.id ? `https://assets.ppy.sh/beatmaps/${bms.id}/covers/cover.jpg` : mapCover);
                 return {
                     rank: String(item.rank || "S").replace(/H$/, ""),
                     title: bms.title || item.beatmap?.version || "Beatmap",
                     mods: modsArr,
                     timeAgo: formatShortAgo(item.created_at),
                     pp: item.pp ? `${Math.round(item.pp)}pp` : "0pp",
+                    cover: coverUrl,
                 };
             });
         }
@@ -188,12 +190,12 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
     }
     if (topScores.length === 0) {
         topScores = [
-            { rank: "S", title: "Song That Might Play When You Fight Sans", mods: ["HD", "HR"], timeAgo: "1y", pp: "1146pp" },
-            { rank: "X", title: "Bike Chase", mods: ["HD", "HR"], timeAgo: "1y", pp: "1120pp" },
-            { rank: "S", title: "ANTIDOTE", mods: ["HD", "HR"], timeAgo: "1y", pp: "1108pp" },
-            { rank: "S", title: "Bass Slut (Original Mix)", mods: ["HD", "DT"], timeAgo: "2y", pp: "1100pp" },
-            { rank: "S", title: "Last Goodbye", mods: ["HD", "HR"], timeAgo: "1y", pp: "1064pp" },
-            { rank: "A", title: "ChuChu Lovely MuniMuni MuraMura", mods: ["HD", "DT"], timeAgo: "1y", pp: "1058pp" },
+            { rank: "S", title: "Song That Might Play When You Fight Sans", mods: ["HD", "HR"], timeAgo: "1y", pp: "1146pp", cover: "https://assets.ppy.sh/beatmaps/1031435/covers/cover.jpg" },
+            { rank: "X", title: "Bike Chase", mods: ["HD", "HR"], timeAgo: "1y", pp: "1120pp", cover: "https://assets.ppy.sh/beatmaps/1449830/covers/cover.jpg" },
+            { rank: "S", title: "ANTIDOTE", mods: ["HD", "HR"], timeAgo: "1y", pp: "1108pp", cover: "https://assets.ppy.sh/beatmaps/1271616/covers/cover.jpg" },
+            { rank: "S", title: "Bass Slut (Original Mix)", mods: ["HD", "DT"], timeAgo: "2y", pp: "1100pp", cover: "https://assets.ppy.sh/beatmaps/399358/covers/cover.jpg" },
+            { rank: "S", title: "Last Goodbye", mods: ["HD", "HR"], timeAgo: "1y", pp: "1064pp", cover: "https://assets.ppy.sh/beatmaps/744372/covers/cover.jpg" },
+            { rank: "A", title: "ChuChu Lovely MuniMuni MuraMura", mods: ["HD", "DT"], timeAgo: "1y", pp: "1058pp", cover: "https://assets.ppy.sh/beatmaps/847323/covers/cover.jpg" },
         ];
     }
 

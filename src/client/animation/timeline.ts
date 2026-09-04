@@ -575,15 +575,15 @@ export function seekShowcaseIntro(t: number, nodes: ShowcaseNodeSource): void {
     // Phase 4: Left flyout stats slide out to the left (1.10s -> 2.10s)
     if (leftFlyout) {
         if (t < 1.10) {
-            leftFlyout.style.transform = "translateY(-50%) translateX(90px)";
+            leftFlyout.style.transform = "translateX(90px)";
             leftFlyout.style.opacity = "0";
         } else if (t < 2.10) {
             const p = easeMotionDecel((t - 1.10) / 1.0);
             const dx = 90 * (1 - p);
-            leftFlyout.style.transform = `translateY(-50%) translateX(${dx.toFixed(1)}px)`;
+            leftFlyout.style.transform = `translateX(${dx.toFixed(1)}px)`;
             leftFlyout.style.opacity = String(p);
         } else {
-            leftFlyout.style.transform = "translateY(-50%) translateX(0)";
+            leftFlyout.style.transform = "translateX(0)";
             leftFlyout.style.opacity = "1";
         }
     }
@@ -591,15 +591,15 @@ export function seekShowcaseIntro(t: number, nodes: ShowcaseNodeSource): void {
     // Phase 5: Right flyout stats slide out to the right (1.15s -> 2.15s)
     if (rightFlyout) {
         if (t < 1.15) {
-            rightFlyout.style.transform = "translateY(-50%) translateX(-90px)";
+            rightFlyout.style.transform = "translateX(-90px)";
             rightFlyout.style.opacity = "0";
         } else if (t < 2.15) {
             const p = easeMotionDecel((t - 1.15) / 1.0);
             const dx = -90 * (1 - p);
-            rightFlyout.style.transform = `translateY(-50%) translateX(${dx.toFixed(1)}px)`;
+            rightFlyout.style.transform = `translateX(${dx.toFixed(1)}px)`;
             rightFlyout.style.opacity = String(p);
         } else {
-            rightFlyout.style.transform = "translateY(-50%) translateX(0)";
+            rightFlyout.style.transform = "translateX(0)";
             rightFlyout.style.opacity = "1";
         }
     }

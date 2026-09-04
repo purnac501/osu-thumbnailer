@@ -1,6 +1,6 @@
 import type { RefCallback } from "react";
 import { Star } from "lucide-react";
-import type { OverlayData } from "./types";
+import { DEFAULT_OVERLAY_DATA, type OverlayData } from "./types";
 import "./showcase-intro.css";
 
 export type ShowcaseNode =
@@ -13,6 +13,34 @@ export type ShowcaseNode =
     | "bottomTime";
 
 export type ShowcaseRefSetter = (name: ShowcaseNode) => RefCallback<Element>;
+
+function formatScoreNumber(val: string | number): string {
+    const raw = String(val).replace(/\s+/g, "");
+    if (!/^\d+$/.test(raw)) return String(val);
+    return raw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function formatComboNumber(n: number | string): string {
+    const raw = String(n).replace(/\s+/g, "");
+    if (!/^\d+$/.test(raw)) return String(n);
+    return raw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function formatPpValue(pp: string): string {
+    const cleaned = pp.trim();
+    if (!cleaned) return "0PP";
+    return cleaned.toUpperCase().endsWith("PP") ? cleaned.toUpperCase() : `${cleaned}PP`;
+}
+
+function getPlayRankClass(rank: string): string {
+    const r = rank.toUpperCase().replace(/H$/, "");
+    if (r === "SS" || r === "X") return "rank-x";
+    if (r === "S") return "rank-s";
+    if (r === "A") return "rank-a";
+    if (r === "B") return "rank-b";
+    if (r === "C") return "rank-c";
+    return "rank-d";
+}
 
 export function ShowcaseIntroWidget({
     data,
@@ -36,14 +64,9 @@ export function ShowcaseIntroWidget({
         mods: ["HD", "HR"],
     };
 
-    const topScores = (data.topScores && data.topScores.length > 0) ? data.topScores.slice(0, 6) : [
-        { rank: "S", title: "Song That Might Play When You Fight Sans", mods: ["HD", "HR"], timeAgo: "1y", pp: "1146pp" },
-        { rank: "X", title: "Bike Chase", mods: ["HD", "HR"], timeAgo: "1y", pp: "1120pp" },
-        { rank: "S", title: "ANTIDOTE", mods: ["HD", "HR"], timeAgo: "1y", pp: "1108pp" },
-        { rank: "S", title: "Bass Slut (Original Mix)", mods: ["HD", "DT"], timeAgo: "2y", pp: "1100pp" },
-        { rank: "S", title: "Last Goodbye", mods: ["HD", "HR"], timeAgo: "1y", pp: "1064pp" },
-        { rank: "A", title: "ChuChu Lovely MuniMuni MuraMura", mods: ["HD", "DT"], timeAgo: "1y", pp: "1058pp" },
-    ];
+    const topScores = (data.topScores && data.topScores.length > 0)
+        ? data.topScores.slice(0, 6)
+        : (DEFAULT_OVERLAY_DATA.topScores ?? []);
 
     const csPct = Math.min(100, Math.max(0, (data.map.cs / 10) * 100));
     const arPct = Math.min(100, Math.max(0, (data.map.ar / 11) * 100));
@@ -140,71 +163,99 @@ export function ShowcaseIntroWidget({
                 </div>
             </div>
 
-            {/* Left Flyout: Player Card & Top Plays */}
+            {/* Left Flyout: Player Card & Top Plays Stack Curved Along Lens */}
             <aside className="showcase-left-flyout" ref={setRef("leftFlyout") as RefCallback<HTMLElement>}>
                 <div className="showcase-player-card">
                     <img
                         className="showcase-player-avatar"
                         src={data.player.avatar}
                         alt={data.player.username}
+                        loading="eager"
                         onError={(e) => {
-                            (e.target as HTMLImageElement).src = "https://a.ppy.sh/1415940";
+                            const el = e.target as HTMLImageElement;
+                            if (!el.dataset.fallback) {
+                                el.dataset.fallback = "1";
+                                el.src = "https://assets.ppy.sh/beatmaps/1031435/covers/cover.jpg";
+                            }
                         }}
                     />
                     <div className="showcase-player-meta">
                         <div className="showcase-player-name">
-                            {data.player.username} {data.player.grank}
+                            {data.player.username} <span className="showcase-player-grank">{data.player.grank}</span>
                         </div>
                         <div className="showcase-player-sub">
-                            <span>{data.player.flag}</span>
-                            <span>{data.player.crank}</span>
+                            <span className="showcase-player-flag">{data.player.flag}</span>
+                            <span className="showcase-player-crank">{data.player.crank}</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="showcase-top-plays-list">
                     {topScores.map((play, idx) => (
-                        <div key={`${play.title}-${idx}`} className="showcase-play-item">
-                            <div className={`showcase-play-rank rank-${play.rank.toLowerCase()}`}>
-                                {play.rank}
-                            </div>
-                            <div className="showcase-play-title" title={play.title}>
-                                {play.title}
-                            </div>
-                            {play.mods.length > 0 ? (
-                                <div className="showcase-play-mods">
-                                    {play.mods.slice(0, 2).map((m) => (
-                                        <span key={m} className="showcase-mod-badge">{m}</span>
-                                    ))}
+                        <div key={`${play.title}-${idx}`} className={`showcase-play-item showcase-play-row-${idx + 1}`}>
+                            <div className="showcase-play-thumb-wrap">
+                                <img
+                                    className="showcase-play-thumb"
+                                    src={play.cover || data.map.cover}
+                                    alt={play.title}
+                                    loading="eager"
+                                    onError={(e) => {
+                                        const el = e.target as HTMLImageElement;
+                                        if (!el.dataset.fallback) {
+                                            el.dataset.fallback = "1";
+                                            el.src = data.map.cover;
+                                        }
+                                    }}
+                                />
+                                <div className="showcase-play-thumb-dim" />
+                                <div className={`showcase-play-rank-badge ${getPlayRankClass(play.rank)}`}>
+                                    {play.rank.toUpperCase().replace(/H$/, "")}
                                 </div>
-                            ) : null}
-                            <div className="showcase-play-time">{play.timeAgo}</div>
-                            <div className="showcase-play-pp">{play.pp}</div>
+                            </div>
+
+                            <div className="showcase-play-body">
+                                <div className="showcase-play-title" title={play.title}>
+                                    {play.title}
+                                </div>
+                                <div className="showcase-play-meta">
+                                    {play.mods && play.mods.length > 0 && (
+                                        <div className="showcase-mod-combo">
+                                            {play.mods.slice(0, 3).map((mod) => (
+                                                <span key={mod} className={`showcase-mod-tag mod-${mod.toLowerCase()}`}>
+                                                    {mod}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <span className="showcase-play-time">{play.timeAgo}</span>
+                                    <span className="showcase-play-pp">{play.pp}</span>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
             </aside>
 
-            {/* Right Flyout: Score, Combo, PP Badge, Accuracy, Hit Judgments */}
+            {/* Right Flyout: Score, Combo, PP Badge, Accuracy, Hit Judgments Curved Along Lens */}
             <aside className="showcase-right-flyout" ref={setRef("rightFlyout") as RefCallback<HTMLElement>}>
-                <div className="showcase-score-row">
+                <div className="showcase-right-item showcase-score-row">
                     <span className="showcase-score-label">Score</span>
-                    <span className="showcase-score-val">{score.totalScore}</span>
+                    <span className="showcase-score-val">{formatScoreNumber(score.totalScore)}</span>
                 </div>
 
-                <div className="showcase-combo-row">
-                    {score.combo.toLocaleString()} / {score.maxCombo.toLocaleString()}x
+                <div className="showcase-right-item showcase-combo-row">
+                    {formatComboNumber(score.combo)}/{formatComboNumber(score.maxCombo)}x
                 </div>
 
-                <div className="showcase-pp-badge">
-                    <span className="showcase-pp-text">{score.pp}</span>
+                <div className="showcase-right-item showcase-pp-badge">
+                    <span className="showcase-pp-text">{formatPpValue(score.pp)}</span>
                 </div>
 
-                <div className="showcase-acc-row">
+                <div className="showcase-right-item showcase-acc-row">
                     {score.accuracy}
                 </div>
 
-                <div className="showcase-hits-strip">
+                <div className="showcase-right-item showcase-hits-strip">
                     <div className="showcase-hit-box h300">
                         <span>{score.count300}</span>
                     </div>
