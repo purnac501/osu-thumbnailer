@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, SegmentedControl, Switch, TextField } from "@radix-ui/themes";
+import { Button, Flex, SegmentedControl, Switch, TextField } from "@radix-ui/themes";
 import { DownloadIcon, PlayIcon } from "@radix-ui/react-icons";
 import "./overlay.css";
 import "./animation-tab.css";
@@ -45,7 +45,7 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
     onReady?: (api: AnimationApi) => void;
 }) {
     const [data, setData] = useState<OverlayData>(DEFAULT_OVERLAY_DATA);
-    const [accent, setAccent] = useState(OVERLAY_THEMES.cyan!.accent);
+    const [accent, setAccent] = useState(OVERLAY_THEMES.gray!.accent);
     const [loop, setLoop] = useState(true);
     const [busy, setBusy] = useState(false);
     const [fetchMsg, setFetchMsg] = useState<string | null>(null);
@@ -173,7 +173,7 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
             applyOverlayPalette(p.accent, p.top, p.bottom, p.lip);
         }
         else {
-            const t = OVERLAY_THEMES[theme] ?? OVERLAY_THEMES.cyan!;
+            const t = OVERLAY_THEMES[theme] ?? OVERLAY_THEMES.gray!;
             setAccent(t.accent);
             applyOverlayPalette(t.accent, t.top, t.bottom, t.lip);
         }
@@ -324,24 +324,27 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
             <div className="render-progress-fill" style={{ width: `${Math.round(renderProgress * 100)}%` }}/>
           </div>) : null}
           {downloadReady ? (
-            <div className="download-ready-card">
-              <div className="download-ready-info">
-                <span className="download-ready-title">🎉 {downloadReady.label} ready!</span>
-                <span className="download-ready-hint">Tap below if download didn't start automatically:</span>
-              </div>
+            <div className="field-note" role="status">{downloadReady.label} ready! Tap below if the download did not start.</div>
+          ) : null}
+          {downloadReady ? (
+            <Button asChild size="2" variant="soft" color="gray" highContrast style={{ width: "100%", justifyContent: "flex-start", height: "auto", paddingTop: 8, paddingBottom: 8 }}>
               <a
                 href={downloadReady.url}
                 download={downloadReady.filename}
-                className="download-direct-btn"
+                title={downloadReady.filename}
                 onClick={() => {
                   setTimeout(() => {
                     window.location.href = downloadReady.url;
                   }, 150);
                 }}
               >
-                <DownloadIcon /> Save {downloadReady.filename}
+                <DownloadIcon />
+                <Flex direction="column" align="start" gap="1" style={{ minWidth: 0, flex: 1, lineHeight: 1.4 }}>
+                  <span>Save file</span>
+                  <span style={{ fontSize: 11, opacity: 0.65, fontWeight: 400, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{downloadReady.filename}</span>
+                </Flex>
               </a>
-            </div>
+            </Button>
           ) : null}
         </section>
 
@@ -366,75 +369,6 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
               <span className="setting-value">{accent.toUpperCase()}</span>
             </div>
             <AccentPicker color={accent} onChange={onAccentInput} align="right"/>
-          </div>
-
-          <div className="setting-row" style={{ marginTop: "8px", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
-            <div className="setting-copy">
-              <span className="setting-label">Beatmap status</span>
-              <span className="setting-value" style={{ textTransform: "capitalize" }}>{data.map.status || "ranked"}</span>
-            </div>
-            <SegmentedControl.Root
-              size="1"
-              className="segmented-control"
-              style={{ width: "100%" }}
-              value={data.map.status || "ranked"}
-              onValueChange={(status) => setData((prev) => ({ ...prev, map: { ...prev.map, status } }))}
-            >
-              <SegmentedControl.Item value="ranked">Ranked</SegmentedControl.Item>
-              <SegmentedControl.Item value="loved">Loved</SegmentedControl.Item>
-              <SegmentedControl.Item value="qualified">Qualified</SegmentedControl.Item>
-              <SegmentedControl.Item value="graveyard">Graveyard</SegmentedControl.Item>
-            </SegmentedControl.Root>
-          </div>
-        </section>
-
-        <section className="sidebar-section animation-group" aria-label="Export">
-          <span className="field-label">Export & Download</span>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <Button
-              type="button"
-              size="2"
-              color="gray"
-              highContrast
-              disabled={!hasData || renderProgress !== null}
-              onClick={() => download("gif", "compact")}
-              title="Compact ~1MB GIF optimized for Discord and web"
-            >
-              ⚡ Download GIF (Small ~1MB)
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              color="gray"
-              variant="soft"
-              disabled={!hasData || renderProgress !== null}
-              onClick={() => download("gif", "hq")}
-              title="Full 60fps high quality master GIF"
-            >
-              🎨 Download GIF (HQ 60fps)
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              color="gray"
-              variant="soft"
-              disabled={!hasData || renderProgress !== null}
-              onClick={() => download("mov", "compact")}
-              title="Compressed small transparent video"
-            >
-              🎥 Download Video (Small)
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              color="gray"
-              variant="soft"
-              disabled={!hasData || renderProgress !== null}
-              onClick={() => download("mov", "hq")}
-              title="Lossless ProRes 4444 master video for editors"
-            >
-              🎬 Download Video (ProRes Master)
-            </Button>
           </div>
         </section>
       </aside>

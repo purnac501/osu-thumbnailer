@@ -71,7 +71,7 @@ describe("resolveOverlayData", () => {
         const data = await resolveOverlayData("https://osu.ppy.sh/scores/5500357550", clientWith([]), identity);
         expect(data.player.username).toBe("TestPlayer");
         expect(data.player.flag).toBe("🇺🇸");
-        expect(data.player.crank).toBe("- #10");
+        expect(data.player.crank).toBe("#10");
         expect(data.player.grank).toBe("#5000");
         expect(digits(data.player.pp)).toBe(1235);
         expect(data.player.hours).toBe(2);

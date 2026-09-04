@@ -144,7 +144,7 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
             username: u.username || "Player",
             flag: getFlagEmoji(u.country_code),
             countryCode: u.country_code || "ID",
-            crank: stats.country_rank ? `- #${stats.country_rank}` : "- #1",
+            crank: stats.country_rank ? `#${stats.country_rank}` : "#1",
             grank: stats.global_rank ? `#${stats.global_rank}` : "#7",
             pp: stats.pp ? `${Math.round(stats.pp).toLocaleString()}pp` : "25 838pp",
             hours: Math.round((stats.play_time || 0) / 3600) || 3664,

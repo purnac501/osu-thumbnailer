@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { toBlob } from "html-to-image";
-import { Button, ContextMenu, Flex, IconButton, Popover, SegmentedControl, Select, Switch, TextField } from "@radix-ui/themes";
-import { DownloadIcon, InfoCircledIcon, PlusIcon, ResetIcon } from "@radix-ui/react-icons";
+import { Button, ContextMenu, Dialog, Flex, IconButton, Popover, SegmentedControl, Select, Switch, TextField } from "@radix-ui/themes";
+import { DownloadIcon, InfoCircledIcon, PlusIcon, ResetIcon, Cross2Icon } from "@radix-ui/react-icons";
 import "@fontsource/baloo-2/400.css";
 import "@fontsource/baloo-2/700.css";
 import "@fontsource/montserrat/400.css";
@@ -22,6 +22,7 @@ import { loadGoogleFont } from "../thumbnail/fonts";
 import { EditorCanvas, getLayerTextStyle, getTextKeyForLayer, isTextLayer, LAYER_NAMES } from "./EditorCanvas";
 import { AccentPicker, ColorPicker } from "./AccentPicker";
 import { AnimationTab, type AnimationApi } from "./animation/AnimationTab";
+import type { AnimationExportPreset } from "../shared/animation-export";
 import { OVERLAY_THEMES, type OverlayThemeId } from "./animation/themes";
 import "./styles.css";
 const RESOLUTIONS = Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[];
@@ -49,6 +50,20 @@ function loadSaved(): SavedState {
     };
 }
 const EMPTY_EDITOR: EditorState = { twitchVisible: false };
+const ANIMATION_EXPORT_OPTIONS: Record<"gif" | "video", {
+    preset: AnimationExportPreset;
+    label: string;
+    description: string;
+}[]> = {
+    gif: [
+        { preset: "compact", label: "Small (~1MB)", description: "Optimized for Discord and web" },
+        { preset: "hq", label: "HQ 60fps", description: "Full quality 60fps master GIF" },
+    ],
+    video: [
+        { preset: "compact", label: "Small", description: "Compressed video with transparency" },
+        { preset: "hq", label: "ProRes Master", description: "Lossless ProRes 4444 for video editing" },
+    ],
+};
 export function GeneratorPage() {
     const saved = useMemo(loadSaved, []);
     const query = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -56,7 +71,7 @@ export function GeneratorPage() {
     const [activeTab, setActiveTab] = useState(query.get("tab") === "animation" ? "animation" : "thumbnails");
     const [animTheme, setAnimTheme] = useState<OverlayThemeId>(() => {
         const t = query.get("theme");
-        return t !== null && (t in OVERLAY_THEMES || t === "custom") ? (t as OverlayThemeId) : "cyan";
+        return t !== null && (t in OVERLAY_THEMES || t === "custom") ? (t as OverlayThemeId) : "gray";
     });
     const animApi = useRef<AnimationApi | null>(null);
     const [animCanDownload, setAnimCanDownload] = useState(false);
@@ -72,6 +87,7 @@ export function GeneratorPage() {
     const [missDraft, setMissDraft] = useState("0");
     const [sidebarAccentText, setSidebarAccentText] = useState("");
     const [templateId, setTemplateId] = useState<string>(saved.templateId ?? "showcase");
+    const [exportDialog, setExportDialog] = useState<"gif" | "video" | null>(null);
     useEffect(() => {
         loadGoogleFont("Teko");
         loadGoogleFont("Bebas Neue");
@@ -479,18 +495,38 @@ export function GeneratorPage() {
               <span className="toolbar-download-label">{busy ? "Preparing..." : "Download PNG"}</span>
             </Button>) : null}
           {activeTab === "animation" ? (<>
-              <Button type="button" onClick={() => animApi.current?.download("gif", "compact")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="solid" color="gray" highContrast aria-label="Download Small GIF" title="Download small, lightweight GIF (~1MB)">
+              <Button type="button" onClick={() => setExportDialog("gif")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="solid" color="gray" highContrast aria-label="Download GIF" title="Download GIF">
                 <DownloadIcon />
-                <span className="toolbar-download-label">GIF (Small)</span>
+                <span className="toolbar-download-label">GIF</span>
               </Button>
-              <Button type="button" onClick={() => animApi.current?.download("gif", "hq")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="soft" color="gray" aria-label="Download HQ GIF" title="Download full quality 60fps GIF">
-                <DownloadIcon />
-                <span className="toolbar-download-label">GIF (HD)</span>
-              </Button>
-              <Button type="button" onClick={() => animApi.current?.download("mov", "compact")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="soft" color="gray" aria-label="Download Video" title="Download video">
+              <Button type="button" onClick={() => setExportDialog("video")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="soft" color="gray" aria-label="Download Video" title="Download Video">
                 <DownloadIcon />
                 <span className="toolbar-download-label">Video</span>
               </Button>
+              <Dialog.Root open={exportDialog !== null} onOpenChange={(open) => { if (!open) setExportDialog(null); }}>
+                <Dialog.Content size="1" maxWidth="420px" aria-describedby={undefined}>
+                  <Flex justify="between" align="center">
+                    <Dialog.Title size="3">Download {exportDialog === "video" ? "Video" : "GIF"}</Dialog.Title>
+                    <Dialog.Close>
+                      <IconButton size="1" variant="ghost" color="gray" aria-label="Close dialog">
+                        <Cross2Icon />
+                      </IconButton>
+                    </Dialog.Close>
+                  </Flex>
+                  <Dialog.Description size="1" color="gray">Choose a preset to render.</Dialog.Description>
+                  <Flex direction="column" gap="2" mt="3">
+                    {(exportDialog === "video" ? ANIMATION_EXPORT_OPTIONS.video : ANIMATION_EXPORT_OPTIONS.gif).map((option) => (<Button key={option.preset} type="button" size="2" variant="soft" color="gray" highContrast disabled={!animCanDownload} style={{ justifyContent: "flex-start", height: "auto", paddingTop: 9, paddingBottom: 9 }} onClick={() => {
+                        setExportDialog(null);
+                        animApi.current?.download(exportDialog === "video" ? "mov" : "gif", option.preset);
+                    }}>
+                      <Flex direction="column" align="start" gap="1" style={{ lineHeight: 1.4 }}>
+                        <span>{option.label}</span>
+                        <span style={{ fontSize: 11, opacity: 0.65, fontWeight: 400 }}>{option.description}</span>
+                      </Flex>
+                    </Button>))}
+                  </Flex>
+                </Dialog.Content>
+              </Dialog.Root>
             </>) : null}
         </Flex>
       </header>

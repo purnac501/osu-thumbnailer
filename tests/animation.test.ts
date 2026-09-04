@@ -52,10 +52,10 @@ describe("playcount spline", () => {
     });
 });
 describe("overlay themes", () => {
-    it("ships six themes with distinct accents", () => {
+    it("ships seven themes with distinct accents", () => {
         const ids = Object.keys(OVERLAY_THEMES);
-        expect(ids).toHaveLength(6);
-        expect(new Set(ids.map((id) => OVERLAY_THEMES[id]!.accent)).size).toBe(6);
+        expect(ids).toHaveLength(7);
+        expect(new Set(ids.map((id) => OVERLAY_THEMES[id]!.accent)).size).toBe(7);
     });
     it("derives dark card tones from a custom accent", () => {
         expect(customAccentPalette("#00D2FF")).toEqual({
