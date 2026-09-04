@@ -8,5 +8,4 @@ import "@fontsource/montserrat/700.css";
 import "flag-icons/css/flag-icons.min.css";
 import "../thumbnail/styles.css";
 import { RenderPage } from "./RenderPage";
-
 createRoot(document.getElementById("root")!).render(<RenderPage />);

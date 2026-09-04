@@ -1,5 +1,4 @@
-/* Shared thumbnail styles. Layout stays in template configs; this file only
-   neutralizes defaults that would leak into the render. */
+
 @import "@fontsource/fredoka/index.css";
 @import "@fontsource/dynapuff/index.css";
 
@@ -7,6 +6,9 @@ html,
 body {
   margin: 0;
   padding: 0;
+}
+
+body {
   background: #111;
 }
 
@@ -15,13 +17,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Widths/heights in template configs include borders. */
 #thumbnail-root,
 #thumbnail-root * {
   box-sizing: border-box;
 }
 
-/* Deterministic rendering: kill all transitions/animations in render mode. */
 [data-render-ready] *,
 #thumbnail-root * {
   transition: none !important;
