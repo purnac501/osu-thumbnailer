@@ -42,6 +42,8 @@ function cacheOverlay(url: string, value: OverlayData): void {
 export interface AnimationApi {
     download: (format: AnimationExportFormat, preset?: AnimationExportPreset) => void;
     canDownload: boolean;
+    renderProgress: number | null;
+    downloadReady: { url: string; filename: string; label: string } | null;
 }
 export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUrl, onScoreUrlChange, onReady, }: {
     exportMode?: boolean;
@@ -78,6 +80,7 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
     const nodes = useRef(new Map<OverlayNode, Element>());
     const showcaseNodes = useRef(new Map<ShowcaseNode, HTMLElement>());
     const dataRef = useRef(data);
+    const fetchVersion = useRef(0);
     dataRef.current = data;
     const loopRef = useRef(loop);
     loopRef.current = loop;
@@ -195,12 +198,14 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         const clean = url.trim();
         if (!clean)
             return;
+        const version = ++fetchVersion.current;
         if (!parseScoreUrl(clean)) {
             setFetchMsg("That is not a score link. Paste one like https://osu.ppy.sh/scores/1234567890");
             return;
         }
         const cached = overlayCache.get(clean);
         if (cached) {
+            dataRef.current = cached;
             setData(cached);
             setHasData(true);
             setFetchMsg("Synced!");
@@ -217,7 +222,10 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
             };
             if (!json.data)
                 throw new Error("No data returned");
+            if (version !== fetchVersion.current)
+                return;
             cacheOverlay(clean, json.data);
+            dataRef.current = json.data;
             setData(json.data);
             setHasData(true);
             await window.waitForAllAssetsReady?.();
@@ -225,10 +233,13 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
             replay();
         }
         catch (err) {
+            if (version !== fetchVersion.current)
+                return;
             setFetchMsg(`Error: ${err instanceof Error ? err.message : String(err)}`);
         }
         finally {
-            setBusy(false);
+            if (version === fetchVersion.current)
+                setBusy(false);
         }
     }, [replay]);
     useEffect(() => {
@@ -263,12 +274,18 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         window.waitForAllAssetsReady = async () => {
             const root = stageRef.current;
             const imgs = Array.from(root?.querySelectorAll("img") ?? []);
-            await Promise.all(imgs.map((img) => img.complete
+            const banners = [dataRef.current.player.banner, dataRef.current.map.cover].map((url) => new Promise<void>((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+                img.src = url;
+            }));
+            await Promise.all([...banners, ...imgs.map((img) => img.complete
                 ? Promise.resolve()
                 : new Promise<void>((resolve) => {
                     img.addEventListener("load", () => resolve(), { once: true });
                     img.addEventListener("error", () => resolve(), { once: true });
-                })));
+                }))]);
             await document.fonts.ready;
         };
         window.seekAnimation = (t: number) => {
@@ -340,14 +357,13 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
                         throw new Error(job.error ?? "Render failed");
                     const total = Math.max(1, job.total);
                     setRenderProgress(Math.min(1, job.done / total));
-                    setFetchMsg(`Rendering ${label} ${Math.round((100 * job.done) / total)}%`);
                     if (job.state === "done")
                         break;
                 }
                 const downloadUrl = `/api/export-animation/file?id=${started.id}`;
                 const filename = animationExportFileName(format, preset, animStyle);
                 setDownloadReady({ url: downloadUrl, filename, label });
-                setFetchMsg("Render ready! Tap below or check your downloads.");
+                setFetchMsg(null);
 
                 const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
                 if (isMobile) {
@@ -370,8 +386,8 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         })();
     };
     useEffect(() => {
-        onReady?.({ download, canDownload: hasData && renderProgress === null });
-    }, [onReady, download, hasData, renderProgress]);
+        onReady?.({ download, canDownload: hasData && renderProgress === null, renderProgress, downloadReady });
+    }, [onReady, download, hasData, renderProgress, downloadReady]);
     if (exportMode) {
         const stageClass = exportFormat === "gif" ? "animation-stage gif-export" : "animation-stage";
         const stageStyle = exportTransparent ? { backgroundColor: "transparent" } : undefined;
@@ -400,32 +416,6 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
             {busy ? "Fetching..." : "Fetch"}
           </Button>
           {fetchMsg ? <div className="field-note" role="status">{fetchMsg}</div> : null}
-          {renderProgress !== null ? (<div className="render-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(renderProgress * 100)}>
-            <div className="render-progress-fill" style={{ width: `${Math.round(renderProgress * 100)}%` }}/>
-          </div>) : null}
-          {downloadReady ? (
-            <div className="field-note" role="status">{downloadReady.label} ready! Tap below if the download did not start.</div>
-          ) : null}
-          {downloadReady ? (
-            <Button asChild size="2" variant="soft" color="gray" highContrast style={{ width: "100%", justifyContent: "flex-start", height: "auto", paddingTop: 8, paddingBottom: 8 }}>
-              <a
-                href={downloadReady.url}
-                download={downloadReady.filename}
-                title={downloadReady.filename}
-                onClick={() => {
-                  setTimeout(() => {
-                    window.location.href = downloadReady.url;
-                  }, 150);
-                }}
-              >
-                <DownloadIcon />
-                <Flex direction="column" align="start" gap="1" style={{ minWidth: 0, flex: 1, lineHeight: 1.4 }}>
-                  <span>Save file</span>
-                  <span style={{ fontSize: 11, opacity: 0.65, fontWeight: 400, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{downloadReady.filename}</span>
-                </Flex>
-              </a>
-            </Button>
-          ) : null}
         </section>
 
         <section className="sidebar-section animation-group" aria-label="Animation Style">

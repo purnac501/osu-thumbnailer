@@ -52,7 +52,7 @@ export function normalizeScore(score: ApiScore, extras: {
         countryCode: user?.country_code,
         pp: score.pp ?? undefined,
         accuracy: score.accuracy ?? 0,
-        grade: score.rank ?? "",
+        grade: score.rank === "X" || score.rank === "XH" ? "SS" : score.rank ?? "",
         maxCombo: score.max_combo ?? 0,
         leaderboardPosition,
         status,

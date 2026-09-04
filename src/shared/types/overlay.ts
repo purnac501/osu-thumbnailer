@@ -33,6 +33,7 @@ export interface OverlayScoreDetails {
 export interface OverlayData {
     player: {
         username: string;
+        isSupporter: boolean;
         flag: string;
         countryCode: string;
         crank: string;

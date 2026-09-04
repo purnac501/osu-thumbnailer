@@ -17,10 +17,12 @@ describe("gif ffmpeg args", () => {
         expect(args).toContain("/tmp/x/frame_%04d.png");
         const vf = args[args.indexOf("-vf") + 1]!;
         expect(vf).toContain("palettegen");
+        expect(vf).toContain("fps=30");
         expect(vf).toContain("reserve_transparent=1");
         expect(vf).toContain("paletteuse");
         expect(vf).toContain("dither=sierra2_4a");
         expect(vf).toContain("diff_mode=rectangle");
+        expect(vf).not.toContain("scale=");
         expect(args[args.length - 1]).toBe("/tmp/x/output.gif");
     });
 });
@@ -67,9 +69,10 @@ describe("gif post compression", () => {
         expect(gifsicleBin().endsWith("vendor/gifsicle")).toBe(true);
     });
     it("compresses lossy without touching dimensions or timing", () => {
-        const args = gifsicleArgs("/tmp/x/output.gif", "/tmp/x/small.gif");
+        const args = gifsicleArgs("/tmp/x/output.gif", "/tmp/x/small.gif", "compact");
         expect(args).toContain("--optimize=3");
-        expect(args).toContain("--colors");
+        expect(args).toContain("--lossy=10");
+        expect(args).toContain("256");
         expect(args[args.length - 2]).toBe("/tmp/x/small.gif");
         expect(args[args.length - 1]).toBe("/tmp/x/output.gif");
     });

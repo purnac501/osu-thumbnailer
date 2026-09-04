@@ -33,6 +33,7 @@ export interface TextLayerConfig extends LayerBase, TextEffect {
     width?: number;
     height?: number;
     maxWidth?: number;
+    maxLines?: number;
     fontFamily: string;
     fontSize: number;
     fontWeight: number;
@@ -235,6 +236,7 @@ export interface ReferenceTemplateComponents {
     comboBadge: BadgeLayerConfig;
     difficultyBadge: BadgeLayerConfig;
     bpmBadge: BadgeLayerConfig;
+    mapArtist?: TextLayerConfig;
     mapTitle: TextLayerConfig;
     grade: TextLayerConfig;
     accuracy: TextLayerConfig;

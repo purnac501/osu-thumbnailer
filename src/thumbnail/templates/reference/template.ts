@@ -3,7 +3,7 @@ import { referenceLayout } from "./layout";
 import { referenceTheme } from "./theme";
 export const referenceTemplate: ThumbnailTemplate = {
     id: "reference",
-    name: "Reference",
+    name: "CPOLesque",
     canvas: { width: 1280, height: 720 },
     theme: referenceTheme,
     background: {

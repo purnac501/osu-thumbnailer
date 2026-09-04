@@ -17,8 +17,10 @@ export function computeTexts(data: ThumbnailData, template: ThumbnailTemplate): 
         ? `${Math.round(data.pp)} PP`
         : ppFormatted;
     const starRatingValue = data.moddedStarRating ?? data.baseStarRating;
-    const starText = isBubbly && starRatingValue !== undefined
-        ? `★ ${starRatingValue.toFixed(2)}★`
+    const starText = template.id === "cute" && starRatingValue !== undefined
+        ? `${starRatingValue.toFixed(2)} ★`
+        : isBubbly && starRatingValue !== undefined
+            ? `★ ${starRatingValue.toFixed(2)}★`
         : formatStarRating(starRatingValue);
     const mapTitleText = template.id === "showcase" || template.id === "adaptable"
         ? (data.title || "MAP TITLE").toUpperCase()
@@ -36,6 +38,7 @@ export function computeTexts(data: ThumbnailData, template: ThumbnailTemplate): 
         combo: formatCombo(data.maxCombo),
         difficulty: data.difficultyName,
         bpm: formatBpm(data.effectiveBpm),
+        "map-artist": data.artist,
         "map-title": mapTitleText,
         grade: data.grade,
         accuracy: formatAccuracy(data.accuracy),

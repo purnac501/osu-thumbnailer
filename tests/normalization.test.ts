@@ -3,12 +3,14 @@ import { getClockRate, modAssetPath, normalizeMods } from "../src/shared/mods/mo
 import { detectStatus } from "../src/shared/normalize/status";
 import { backgroundCandidates, normalizeScore } from "../src/shared/normalize/normalizeScore";
 import type { ApiScore } from "../src/shared/types/osu";
-import { referenceFixtureScore } from "../src/server/data/fixtures";
+import { referenceFixtureScore, referenceFixtureThumbnail } from "../src/server/data/fixtures";
 import { applyDataOverrides, applyOverrides } from "../src/thumbnail/overrides";
 import { referenceTemplate } from "../src/thumbnail/templates/reference/template";
+import { cuteTemplate } from "../src/thumbnail/templates/cute/template";
+import { leaderboardColor } from "../src/thumbnail/Thumbnail";
 import { formatPp } from "../src/shared/formatting/format";
 import { OsuRequestQueue } from "../src/shared/osu/queue";
-import { withTextOverride } from "../src/thumbnail/texts";
+import { computeTexts, withTextOverride } from "../src/thumbnail/texts";
 describe("mods", () => {
     it("normalizes legacy acronym strings and structured mods", () => {
         expect(normalizeMods(["HD", "DT"])).toEqual([
@@ -102,13 +104,143 @@ describe("normalizeScore", () => {
         expect(data.grade).toBe("S");
         expect(data.leaderboardPosition).toBe(2);
     });
+    it.each(["X", "XH"])("renders the osu! %s rank as SS", (rank) => {
+        const data = normalizeScore({ ...referenceFixtureScore, rank });
+        expect(data.grade).toBe("SS");
+    });
+    it("keeps the CPOL grade inside its column", () => {
+        expect(referenceTemplate.components.grade.y).toBe(350);
+        expect(referenceTemplate.components.grade.maxWidth).toBe(205);
+        expect(referenceTemplate.components.grade.x + referenceTemplate.components.grade.maxWidth!).toBeLessThan(300);
+    });
+    it("keeps CPOL text glows restrained", () => {
+        const glowing = [
+            referenceTemplate.components.status,
+            referenceTemplate.components.statusMiss,
+            referenceTemplate.components.statusSB,
+            referenceTemplate.components.starRating,
+            referenceTemplate.components.pp,
+            referenceTemplate.components.grade,
+            referenceTemplate.components.accuracy,
+            referenceTemplate.components.leaderboard,
+        ];
+        expect(glowing.every((layer) => (layer.glow?.blur ?? 0) <= 18)).toBe(true);
+    });
+    it.each([
+        [1, "#E7CE56"],
+        [2, "#A5A4A6"],
+        [3, "#CD7F32"],
+        [4, "#63E564"],
+    ])("colors leaderboard position #%s", (leaderboardPosition, color) => {
+        const data = { ...referenceFixtureThumbnail, leaderboardPosition };
+        expect(leaderboardColor(data, referenceTemplate)).toBe(color);
+    });
     it("hides an unavailable zero leaderboard position", () => {
         const score = { ...referenceFixtureScore, rank_global: 0 };
         const data = normalizeScore(score, { leaderboardPosition: 0 });
         expect(data.leaderboardPosition).toBeUndefined();
     });
 });
+describe("Clean layout", () => {
+    it("keeps primary text readable at feed scale", () => {
+        expect(cuteTemplate.components.pp.fontSize).toBeGreaterThanOrEqual(130);
+        expect(cuteTemplate.components.statusMiss.fontSize).toBeGreaterThanOrEqual(44);
+        expect(cuteTemplate.components.accuracy.fontSize).toBeGreaterThanOrEqual(40);
+        expect(cuteTemplate.components.starRating.fontSize).toBeGreaterThanOrEqual(44);
+        expect(cuteTemplate.components.usernamePanel.fontSize).toBeGreaterThanOrEqual(38);
+    });
+    it("uses a large centered map block with a quieter artist", () => {
+        expect(cuteTemplate.components.mapTitle.fontSize).toBeGreaterThanOrEqual(54);
+        expect(cuteTemplate.components.mapTitle.width).toBe(1160);
+        expect(cuteTemplate.components.mapTitle.align).toBe("center");
+        expect(cuteTemplate.components.mapArtist?.align).toBe("center");
+        expect(cuteTemplate.components.mapArtist?.fontSize).toBeLessThan(cuteTemplate.components.mapTitle.fontSize);
+        expect(cuteTemplate.components.mapArtist?.color).toBe("#C8C3CC");
+        expect(cuteTemplate.components.mapArtist?.y).toBeGreaterThan(cuteTemplate.components.topPanel.y + cuteTemplate.components.topPanel.height);
+        expect(cuteTemplate.components.difficultyBadge.textTransform).toBe("uppercase");
+    });
+    it("uses semantic status colors without pill containers", () => {
+        expect(cuteTemplate.components.status.color).toBe("#FFD166");
+        expect(cuteTemplate.components.statusMiss.color).toBe("#FF5252");
+        expect(cuteTemplate.components.statusSB.color).toBe("#FFFFFF");
+        for (const layer of [cuteTemplate.components.status, cuteTemplate.components.statusMiss, cuteTemplate.components.statusSB, cuteTemplate.components.starRating, cuteTemplate.components.mapTitle]) {
+            expect(layer.background).toBeUndefined();
+            expect(layer.border).toBeUndefined();
+        }
+        expect(cuteTemplate.components.usernamePanel.background).toBe("transparent");
+        expect(cuteTemplate.components.usernamePanel.borderWidth).toBe(0);
+        expect(cuteTemplate.dataOptions).toMatchObject({
+            fcText: "FC",
+            missText: "{count}x",
+            sbText: "{count}xSB",
+        });
+    });
+    it("uses one gold star after the star rating", () => {
+        expect(computeTexts(referenceFixtureThumbnail, cuteTemplate)["star-rating"]).toMatch(/^\d+\.\d{2} ★$/);
+        expect(cuteTemplate.components.starRating.color).toBe("#FFD166");
+    });
+    it("centers the beatmap status notch at the top", () => {
+        expect(cuteTemplate.components.starNotch).toMatchObject({ visible: true, x: 555, y: 0, width: 170, height: 86 });
+        expect(cuteTemplate.components.starNotch.x + cuteTemplate.components.starNotch.width / 2).toBe(640);
+        expect(cuteTemplate.components.starNotch.assets).toMatchObject({
+            ranked: "/assets/osu/notch/ranked.png",
+            loved: "/assets/osu/notch/loved.png",
+            approved: "/assets/osu/notch/approved.png",
+            graveyard: "/assets/osu/notch/unranked.png",
+        });
+    });
+    it("uses the poster-style result grid", () => {
+        expect(cuteTemplate.components.starRating).toMatchObject({ x: 500, y: 98, width: 280, fontSize: 73 });
+        expect(cuteTemplate.components.statusMiss).toMatchObject({ x: 930, y: 185, height: 275, valign: "center", width: 260, fontSize: 158 });
+        expect(cuteTemplate.components.status).toMatchObject({ x: 930, y: 185, height: 275, valign: "center", width: 260, fontSize: 158 });
+        expect(cuteTemplate.components.statusSB).toMatchObject({ x: 930, y: 185, height: 275, valign: "center", width: 260, fontSize: 120 });
+        expect(cuteTemplate.components.accuracy).toMatchObject({ x: 960, y: 112, width: 260, fontSize: 62, align: "right" });
+        expect(cuteTemplate.components.leaderboard).toMatchObject({ x: 960, y: 66, width: 260, fontSize: 40, align: "right" });
+        expect(cuteTemplate.components.grade).toMatchObject({ x: 70, y: 185, height: 275, valign: "center", width: 280, fontSize: 190 });
+        expect(cuteTemplate.components.pp).toMatchObject({ x: 360, y: 185, height: 275, valign: "center", width: 560, fontSize: 130 });
+        expect(cuteTemplate.components.pp.align).toBe("center");
+        expect(cuteTemplate.components.starRating.x + cuteTemplate.components.starRating.width! / 2).toBe(640);
+        expect(cuteTemplate.components.mapArtist!.x + cuteTemplate.components.mapArtist!.width! / 2).toBe(640);
+        expect(cuteTemplate.components.mapTitle.x + cuteTemplate.components.mapTitle.width! / 2).toBe(640);
+        expect(cuteTemplate.components.badgeRow.x + cuteTemplate.components.badgeRow.width / 2).toBe(640);
+        expect(cuteTemplate.components.grade.height).toBe(275);
+    });
+    it("shows the CPOL score and map data", () => {
+        expect(cuteTemplate.components.comboBadge.visible).toBe(true);
+        expect(cuteTemplate.components.difficultyBadge.visible).toBe(true);
+        expect(cuteTemplate.components.bpmBadge.visible).toBe(true);
+        expect(cuteTemplate.components.grade.visible).toBe(true);
+    });
+    it("groups score information on one middle glass panel", () => {
+        expect(cuteTemplate.components.topPanel).toMatchObject({
+            visible: true,
+            x: 30,
+            y: 185,
+            width: 1220,
+            height: 275,
+            backdropBlur: 10,
+        });
+        expect(cuteTemplate.components.sparkles?.visible).toBe(false);
+        expect(cuteTemplate.components.innerBorder?.visible).toBe(false);
+    });
+    it("applies the selected accent to the Cute frame tint", () => {
+        const edited = applyOverrides(cuteTemplate, { accent: "#00F0FF" });
+        expect(edited.background.overlays?.some((overlay) => overlay.boxShadow?.includes("rgba(0, 240, 255, 0.25)"))).toBe(true);
+        expect(edited.components.innerBorder?.border).toContain("rgba(0, 240, 255, 0.55)");
+    });
+});
 describe("manual score-data overrides", () => {
+    it("can hide only the Classic mod", () => {
+        const data = {
+            ...referenceFixtureThumbnail,
+            mods: [
+                { acronym: "CL", name: "Classic" },
+                { acronym: "HD", name: "Hidden" },
+            ],
+        };
+        expect(applyDataOverrides(data, { classicVisible: false }).mods.map((mod) => mod.acronym)).toEqual(["HD"]);
+        expect(applyDataOverrides(data, {}).mods.map((mod) => mod.acronym)).toEqual(["CL", "HD"]);
+    });
     it("renders a manual slider-break count as a broken combo", () => {
         const data = normalizeScore(referenceFixtureScore);
         const edited = applyDataOverrides(data, { sliderBreakCount: 3 });

@@ -33,7 +33,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
         fontSize: 176,
         fontWeight: 600,
         color: c.fc,
-        glow: { blur: 30, layers: 3 },
+        glow: { blur: 18, layers: 2 },
     },
     statusMiss: {
         visible: true,
@@ -44,7 +44,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
         fontSize: 150,
         fontWeight: 700,
         color: "#FF355A",
-        glow: { blur: 26, layers: 3 },
+        glow: { blur: 18, layers: 2 },
     },
     statusSB: {
         visible: true,
@@ -54,7 +54,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
         fontSize: 68,
         fontWeight: 700,
         color: "#B8B8B8",
-        glow: { blur: 14, layers: 2 },
+        glow: { blur: 8, layers: 1 },
     },
     starNotch: {
         visible: true,
@@ -101,7 +101,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
         fontSize: 84,
         fontWeight: 700,
         color: c.starRating,
-        glow: { blur: 14, layers: 2 },
+        glow: { blur: 9, layers: 1 },
     },
     pp: {
         visible: true,
@@ -113,7 +113,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
         fontWeight: 600,
         color: c.pp,
         align: "right",
-        glow: { blur: 18, layers: 3 },
+        glow: { blur: 10, layers: 2 },
     },
     badgeRow: {
         visible: true,
@@ -203,11 +203,13 @@ export const referenceLayout: ReferenceTemplateComponents = {
         visible: true,
         x: 82,
         y: 350,
+        width: 205,
+        maxWidth: 205,
         fontFamily: FONTS.display,
         fontSize: 288,
         fontWeight: 600,
         color: c.grade,
-        glow: { blur: 30, layers: 3 },
+        glow: { blur: 18, layers: 2 },
     },
     accuracy: {
         visible: true,
@@ -219,7 +221,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
         fontWeight: 600,
         color: c.text,
         align: "right",
-        glow: { blur: 12, layers: 2 },
+        glow: { blur: 7, layers: 1 },
     },
     leaderboard: {
         visible: true,
@@ -231,7 +233,7 @@ export const referenceLayout: ReferenceTemplateComponents = {
         fontWeight: 600,
         color: c.leaderboard,
         align: "right",
-        glow: { blur: 12, layers: 2 },
+        glow: { blur: 7, layers: 1 },
     },
     avatar: {
         visible: true,

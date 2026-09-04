@@ -24,6 +24,17 @@ function gradeColor(data: ThumbnailData, template: ThumbnailTemplate): string {
     }
     return template.dataOptions.gradeColors[data.grade] ?? template.components.grade.color;
 }
+export function leaderboardColor(data: ThumbnailData, template: ThumbnailTemplate): string {
+    if (template.components.leaderboard.color !== template.theme.leaderboard)
+        return template.components.leaderboard.color;
+    if (data.leaderboardPosition === 1)
+        return "#E7CE56";
+    if (data.leaderboardPosition === 2)
+        return "#A5A4A6";
+    if (data.leaderboardPosition === 3)
+        return "#CD7F32";
+    return "#63E564";
+}
 function starColor(data: ThumbnailData, template: ThumbnailTemplate): string {
     if (template.components.starRating.color !== template.theme.starRating) {
         return template.components.starRating.color;
@@ -52,6 +63,37 @@ export function Thumbnail({ data, template, scale = 1, markReady = false, }: {
     const { canvas, components: c } = template;
     const texts = computeTexts(data, template);
     const text = (key: string) => withTextOverride(key, texts, template);
+    const grade = data.grade === "SS"
+        ? template.id === "reference"
+            ? {
+            ...c.grade,
+            x: template.positionOverrides?.grade?.x ?? 48,
+            width: template.sizeOverrides?.grade?.width ?? 260,
+            maxWidth: template.sizeOverrides?.grade?.maxWidth ?? 260,
+            fontSize: template.fontSizeOverrides?.grade ?? 310,
+            }
+            : template.id === "cute"
+                ? {
+                    ...c.grade,
+                    y: template.positionOverrides?.grade?.y ?? c.grade.y,
+                    height: template.sizeOverrides?.grade?.height ?? c.grade.height,
+                    valign: c.grade.valign,
+                    fontSize: template.fontSizeOverrides?.grade ?? 165,
+                }
+                : c.grade
+        : c.grade;
+    const rawMapText = template.id === "cute" && template.textOverrides?.["map-title"] === undefined
+        ? data.title
+        : text("map-title");
+    const mapText = rawMapText;
+    const rawArtist = text("map-artist");
+    const mapArtist = template.id === "cute" && rawArtist.length > 34
+        ? `${rawArtist.slice(0, 33).trimEnd()}…`
+        : rawArtist;
+    const difficultyText = text("difficulty");
+    const visibleDifficulty = template.id === "cute" && difficultyText.length > 25
+        ? `${difficultyText.slice(0, 24).trimEnd()}…`
+        : difficultyText;
     const bgSrc = data.backgroundUrl ?? data.backgroundFallbacks?.[0];
     const hasMisses = text("status") !== "";
     const hasSliderBreaks = text("status-sb") !== "";
@@ -62,11 +104,16 @@ export function Thumbnail({ data, template, scale = 1, markReady = false, }: {
     const statusMiss = {
         ...c.statusMiss,
         fontSize: !isMissSizeOverridden && splitStatus ? c.statusMiss.fontSize * 0.75 : c.statusMiss.fontSize,
+        ...(template.id === "cute" && splitStatus
+            ? { y: 230, height: 110, valign: "center" as const }
+            : {}),
     };
     const statusSB = {
         ...c.statusSB,
         fontSize: isSbSizeOverridden
             ? c.statusSB.fontSize
+            : template.id === "cute"
+                ? (splitStatus ? 58 : c.statusSB.fontSize)
             : splitStatus
                 ? c.statusSB.fontSize * 0.9
                 : !hasMisses
@@ -74,14 +121,21 @@ export function Thumbnail({ data, template, scale = 1, markReady = false, }: {
                     : c.statusSB.fontSize,
         x: isSbPosOverridden
             ? c.statusSB.x
+            : template.id === "cute"
+                ? c.statusSB.x
             : !hasMisses
                 ? c.statusMiss.x
                 : c.statusSB.x,
         y: isSbPosOverridden
             ? c.statusSB.y
+            : template.id === "cute"
+                ? (splitStatus ? 345 : c.statusSB.y)
             : !hasMisses
                 ? c.statusMiss.y + 10
                 : c.statusSB.y,
+        ...(template.id === "cute" && splitStatus
+            ? { height: 70, valign: "center" as const }
+            : {}),
     };
     useEffect(() => {
         if (!markReady)
@@ -147,24 +201,27 @@ export function Thumbnail({ data, template, scale = 1, markReady = false, }: {
           {text("combo")}
         </BadgeLayer>
         <BadgeLayer config={c.difficultyBadge} testId="difficulty" variant="row">
-          {text("difficulty")}
+          {visibleDifficulty}
         </BadgeLayer>
         <BadgeLayer config={c.bpmBadge} testId="bpm" variant="row">
           {text("bpm")}
         </BadgeLayer>
       </BadgeRow>
 
+      {c.mapArtist ? (<TextLayer config={c.mapArtist} testId="map-artist">
+        {mapArtist}
+      </TextLayer>) : null}
       <TextLayer config={c.mapTitle} testId="map-title">
-        {text("map-title")}
+        {mapText}
       </TextLayer>
 
-      <TextLayer config={{ ...c.grade, color: gradeColor(data, template) }} testId="grade">
+      <TextLayer config={{ ...grade, color: gradeColor(data, template) }} testId="grade">
         {text("grade")}
       </TextLayer>
       <TextLayer config={c.accuracy} testId="accuracy">
         {text("accuracy")}
       </TextLayer>
-      <TextLayer config={c.leaderboard} testId="leaderboard">
+      <TextLayer config={{ ...c.leaderboard, color: leaderboardColor(data, template) }} testId="leaderboard">
         {text("leaderboard")}
       </TextLayer>
 
@@ -189,10 +246,6 @@ export function Thumbnail({ data, template, scale = 1, markReady = false, }: {
       {c.sparkles?.visible ? (<CuteSparkles config={c.sparkles} color={template.theme.accent}/>) : null}
 
 
-      <BottomMessage text={text("bottom-text")} accentPart={template.bottomHighlightOverride} config={c.bottomMessage}/>
-
-      {template.customTexts?.map((item) => (<TextLayer key={item.id} config={item} testId={item.id}>
-          {item.text}
-        </TextLayer>))}
+      {c.bottomMessage?.visible ? (<BottomMessage text={text("bottom-text")} accentPart={template.bottomHighlightOverride} config={c.bottomMessage}/>) : null}
     </div>);
 }

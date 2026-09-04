@@ -7,6 +7,7 @@ function digits(value: string): number {
 const user = {
     id: 12345,
     username: "TestPlayer",
+    is_supporter: false,
     country_code: "US",
     statistics: {
         country_rank: 10,
@@ -70,6 +71,7 @@ describe("resolveOverlayData", () => {
     it("resolves player, map, peak, and badges from a score", async () => {
         const data = await resolveOverlayData("https://osu.ppy.sh/scores/5500357550", clientWith([]), identity);
         expect(data.player.username).toBe("TestPlayer");
+        expect(data.player.isSupporter).toBe(false);
         expect(data.player.flag).toBe("🇺🇸");
         expect(data.player.crank).toBe("#10");
         expect(data.player.grank).toBe("#5000");
@@ -89,6 +91,16 @@ describe("resolveOverlayData", () => {
         expect(data.map.sr).toBe("6.50");
         expect(digits(data.map.favs)).toBe(138);
         expect(digits(data.map.plays)).toBe(17632);
+    });
+    it("shows supporter status from the user API", async () => {
+        const client = clientWith([]);
+        vi.mocked(client.apiGet).mockImplementation(async (path: string) => {
+            if (path.startsWith("/users/"))
+                return { ...structuredClone(user), is_supporter: true };
+            return structuredClone(beatmap);
+        });
+        const data = await resolveOverlayData("https://osu.ppy.sh/scores/5500357550", client, identity);
+        expect(data.player.isSupporter).toBe(true);
     });
     it("applies DT transforms for string and object mods", async () => {
         for (const mods of [["DT"], [{ acronym: "DT" }]]) {
