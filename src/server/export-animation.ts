@@ -49,7 +49,7 @@ export function movFfmpegArgs(framePattern: string, outFile: string): string[] {
         "-profile:v",
         "4444",
         "-qscale:v",
-        "15",
+        "25",
         "-movflags",
         "+faststart",
         outFile,
@@ -69,7 +69,7 @@ export function gifsicleArgs(inFile: string, outFile: string): string[] {
     return ["--optimize=3", "--colors", "256", "-o", outFile, inFile];
 }
 export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent">): string {
-    return createHash("sha1").update(JSON.stringify(["v10", ANIMATION_EXPORT_FRAMES, options.format, options.score, options.theme, options.accent])).digest("hex");
+    return createHash("sha1").update(JSON.stringify(["v15", ANIMATION_EXPORT_FRAMES, options.format, options.score, options.theme, options.accent])).digest("hex");
 }
 export function exportCacheDir(): string {
     return path.join(os.tmpdir(), "osu-overlay-cache");
