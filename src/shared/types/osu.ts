@@ -73,11 +73,15 @@ export interface ApiUser {
     country_code?: string;
 }
 export interface ApiBeatmapAttributes {
-    beatmap_id: number;
-    difficulty_rating: number;
+    beatmap_id?: number;
+    difficulty_rating?: number;
     star_rating: number;
     max_combo?: number;
     clock_rate?: number;
+    approach_rate?: number;
+    overall_difficulty?: number;
+    circle_size?: number;
+    drain_rate?: number;
     ar?: number;
     cs?: number;
     od?: number;

@@ -70,4 +70,11 @@ describe("animation export URLs", () => {
         expect(parseAnimationExportFormat(null)).toBe("gif");
         expect(parseAnimationExportFormat("")).toBe("gif");
     });
+    it("names files for resolution presets 1080p, 1440p, 4k, and compact", () => {
+        expect(animationExportFileName("mov", "1080p", "showcase")).toBe("osu-showcase-intro-1080p.mov");
+        expect(animationExportFileName("mov", "1440p", "showcase")).toBe("osu-showcase-intro-1440p.mov");
+        expect(animationExportFileName("mov", "4k", "showcase")).toBe("osu-showcase-intro-4k.mov");
+        expect(animationExportFileName("mov", "compact", "showcase")).toBe("osu-showcase-intro-compact.mov");
+        expect(animationExportFileName("mov", "1080p", "card")).toBe("osu-score-card-1080p.mov");
+    });
 });

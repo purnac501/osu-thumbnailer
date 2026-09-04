@@ -91,14 +91,27 @@ export function createOsuClient(credentials: OsuCredentials) {
                 star_rating?: number;
                 clock_rate?: number;
                 max_combo?: number;
+                approach_rate?: number;
+                overall_difficulty?: number;
+                circle_size?: number;
+                drain_rate?: number;
+                ar?: number;
+                od?: number;
+                cs?: number;
+                hp?: number;
             };
         };
         if (!body.attributes?.star_rating)
             return null;
+        const attr = body.attributes;
         return {
-            star_rating: body.attributes.star_rating,
-            clock_rate: body.attributes.clock_rate,
-            max_combo: body.attributes.max_combo,
+            star_rating: attr.star_rating,
+            clock_rate: attr.clock_rate ?? 1,
+            max_combo: attr.max_combo,
+            approach_rate: attr.approach_rate ?? attr.ar,
+            overall_difficulty: attr.overall_difficulty ?? attr.od,
+            circle_size: attr.circle_size ?? attr.cs,
+            drain_rate: attr.drain_rate ?? attr.hp,
         };
     };
     const fetchLeaderboardPosition = async (beatmapId: number, scoreId: string, mods: unknown[]) => {

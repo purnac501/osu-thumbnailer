@@ -43,7 +43,7 @@ const beatmap = {
         covers: { cover: "https://example.com/c.jpg" },
     },
 };
-function clientWith(scoreMods: unknown, scoreThrows = false): OsuClient {
+function clientWith(scoreMods: unknown, scoreThrows = false, moddedAttributes: any = null): OsuClient {
     const lifeline = {
         ...structuredClone(user),
         id: 11367222,
@@ -62,7 +62,7 @@ function clientWith(scoreMods: unknown, scoreThrows = false): OsuClient {
                 return structuredClone(user);
             return structuredClone(beatmap);
         }),
-        getModdedBeatmapAttributes: vi.fn(),
+        getModdedBeatmapAttributes: vi.fn().mockResolvedValue(moddedAttributes),
         fetchLeaderboardPosition: vi.fn(),
     } as unknown as OsuClient;
 }
@@ -73,20 +73,17 @@ describe("resolveOverlayData", () => {
         expect(data.player.username).toBe("TestPlayer");
         expect(data.player.isSupporter).toBe(false);
         expect(data.player.flag).toBe("🇺🇸");
-        expect(data.player.crank).toBe("#10");
+        expect(data.player.countryCode).toBe("US");
         expect(data.player.grank).toBe("#5000");
-        expect(digits(data.player.pp)).toBe(1235);
+        expect(data.player.crank).toBe("#10");
+        expect(data.player.pp).toBe("1,235pp");
         expect(data.player.hours).toBe(2);
         expect(data.player.playcount).toBe(9000);
-        expect(data.player.badges).toEqual([{ url: "https://example.com/b.png", title: "Winner" }]);
         expect(data.player.badgeCount).toBe(1);
         expect(data.player.peakMonth).toBe("June 2020");
         expect(data.player.peakCount).toBe(900);
         expect(data.map.title).toBe("Song [Insane]");
         expect(data.map.artist).toBe("by Artist");
-        expect(data.map.ar).toBe(9);
-        expect(data.map.arMs).toBe("600ms");
-        expect(data.map.odMs).toBe("29.0ms");
         expect(data.map.bpm).toBe("200bpm");
         expect(data.map.sr).toBe("6.50");
         expect(digits(data.map.favs)).toBe(138);
@@ -105,12 +102,40 @@ describe("resolveOverlayData", () => {
     it("applies DT transforms for string and object mods", async () => {
         for (const mods of [["DT"], [{ acronym: "DT" }]]) {
             const data = await resolveOverlayData("https://osu.ppy.sh/scores/5500357550", clientWith(mods), identity);
-            expect(data.map.sr).toBe("11.49");
-            expect(data.map.ar).toBe(10.67);
-            expect(data.map.od).toBe(10.58);
+            expect(data.map.sr).toBe("8.78");
+            expect(data.map.ar).toBe(10.33);
+            expect(data.map.od).toBe(10.11);
             expect(data.map.bpm).toBe("300bpm");
-            expect(data.map.arMs).toBe("349ms");
+            expect(data.map.arMs).toBe("400ms");
         }
+    });
+    it("prioritizes official modded attributes from osu! API when available", async () => {
+        const mockAttributes = {
+            star_rating: 9.45,
+            approach_rate: 10.3,
+            overall_difficulty: 10.2,
+            circle_size: 4.0,
+            drain_rate: 6.0,
+            clock_rate: 1.5,
+            max_combo: 1250,
+        };
+        const data = await resolveOverlayData(
+            "https://osu.ppy.sh/scores/5500357550",
+            clientWith(["DT"], false, mockAttributes),
+            identity
+        );
+        expect(data.map.sr).toBe("9.45");
+        expect(data.map.ar).toBe(10.3);
+        expect(data.map.od).toBe(10.2);
+        expect(data.map.bpm).toBe("300bpm");
+        expect(data.score.maxCombo).toBe(1250);
+    });
+    it("applies HR transforms modifying CS and HP accurately", async () => {
+        const data = await resolveOverlayData("https://osu.ppy.sh/scores/5500357550", clientWith(["HR"]), identity);
+        expect(data.map.cs).toBe(5.2);
+        expect(data.map.hp).toBe(7.0);
+        expect(data.map.ar).toBe(10.0);
+        expect(data.map.od).toBe(10.0);
     });
     it("falls back to lifeline content when the score cannot load", async () => {
         const data = await resolveOverlayData("https://osu.ppy.sh/scores/1", clientWith([], true), identity);

@@ -1,6 +1,8 @@
 import type { RefCallback } from "react";
 import { Star } from "lucide-react";
 import { DEFAULT_OVERLAY_DATA, type OverlayData } from "./types";
+import { modAssetPath } from "../../shared/mods/mods";
+import { resolveAssetUrl } from "../../shared/assets/assetUrl";
 import "./showcase-intro.css";
 
 export type ShowcaseNode =
@@ -13,6 +15,23 @@ export type ShowcaseNode =
     | "bottomTime";
 
 export type ShowcaseRefSetter = (name: ShowcaseNode) => RefCallback<Element>;
+
+const SHOWCASE_MOD_COLORS: Record<string, string> = {
+    HD: "#2080E0",
+    HR: "#E08510",
+    DT: "#9640D8",
+    NC: "#7C2AB8",
+    FL: "#E59819",
+    EZ: "#22A855",
+    HT: "#1C8C8C",
+    CL: "#4D5663",
+    NF: "#3B82F6",
+    SO: "#EC4899",
+    SD: "#E08510",
+    PF: "#E08510",
+    MR: "#8C5CFF",
+    V2: "#8C5CFF",
+};
 
 function formatScoreNumber(val: string | number): string {
     const raw = String(val).replace(/\s+/g, "");
@@ -84,13 +103,6 @@ export function ShowcaseIntroWidget({
 
     return (
         <div className="showcase-intro-container" ref={setRef("container") as RefCallback<HTMLDivElement>}>
-            {/* Cinematic Background Wallpaper */}
-            <div
-                className="showcase-bg-layer"
-                style={{ backgroundImage: `url(${data.map.cover})` }}
-            />
-            <div className="showcase-bg-vignette" />
-
             {/* Top Map Attributes & Star Rating Bar */}
             <header className="showcase-top-bar" ref={setRef("topBar") as RefCallback<HTMLElement>}>
                 {/* Left Gauges: CS & AR */}
@@ -220,11 +232,32 @@ export function ShowcaseIntroWidget({
                                 <div className="showcase-play-meta">
                                     {play.mods && play.mods.length > 0 && (
                                         <div className="showcase-mod-combo">
-                                            {play.mods.slice(0, 3).map((mod) => (
-                                                <span key={mod} className={`showcase-mod-tag mod-${mod.toLowerCase()}`}>
-                                                    {mod}
-                                                </span>
-                                            ))}
+                                            {play.mods.slice(0, 3).map((mod) => {
+                                                const rawAsset = modAssetPath(mod);
+                                                const asset = resolveAssetUrl(rawAsset ?? undefined);
+                                                const bg = SHOWCASE_MOD_COLORS[mod.toUpperCase()] ?? "#4D5663";
+                                                if (asset) {
+                                                    return (
+                                                        <div
+                                                            key={mod}
+                                                            className="showcase-mod-icon-badge"
+                                                            style={{ backgroundColor: bg }}
+                                                            title={mod}
+                                                        >
+                                                            <img
+                                                                src={asset}
+                                                                alt={mod}
+                                                                className="showcase-mod-svg"
+                                                            />
+                                                        </div>
+                                                    );
+                                                }
+                                                return (
+                                                    <span key={mod} className={`showcase-mod-tag mod-${mod.toLowerCase()}`}>
+                                                        {mod}
+                                                    </span>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                     <span className="showcase-play-time">{play.timeAgo}</span>

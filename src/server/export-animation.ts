@@ -35,7 +35,7 @@ export const EXPORT_DEVICE_SCALE = 1.5;
 export const EXPORT_CLIP_PADDING = 56;
 export const EXPORT_SHARD_COUNT = 4;
 export const EXPORT_CACHE_TTL_MS = 30 * 60 * 1000;
-export function gifFfmpegArgs(framePattern: string, outFile: string, preset?: "compact" | "hq"): string[] {
+export function gifFfmpegArgs(framePattern: string, outFile: string, preset?: AnimationExportPreset): string[] {
     if (preset === "compact") {
         return [
             "-y",
@@ -59,7 +59,7 @@ export function gifFfmpegArgs(framePattern: string, outFile: string, preset?: "c
         outFile,
     ];
 }
-export function movFfmpegArgs(framePattern: string, outFile: string, preset?: "compact" | "hq"): string[] {
+export function movFfmpegArgs(framePattern: string, outFile: string, preset?: AnimationExportPreset): string[] {
     if (preset === "compact") {
         return [
             "-y",
@@ -109,14 +109,14 @@ export function gifsicleBin(): string {
     const entry = createRequire(import.meta.url).resolve("gifsicle");
     return path.join(path.dirname(entry), "vendor", "gifsicle");
 }
-export function gifsicleArgs(inFile: string, outFile: string, preset?: "compact" | "hq"): string[] {
+export function gifsicleArgs(inFile: string, outFile: string, preset?: AnimationExportPreset): string[] {
     if (preset === "compact") {
         return ["--optimize=3", "--lossy=10", "--colors", "256", "-o", outFile, inFile];
     }
     return ["--optimize=3", "--colors", "256", "-o", outFile, inFile];
 }
 export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent"> & { preset?: string; style?: string }): string {
-    return createHash("sha1").update(JSON.stringify(["v30", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.style ?? "card", options.score, options.theme, options.accent])).digest("hex");
+    return createHash("sha1").update(JSON.stringify(["v31", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.style ?? "card", options.score, options.theme, options.accent])).digest("hex");
 }
 export function exportCacheDir(): string {
     return path.join(os.tmpdir(), "osu-overlay-cache");
@@ -179,7 +179,16 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
     try {
         const isShowcase = options.style === "showcase";
         const viewport = isShowcase ? { width: 960, height: 540 } : EXPORT_VIEWPORT;
-        const deviceScale = isShowcase ? 1.0 : EXPORT_DEVICE_SCALE;
+        let deviceScale = 1.0;
+        if (options.preset === "4k") {
+            deviceScale = 4.0;
+        } else if (options.preset === "1440p") {
+            deviceScale = 2560 / 960;
+        } else if (options.preset === "1080p" || options.preset === "hq" || !options.preset) {
+            deviceScale = 2.0;
+        } else {
+            deviceScale = 1.0;
+        }
         const pageUrl = buildAnimationExportPageUrl(options.baseUrl, {
             format: options.format,
             preset: options.preset,

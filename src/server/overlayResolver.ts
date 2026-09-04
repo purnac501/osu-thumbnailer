@@ -55,6 +55,91 @@ function computeMs(ar: number, od: number): {
         odMs: `${odMs.toFixed(1)}ms`,
     };
 }
+
+export interface BaseStats {
+    cs: number;
+    ar: number;
+    od: number;
+    hp: number;
+    bpm: number;
+    sr: number;
+}
+
+export function calculateModdedStats(base: BaseStats, mods: unknown[]): {
+    cs: number;
+    ar: number;
+    od: number;
+    hp: number;
+    bpm: number;
+    sr: number;
+    arMs: string;
+    odMs: string;
+} {
+    const acronyms = (mods || []).map((m: any) =>
+        (typeof m === "string" ? m : m?.acronym || "").toUpperCase()
+    );
+
+    const hasHr = acronyms.includes("HR");
+    const hasEz = acronyms.includes("EZ");
+    const hasDt = acronyms.includes("DT") || acronyms.includes("NC");
+    const hasHt = acronyms.includes("HT") || acronyms.includes("DC");
+
+    // Circle Size (CS)
+    let cs = base.cs;
+    if (hasHr) cs = Math.min(10, cs * 1.3);
+    if (hasEz) cs = Math.max(0, cs * 0.5);
+
+    // HP Drain (HP)
+    let hp = base.hp;
+    if (hasHr) hp = Math.min(10, hp * 1.4);
+    if (hasEz) hp = Math.max(0, hp * 0.5);
+
+    // Approach Rate (AR)
+    let ar = base.ar;
+    if (hasHr) ar = Math.min(10, ar * 1.4);
+    if (hasEz) ar = Math.max(0, ar * 0.5);
+
+    // Overall Difficulty (OD)
+    let od = base.od;
+    if (hasHr) od = Math.min(10, od * 1.4);
+    if (hasEz) od = Math.max(0, od * 0.5);
+
+    // Clock rate
+    const clockRate = hasDt ? 1.5 : (hasHt ? 0.75 : 1);
+    const bpm = Math.round(base.bpm * clockRate);
+
+    let arMs = ar <= 5 ? 1800 - 120 * ar : 1200 - 150 * (ar - 5);
+    arMs = arMs / clockRate;
+
+    if (arMs < 300) {
+        ar = 11;
+    } else if (arMs <= 1200) {
+        ar = 5 + (1200 - arMs) / 150;
+    } else {
+        ar = (1800 - arMs) / 120;
+    }
+
+    let odMs = (80 - 6 * od) / clockRate;
+    od = (80 - odMs) / 6;
+
+    let sr = base.sr;
+    if (hasDt && hasHr) sr = sr * 1.55;
+    else if (hasDt) sr = sr * 1.35;
+    else if (hasHr) sr = sr * 1.10;
+    else if (hasEz) sr = sr * 0.85;
+    else if (hasHt) sr = sr * 0.80;
+
+    return {
+        cs: Number(cs.toFixed(2)),
+        ar: Number(Math.min(11, ar).toFixed(2)),
+        od: Number(Math.min(11, od).toFixed(2)),
+        hp: Number(hp.toFixed(2)),
+        bpm,
+        sr: Number(sr.toFixed(2)),
+        arMs: `${Math.round(arMs)}ms`,
+        odMs: `${odMs.toFixed(1)}ms`,
+    };
+}
 export async function resolveOverlayData(input: string, client: OsuClient, proxiedAsset: (url?: string) => string | undefined): Promise<OverlayData> {
     const clean = input.trim();
     let targetUserId: string | number = LIFELINE_USER_ID;
@@ -156,15 +241,32 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
     const baseHp = Number(bm.drain ?? 4.5);
     const baseBpm = Number(bm.bpm ?? 200);
     const baseSr = Number(bm.difficulty_rating ?? 7.37);
-    const hasDt = Array.isArray(targetMods) && targetMods.some((m) => {
-        const s = typeof m === "string" ? m : (m as any)?.acronym;
-        return s === "DT" || s === "NC";
-    });
-    const effBpm = hasDt ? Math.round(baseBpm * 1.5) : Math.round(baseBpm);
-    const effAr = hasDt ? Math.min(11, Number((baseAr * 1.5 > 10 ? (1200 - (1200 - 150 * (baseAr - 5)) * (2 / 3)) / 150 + 5 : baseAr).toFixed(2))) : baseAr;
-    const effOd = hasDt ? Math.min(11, Number((baseOd * 1.5 > 10 ? (80 - (80 - 6 * baseOd) * (2 / 3)) / 6 : baseOd).toFixed(2))) : baseOd;
-    const effSr = hasDt ? (baseSr * 1.45).toFixed(2) : baseSr.toFixed(2);
-    const { arMs, odMs } = computeMs(hasDt ? 10.67 : effAr, hasDt ? 10.58 : effOd);
+    // Calculate modded stats using standard math formulas
+    const calcStats = calculateModdedStats(
+        { cs: baseCs, ar: baseAr, od: baseOd, hp: baseHp, bpm: baseBpm, sr: baseSr },
+        targetMods
+    );
+
+    // Fetch official modded attributes from osu! v2 API if mods are present
+    let attributes: any = null;
+    try {
+        if (targetBeatmapId > 0 && Array.isArray(targetMods) && targetMods.length > 0) {
+            attributes = await client.getModdedBeatmapAttributes(Number(targetBeatmapId), targetMods);
+        }
+    } catch (e) {
+        console.warn("Could not fetch modded attributes:", e);
+    }
+
+    const finalSr = attributes?.star_rating !== undefined ? attributes.star_rating.toFixed(2) : calcStats.sr.toFixed(2);
+    const finalAr = attributes?.approach_rate !== undefined ? Number(attributes.approach_rate.toFixed(2)) : calcStats.ar;
+    const finalOd = attributes?.overall_difficulty !== undefined ? Number(attributes.overall_difficulty.toFixed(2)) : calcStats.od;
+    const finalCs = attributes?.circle_size !== undefined ? Number(attributes.circle_size.toFixed(2)) : calcStats.cs;
+    const finalHp = attributes?.drain_rate !== undefined ? Number(attributes.drain_rate.toFixed(2)) : calcStats.hp;
+    const finalClockRate = attributes?.clock_rate ?? (calcStats.bpm / (baseBpm || 1));
+    const finalBpm = Math.round(baseBpm * (finalClockRate || 1));
+    const { arMs, odMs } = attributes
+        ? computeMs(finalAr, finalOd)
+        : { arMs: calcStats.arMs, odMs: calcStats.odMs };
     let topScores: OverlayTopScore[] = [];
     try {
         const bestScores = (await client.apiGet(`/users/${u.id || targetUserId}/scores/best?limit=6&mode=osu`)) as any[];
@@ -207,15 +309,17 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
         const count50 = Number(statsObj.count_50 ?? statsObj.meh ?? 0);
         const countMiss = Number(statsObj.count_miss ?? statsObj.miss ?? 0);
         const maxCombo = Number(fetchedScore.max_combo || 0);
-        const bmMaxCombo = Number(bm.max_combo || fetchedScore.beatmap?.max_combo || maxCombo);
-        const ppVal = fetchedScore.pp ? `${Math.round(fetchedScore.pp)}PP` : (stats.pp ? `${Math.round(stats.pp)}PP` : "880PP");
-        const accuracy = fetchedScore.accuracy !== undefined ? `${(fetchedScore.accuracy * 100).toFixed(2)}%` : "99.63%";
+        const bmMaxCombo = Number(attributes?.max_combo || bm.max_combo || fetchedScore.beatmap?.max_combo || maxCombo);
+        const ppVal = fetchedScore.pp !== null && fetchedScore.pp !== undefined
+            ? `${Math.round(fetchedScore.pp)}PP`
+            : (stats.pp ? `${Math.round(stats.pp)}PP` : "0PP");
+        const accuracy = fetchedScore.accuracy !== undefined ? `${(fetchedScore.accuracy * 100).toFixed(2)}%` : "100.00%";
         const rank = String(fetchedScore.rank || "S").replace(/H$/, "");
         const modsArr = (fetchedScore.mods || []).map((m: any) => (typeof m === "string" ? m : m?.acronym)).filter(Boolean);
         const rawScore = Number(fetchedScore.total_score ?? fetchedScore.score ?? 0);
 
         resolvedScore = {
-            totalScore: rawScore > 0 ? rawScore.toLocaleString("en-US").replace(/,/g, " ") : "80 109 230",
+            totalScore: rawScore.toLocaleString("en-US").replace(/,/g, " "),
             combo: maxCombo,
             maxCombo: bmMaxCombo,
             pp: ppVal,
@@ -225,7 +329,7 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
             count100,
             count50,
             countMiss,
-            playedAtAgo: formatLongAgo(fetchedScore.created_at),
+            playedAtAgo: formatLongAgo(fetchedScore.ended_at || fetchedScore.created_at),
             mods: modsArr,
         };
     } else {
@@ -251,11 +355,11 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
             isSupporter: u.is_supporter === true,
             flag: getFlagEmoji(u.country_code),
             countryCode: u.country_code || "ID",
-            crank: stats.country_rank ? `#${stats.country_rank}` : "#1",
-            grank: stats.global_rank ? `#${stats.global_rank}` : "#7",
-            pp: stats.pp ? `${Math.round(stats.pp).toLocaleString()}pp` : "25 838pp",
-            hours: Math.round((stats.play_time || 0) / 3600) || 3664,
-            playcount: stats.play_count || 301395,
+            crank: stats.country_rank ? `#${stats.country_rank}` : (u.country_rank ? `#${u.country_rank}` : "#1"),
+            grank: stats.global_rank ? `#${stats.global_rank}` : (u.global_rank ? `#${u.global_rank}` : "#1"),
+            pp: stats.pp ? `${Math.round(stats.pp).toLocaleString()}pp` : "0pp",
+            hours: Math.round((stats.play_time || 0) / 3600) || 0,
+            playcount: stats.play_count || 0,
             badgeCount: badges.length,
             badges,
             avatar: userAvatar,
@@ -272,14 +376,14 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
             mapperAvatar,
             favs: Number(set.favourite_count || 138).toLocaleString(),
             plays: Number(set.play_count || 17632).toLocaleString(),
-            sr: hasDt ? "11.49" : effSr,
-            bpm: `${effBpm}bpm`,
-            ar: hasDt ? 10.67 : effAr,
-            arMs: hasDt ? "349ms" : arMs,
-            od: hasDt ? 10.58 : effOd,
-            odMs: hasDt ? "16.5ms" : odMs,
-            cs: baseCs,
-            hp: baseHp,
+            sr: finalSr,
+            bpm: `${finalBpm}bpm`,
+            ar: finalAr,
+            arMs,
+            od: finalOd,
+            odMs,
+            cs: finalCs,
+            hp: finalHp,
             status: String(bm.status || set.status || "ranked").toLowerCase(),
         },
         score: resolvedScore,

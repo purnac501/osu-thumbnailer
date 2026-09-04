@@ -57,11 +57,13 @@ const ANIMATION_EXPORT_OPTIONS: Record<"gif" | "video", {
 }[]> = {
     gif: [
         { preset: "compact", label: "Small (~3-4MB)", description: "Native-resolution 30fps GIF" },
-        { preset: "hq", label: "HQ 30fps", description: "Native-resolution GIF" },
+        { preset: "1080p", label: "1080p HQ", description: "1920×1080 high-res GIF" },
     ],
     video: [
+        { preset: "1080p", label: "1080p (Full HD)", description: "1920×1080 transparent ProRes 4444 video" },
+        { preset: "1440p", label: "1440p (2K QHD)", description: "2560×1440 transparent ProRes 4444 video" },
+        { preset: "4k", label: "4K (Ultra HD)", description: "3840×2160 transparent ProRes 4444 video" },
         { preset: "compact", label: "Small", description: "Compressed video with transparency" },
-        { preset: "hq", label: "ProRes Master", description: "Lossless ProRes 4444 for video editing" },
     ],
 };
 export function GeneratorPage() {
