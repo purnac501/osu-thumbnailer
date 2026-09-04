@@ -7,7 +7,7 @@ export const ANIMATION_EXPORT_MIME: Record<AnimationExportFormat, string> = {
     mov: "video/quicktime",
 };
 export function animationExportFileName(format: AnimationExportFormat): string {
-    return `osu-stream-overlay.${format}`;
+    return `osu-score-card.${format}`;
 }
 export function animationExportBackground(format: AnimationExportFormat): string {
     return "transparent";

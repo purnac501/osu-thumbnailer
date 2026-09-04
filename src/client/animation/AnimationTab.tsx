@@ -4,7 +4,7 @@ import { PlayIcon } from "@radix-ui/react-icons";
 import "./overlay.css";
 import "./animation-tab.css";
 import { DEFAULT_OVERLAY_DATA, type OverlayData } from "./types";
-import { buildAnimationExportStartPath, type AnimationExportFormat, } from "../../shared/animation-export";
+import { animationExportFileName, buildAnimationExportStartPath, type AnimationExportFormat, } from "../../shared/animation-export";
 import { OVERLAY_THEMES, applyOverlayPalette, customAccentPalette, type OverlayThemeId } from "./themes";
 import { buildPlaycountSpline } from "./spline";
 import { OVERLAY_TOTAL_CYCLE, seekOverlay } from "./timeline";
@@ -268,7 +268,7 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
                 }
                 const a = document.createElement("a");
                 a.href = `/api/export-animation/file?id=${started.id}`;
-                a.download = `osu-stream-overlay.${format}`;
+                a.download = animationExportFileName(format);
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

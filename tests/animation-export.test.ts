@@ -7,8 +7,8 @@ describe("animation export constants", () => {
         expect(ANIMATION_EXPORT_FRAMES).toBe(324);
     });
     it("names files and mime types per format", () => {
-        expect(animationExportFileName("gif")).toBe("osu-stream-overlay.gif");
-        expect(animationExportFileName("mov")).toBe("osu-stream-overlay.mov");
+        expect(animationExportFileName("gif")).toBe("osu-score-card.gif");
+        expect(animationExportFileName("mov")).toBe("osu-score-card.mov");
         expect(ANIMATION_EXPORT_MIME.gif).toBe("image/gif");
         expect(ANIMATION_EXPORT_MIME.mov).toBe("video/quicktime");
     });
