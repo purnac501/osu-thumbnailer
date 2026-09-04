@@ -71,6 +71,6 @@ export function parseAnimationExportFormat(value: string | null): AnimationExpor
 export function parseAnimationExportPreset(value: string | null): AnimationExportPreset {
     return value === "compact" || value === "small" ? "compact" : "hq";
 }
-export function parseAnimationStyle(value: string | null): AnimationStyle {
+export function parseAnimationStyle(value: string | null | undefined): AnimationStyle {
     return value === "showcase" ? "showcase" : "card";
 }
