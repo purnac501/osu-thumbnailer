@@ -23,3 +23,60 @@
   border-radius: 3px;
   transition: width 0.4s ease;
 }
+
+.download-ready-card {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(0, 210, 255, 0.09);
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.download-ready-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.download-ready-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.download-ready-hint {
+  font-size: 11px;
+  color: var(--gray-11, #8f9bba);
+}
+
+.download-direct-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #00d2ff;
+  color: #000;
+  font-weight: 700;
+  font-size: 12.5px;
+  text-decoration: none;
+  transition: filter 0.15s ease, transform 0.1s ease;
+  cursor: pointer;
+}
+
+.download-direct-btn:hover {
+  filter: brightness(1.1);
+}
+
+.download-direct-btn:active {
+  transform: scale(0.98);
+}
+

@@ -478,14 +478,20 @@ export function GeneratorPage() {
               <DownloadIcon />
               <span className="toolbar-download-label">{busy ? "Preparing..." : "Download PNG"}</span>
             </Button>) : null}
-          {activeTab === "animation" ? (<Button type="button" onClick={() => animApi.current?.download("gif")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="solid" color="gray" highContrast aria-label="Download GIF">
-              <DownloadIcon />
-              <span className="toolbar-download-label">GIF</span>
-            </Button>) : null}
-          {activeTab === "animation" ? (<Button type="button" onClick={() => animApi.current?.download("mov")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="solid" color="gray" highContrast aria-label="Download video">
-              <DownloadIcon />
-              <span className="toolbar-download-label">MOV</span>
-            </Button>) : null}
+          {activeTab === "animation" ? (<>
+              <Button type="button" onClick={() => animApi.current?.download("gif", "compact")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="solid" color="gray" highContrast aria-label="Download Small GIF" title="Download small, lightweight GIF (~1MB)">
+                <DownloadIcon />
+                <span className="toolbar-download-label">GIF (Small)</span>
+              </Button>
+              <Button type="button" onClick={() => animApi.current?.download("gif", "hq")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="soft" color="gray" aria-label="Download HQ GIF" title="Download full quality 60fps GIF">
+                <DownloadIcon />
+                <span className="toolbar-download-label">GIF (HD)</span>
+              </Button>
+              <Button type="button" onClick={() => animApi.current?.download("mov", "compact")} disabled={!animCanDownload} className="toolbar-download" size="2" variant="soft" color="gray" aria-label="Download Video" title="Download video">
+                <DownloadIcon />
+                <span className="toolbar-download-label">Video</span>
+              </Button>
+            </>) : null}
         </Flex>
       </header>
 

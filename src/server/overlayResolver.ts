@@ -100,7 +100,7 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
         peakCount = max.count;
         try {
             const d = new Date(max.date);
-            peakMonth = d.toLocaleString("en-US", { month: "long", year: "numeric" });
+            peakMonth = d.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
         }
         catch { }
     }
@@ -173,6 +173,7 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
             odMs: hasDt ? "16.5ms" : odMs,
             cs: baseCs,
             hp: baseHp,
+            status: String(bm.status || set.status || "ranked").toLowerCase(),
         },
     };
 }

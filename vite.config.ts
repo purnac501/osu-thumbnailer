@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import react from "@vitejs/plugin-react";
-import { ANIMATION_EXPORT_FRAMES, parseAnimationExportFormat } from "./src/shared/animation-export";
+import { ANIMATION_EXPORT_FRAMES, parseAnimationExportFormat, parseAnimationExportPreset } from "./src/shared/animation-export";
 import { renderAnimationExport } from "./src/server/export-animation";
 interface ExportJobState {
     done: number;
@@ -42,6 +42,7 @@ function overlayExportPlugin(): Plugin {
                 try {
                     const rendered = await renderAnimationExport({
                         format: parseAnimationExportFormat(urlObj.searchParams.get("format")),
+                        preset: parseAnimationExportPreset(urlObj.searchParams.get("preset") ?? urlObj.searchParams.get("compact")),
                         score: urlObj.searchParams.get("score") || "",
                         theme: urlObj.searchParams.get("theme") || "",
                         accent: urlObj.searchParams.get("accent") || "",
@@ -79,7 +80,11 @@ function overlayExportPlugin(): Plugin {
                     return;
                 }
                 const bytes = fs.readFileSync(filePath);
-                fs.rmSync(exportJobDir(id), { recursive: true, force: true });
+                setTimeout(() => {
+                    try {
+                        fs.rmSync(exportJobDir(id), { recursive: true, force: true });
+                    } catch {}
+                }, 10 * 60 * 1000);
                 res.writeHead(200, {
                     "Content-Type": job.contentType,
                     "Content-Disposition": `attachment; filename="${job.fileName}"`,
