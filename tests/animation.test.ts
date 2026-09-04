@@ -137,18 +137,24 @@ describe("overlay timeline", () => {
         expect(els.get("mFavs")!.textContent).toBe("0");
         expect(els.get("mPlays")!.textContent).toBe("0");
     });
-  it("fills map bars and counts favs and plays", () => {
-    const { els, source } = makeSource();
-    seekOverlay(3, source, data);
-    expect(els.get("topMap")!.classList.contains("visible")).toBe(true);
-    expect(els.get("starFooter")!.classList.contains("visible")).toBe(false);
-    seekOverlay(4.5, source, data);
+    it("fills map bars and counts favs and plays", () => {
+        const { els, source } = makeSource();
+        seekOverlay(3, source, data);
+        expect(els.get("topMap")!.classList.contains("visible")).toBe(true);
+        expect(els.get("starFooter")!.classList.contains("visible")).toBe(false);
+        seekOverlay(4.5, source, data);
         expect(els.get("topMap")!.classList.contains("visible")).toBe(true);
         expect(els.get("bottomMap")!.classList.contains("visible")).toBe(true);
         expect(els.get("starFooter")!.classList.contains("visible")).toBe(true);
         expect(els.get("fillAr")!.style.width).not.toBe("0%");
         expect(digits(els.get("mFavs")!.textContent)).toBe(138);
         expect(digits(els.get("mPlays")!.textContent)).toBe(17632);
+    });
+    it("shows the star rating with the map details", () => {
+        const { els, source } = makeSource();
+        seekOverlay(3.18, source, data);
+        expect(Number(els.get("starFooter")!.style.opacity)).toBeGreaterThan(0);
+        expect(els.get("bottomMap")!.style.opacity).toBe(els.get("starFooter")!.style.opacity);
     });
     it("fades the widget out at the end of the loop", () => {
         const { els, source } = makeSource();

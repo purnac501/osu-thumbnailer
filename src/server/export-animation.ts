@@ -31,7 +31,7 @@ export function gifFfmpegArgs(framePattern: string, outFile: string): string[] {
         "-i",
         framePattern,
         "-vf",
-        "scale=600:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256:reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:alpha_threshold=128",
+        "scale=600:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256:reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle:alpha_threshold=128",
         outFile,
     ];
 }
@@ -69,7 +69,7 @@ export function gifsicleArgs(inFile: string, outFile: string): string[] {
     return ["--optimize=3", "--colors", "256", "-o", outFile, inFile];
 }
 export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent">): string {
-    return createHash("sha1").update(JSON.stringify(["v7", ANIMATION_EXPORT_FRAMES, options.format, options.score, options.theme, options.accent])).digest("hex");
+    return createHash("sha1").update(JSON.stringify(["v10", ANIMATION_EXPORT_FRAMES, options.format, options.score, options.theme, options.accent])).digest("hex");
 }
 export function exportCacheDir(): string {
     return path.join(os.tmpdir(), "osu-overlay-cache");

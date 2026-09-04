@@ -19,6 +19,8 @@ describe("gif ffmpeg args", () => {
         expect(vf).toContain("palettegen");
         expect(vf).toContain("reserve_transparent=1");
         expect(vf).toContain("paletteuse");
+        expect(vf).toContain("dither=sierra2_4a");
+        expect(vf).toContain("diff_mode=rectangle");
         expect(args[args.length - 1]).toBe("/tmp/x/output.gif");
     });
 });

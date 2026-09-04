@@ -173,7 +173,7 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         paintLayer(nodes, "bottomPlayer", 0, 8);
         paintLayer(nodes, "topMap", (t - 2.88) / 0.3, 6);
         paintLayer(nodes, "bottomMap", (t - 3.06) / 0.3, 8);
-        paintLayer(nodes, "starFooter", (t - 3.9) / 0.3, 6);
+        paintLayer(nodes, "starFooter", (t - 3.06) / 0.3, 6);
         setBanner(nodes, `url("${data.map.cover}")`);
         const arP = easeOutCubic(Math.min(1, Math.max(0, (t - 2.94) / 1.08)));
         const csP = easeOutCubic(Math.min(1, Math.max(0, (t - 3.0) / 1.08)));
