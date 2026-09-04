@@ -30,7 +30,7 @@ describe("mov ffmpeg args", () => {
         expect(args).toContain(String(ANIMATION_EXPORT_FPS));
         expect(args).toContain("prores_ks");
         expect(args).toContain("4444");
-        expect(args[args.indexOf("-qscale:v") + 1]).toBe("15");
+        expect(args[args.indexOf("-qscale:v") + 1]).toBe("25");
         expect(args[args.indexOf("-vf") + 1]).toContain("format=yuva444p10le");
         expect(args).toContain("+faststart");
         expect(args[args.length - 1]).toBe("/tmp/x/output.mov");
