@@ -7,28 +7,17 @@
   height: 540px;
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: transparent;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   user-select: none;
   box-sizing: border-box;
 }
 
-/* Background wallpaper with cinematic dimming */
-.showcase-bg-layer {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  filter: brightness(0.18) saturate(1.2);
-  transform: scale(1.04);
-}
-
+/* Background wallpaper is transparent for video overlay compositing */
+.showcase-bg-layer,
 .showcase-bg-vignette {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.75) 85%, #000 100%);
-  pointer-events: none;
+  display: none;
 }
 
 /* ==========================================================================
@@ -463,17 +452,37 @@
 .showcase-mod-combo {
   display: inline-flex;
   align-items: center;
-  border-radius: 3px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  gap: 2px;
   line-height: 1;
   flex-shrink: 0;
+}
+
+.showcase-mod-icon-badge {
+  width: 17px;
+  height: 13px;
+  border-radius: 2.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  padding: 1px 2px;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.showcase-mod-svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
 }
 
 .showcase-mod-tag {
   font-size: 8.5px;
   font-weight: 800;
   padding: 1.5px 3.5px;
+  border-radius: 2.5px;
   color: #fff;
   letter-spacing: 0.2px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);

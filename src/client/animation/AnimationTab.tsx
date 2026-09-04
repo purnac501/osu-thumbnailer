@@ -332,7 +332,8 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
                 ? cleanUrl
                 : "https://osu.ppy.sh/scores/2026000001";
             setRenderProgress(0);
-            const label = format.toUpperCase() + (preset === "compact" ? " (Small)" : " (HD)") + (animStyle === "showcase" ? " Showcase" : "");
+            const presetLabel = preset === "compact" ? "Small" : preset.toUpperCase();
+            const label = `${format.toUpperCase()} (${presetLabel})${animStyle === "showcase" ? " Showcase" : ""}`;
             setFetchMsg(`Rendering ${label}...`);
             try {
                 const started = await (await fetch(buildAnimationExportStartPath({
