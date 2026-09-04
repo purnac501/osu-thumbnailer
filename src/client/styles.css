@@ -84,6 +84,10 @@ body {
   width: 128px;
 }
 
+.toolbar-select-wide {
+  width: 172px;
+}
+
 .toolbar-actions {
   margin-left: auto;
   margin-right: var(--space-3);
@@ -421,6 +425,10 @@ body {
 
   .toolbar-select {
     width: 108px;
+  }
+
+  .toolbar-select-wide {
+    width: 148px;
   }
 
   .toolbar-download {
