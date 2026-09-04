@@ -159,14 +159,14 @@
    ========================================================================== */
 .showcase-lens-wrap {
   position: absolute;
-  top: 51%;
-  left: 50%;
+  top: 290px;
+  left: 480px;
   transform: translate(-50%, -50%);
-  width: 290px;
-  height: 290px;
+  width: 380px;
+  height: 380px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), inset 0 0 16px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.8), inset 0 0 16px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   z-index: 10;
   display: flex;
@@ -177,7 +177,7 @@
 
 .showcase-lens-artwork {
   position: absolute;
-  inset: -15px;
+  inset: -20px;
   background-size: cover;
   background-position: center;
   filter: brightness(0.75) contrast(1.1);
@@ -194,72 +194,77 @@
   position: relative;
   z-index: 3;
   font-family: "Teko", "Impact", -apple-system, sans-serif;
-  font-size: 190px;
+  font-size: 240px;
   font-weight: 800;
   line-height: 1;
   color: #E2BC43;
   text-shadow:
-    0 4px 18px rgba(0, 0, 0, 0.85),
-    0 0 28px rgba(226, 188, 67, 0.55),
-    0 0 50px rgba(226, 188, 67, 0.25);
+    0 4px 20px rgba(0, 0, 0, 0.9),
+    0 0 32px rgba(226, 188, 67, 0.6),
+    0 0 55px rgba(226, 188, 67, 0.3);
   transform: translateY(-4px);
 }
 
 .showcase-grade-rank.rank-silver {
   color: #E6EDF2;
   text-shadow:
-    0 4px 18px rgba(0, 0, 0, 0.85),
-    0 0 28px rgba(230, 237, 242, 0.55);
+    0 4px 20px rgba(0, 0, 0, 0.9),
+    0 0 32px rgba(230, 237, 242, 0.6);
 }
 
 .showcase-grade-rank.rank-a {
   color: #51CF66;
   text-shadow:
-    0 4px 18px rgba(0, 0, 0, 0.85),
-    0 0 28px rgba(81, 207, 102, 0.55);
+    0 4px 20px rgba(0, 0, 0, 0.9),
+    0 0 32px rgba(81, 207, 102, 0.6);
 }
 
 .showcase-grade-rank.rank-b {
   color: #339AF0;
   text-shadow:
-    0 4px 18px rgba(0, 0, 0, 0.85),
-    0 0 28px rgba(51, 154, 240, 0.55);
+    0 4px 20px rgba(0, 0, 0, 0.9),
+    0 0 32px rgba(51, 154, 240, 0.6);
 }
 
 /* ==========================================================================
-   Left Flyout: Player Card & Top Plays Stack
+   Left Flyout: Player Card & Top Plays Curved Along Circle Rim
    ========================================================================== */
 .showcase-left-flyout {
   position: absolute;
-  top: 50%;
-  left: 92px;
-  transform: translateY(-50%);
-  width: 250px;
+  top: 0;
+  left: 0;
+  width: 480px;
+  height: 540px;
   z-index: 5;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
+  pointer-events: none;
 }
 
+/* Player Card tucked behind circle rim */
 .showcase-player-card {
+  position: absolute;
+  top: 146px;
+  left: 130px;
+  width: 216px;
+  height: 36px;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, rgba(235, 130, 150, 0.42), rgba(30, 16, 22, 0.82));
-  border: 1px solid rgba(255, 180, 200, 0.28);
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #d38290 0%, #c3707f 100%);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%);
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: auto;
 }
 
 .showcase-player-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .showcase-player-meta {
@@ -270,112 +275,237 @@
 }
 
 .showcase-player-name {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1.1;
+}
+
+.showcase-player-grank {
+  font-weight: 600;
+  opacity: 0.92;
+  margin-left: 2px;
 }
 
 .showcase-player-sub {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.1;
 }
 
+.showcase-player-flag {
+  line-height: 1;
+}
+
+.showcase-player-crank {
+  opacity: 0.95;
+}
+
+/* 6 Leaderboard rows curved along circle */
 .showcase-top-plays-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .showcase-play-item {
+  position: absolute;
+  height: 32px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 4px 8px;
-  border-radius: 5px;
-  background: rgba(14, 16, 22, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: transform 0.15s ease;
+  gap: 8px;
+  padding: 0 2px;
+  box-sizing: border-box;
+  pointer-events: auto;
 }
 
-.showcase-play-rank {
-  width: 17px;
-  height: 17px;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.15);
+.showcase-play-row-1 {
+  top: 190px;
+  left: 74px;
+  width: 226px;
+}
+
+.showcase-play-row-2 {
+  top: 228px;
+  left: 66px;
+  width: 226px;
+}
+
+.showcase-play-row-3 {
+  top: 266px;
+  left: 59px;
+  width: 226px;
+}
+
+.showcase-play-row-4 {
+  top: 304px;
+  left: 59px;
+  width: 226px;
+}
+
+.showcase-play-row-5 {
+  top: 342px;
+  left: 66px;
+  width: 226px;
+}
+
+.showcase-play-row-6 {
+  top: 380px;
+  left: 74px;
+  width: 226px;
+}
+
+/* Thumbnail with artwork and rank letter */
+.showcase-play-thumb-wrap {
+  width: 44px;
+  height: 27px;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1a1a1e;
 }
 
-.showcase-play-rank.rank-s {
-  color: #ECC748;
-  background: rgba(236, 199, 72, 0.2);
+.showcase-play-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.showcase-play-rank.rank-x {
-  color: #E6EDF2;
-  background: rgba(230, 237, 242, 0.2);
+.showcase-play-thumb-dim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.4) 45%, rgba(0, 0, 0, 0.1) 100%);
 }
 
-.showcase-play-rank.rank-a {
+.showcase-play-rank-badge {
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.7);
+}
+
+.showcase-play-rank-badge.rank-s,
+.showcase-play-rank-badge.rank-sh,
+.showcase-play-rank-badge.rank-x,
+.showcase-play-rank-badge.rank-xh {
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.showcase-play-rank-badge.rank-a {
   color: #51CF66;
-  background: rgba(81, 207, 102, 0.2);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(81, 207, 102, 0.6);
+}
+
+.showcase-play-rank-badge.rank-b {
+  color: #339AF0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(51, 154, 240, 0.6);
+}
+
+.showcase-play-rank-badge.rank-c {
+  color: #CC5DE8;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(204, 93, 232, 0.6);
+}
+
+.showcase-play-rank-badge.rank-d {
+  color: #FF6B6B;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(255, 107, 107, 0.6);
+}
+
+/* Play Body: 2 Lines */
+.showcase-play-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .showcase-play-title {
-  flex: 1;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.1px;
 }
 
-.showcase-play-mods {
+.showcase-play-meta {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Connected Mod Badges Pill */
+.showcase-mod-combo {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  line-height: 1;
   flex-shrink: 0;
 }
 
-.showcase-mod-badge {
-  font-size: 9px;
+.showcase-mod-tag {
+  font-size: 8.5px;
   font-weight: 800;
-  padding: 1px 3px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.14);
+  padding: 1.5px 3.5px;
   color: #fff;
-  line-height: 1;
+  letter-spacing: 0.2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
+
+.showcase-mod-tag.mod-hd { background: #2080E0; }
+.showcase-mod-tag.mod-hr { background: #E08510; }
+.showcase-mod-tag.mod-dt { background: #9640D8; }
+.showcase-mod-tag.mod-nc { background: #7C2AB8; }
+.showcase-mod-tag.mod-fl { background: #E59819; }
+.showcase-mod-tag.mod-ez { background: #22A855; }
+.showcase-mod-tag.mod-ht { background: #1C8C8C; }
+.showcase-mod-tag.mod-cl { background: #4D5663; }
+.showcase-mod-tag.mod-nf { background: #3B82F6; }
+.showcase-mod-tag.mod-so { background: #EC4899; }
 
 .showcase-play-time {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   flex-shrink: 0;
 }
 
 .showcase-play-pp {
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  margin-left: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  padding-right: 2px;
   flex-shrink: 0;
 }
 
@@ -384,17 +514,23 @@
    ========================================================================== */
 .showcase-right-flyout {
   position: absolute;
-  top: 50%;
-  right: 120px;
-  transform: translateY(-50%);
+  top: 0;
+  left: 0;
+  width: 960px;
+  height: 540px;
   z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  pointer-events: none;
 }
 
+.showcase-right-item {
+  position: absolute;
+  pointer-events: auto;
+}
+
+/* 1. Score Row */
 .showcase-score-row {
+  top: 190px;
+  left: 668px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -410,6 +546,7 @@
   background: #E06277;
   color: #fff;
   letter-spacing: 0.4px;
+  transform: skewX(-14deg);
 }
 
 .showcase-score-val {
@@ -422,82 +559,93 @@
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
+/* 2. Combo Row */
 .showcase-combo-row {
+  top: 242px;
+  left: 680px;
   font-family: "Teko", -apple-system, sans-serif;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.95);
   letter-spacing: 0.8px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
-}
-
-/* Angled Rose/Coral PP Badge */
-.showcase-pp-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(90deg, #D9546B 0%, #EA7A8E 100%);
-  transform: skewX(-16deg);
-  padding: 4px 24px;
-  border-radius: 3px;
-  box-shadow: 0 3px 12px rgba(217, 84, 107, 0.45);
-}
-
-.showcase-pp-text {
-  transform: skewX(16deg);
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.8px;
   line-height: 1;
 }
 
+/* 3. Chevron PP Badge */
+.showcase-pp-badge {
+  top: 284px;
+  left: 662px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #d88192 0%, #c4697a 100%);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%, 13px 50%);
+  padding: 4px 22px 4px 26px;
+  box-shadow: 0 3px 12px rgba(216, 129, 146, 0.45);
+}
+
+.showcase-pp-text {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* 4. Accuracy Row */
 .showcase-acc-row {
+  top: 330px;
+  left: 680px;
   font-family: "Teko", -apple-system, sans-serif;
-  font-size: 23px;
+  font-size: 25px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
   letter-spacing: 0.6px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  line-height: 1;
 }
 
-/* Hit Counts Parallelogram Strip */
+/* 5. Hit Counts Slanted Strip */
 .showcase-hits-strip {
+  top: 374px;
+  left: 644px;
   display: flex;
   align-items: center;
-  transform: skewX(-16deg);
+  transform: skewX(-18deg);
   border-radius: 3px;
   overflow: hidden;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
 }
 
 .showcase-hit-box {
-  padding: 3px 16px;
+  padding: 2.5px 14px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .showcase-hit-box span {
-  transform: skewX(16deg);
+  transform: skewX(18deg);
   font-family: "Teko", -apple-system, sans-serif;
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
   color: #fff;
   line-height: 1;
 }
 
 .showcase-hit-box.h300 {
-  background: #51CF66;
+  background: #55c777;
 }
 
 .showcase-hit-box.h100 {
-  background: #94D82D;
+  background: #b5d153;
 }
 
 .showcase-hit-box.h0 {
-  background: #FA5252;
+  background: #d86a7d;
 }
 
 /* Bottom relative time */

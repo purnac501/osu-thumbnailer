@@ -12,6 +12,7 @@ export interface OverlayTopScore {
     mods: string[];
     timeAgo: string;
     pp: string;
+    cover?: string;
 }
 
 export interface OverlayScoreDetails {
