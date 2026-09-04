@@ -16,21 +16,24 @@ export type ShowcaseNode =
 
 export type ShowcaseRefSetter = (name: ShowcaseNode) => RefCallback<Element>;
 
-const SHOWCASE_MOD_COLORS: Record<string, string> = {
-    HD: "#2080E0",
-    HR: "#E08510",
-    DT: "#9640D8",
-    NC: "#7C2AB8",
-    FL: "#E59819",
-    EZ: "#22A855",
-    HT: "#1C8C8C",
-    CL: "#4D5663",
-    NF: "#3B82F6",
-    SO: "#EC4899",
-    SD: "#E08510",
-    PF: "#E08510",
-    MR: "#8C5CFF",
-    V2: "#8C5CFF",
+const CPOL_MOD_CONFIG: Record<string, { bg: string; fg: "dark" | "light" }> = {
+    HD: { bg: "#FFCC22", fg: "dark" },
+    HR: { bg: "#FF4D4D", fg: "light" },
+    DT: { bg: "#7A5CFF", fg: "light" },
+    NC: { bg: "#7A5CFF", fg: "light" },
+    FL: { bg: "#FF8822", fg: "light" },
+    EZ: { bg: "#99FF4D", fg: "dark" },
+    HT: { bg: "#99FF4D", fg: "dark" },
+    DC: { bg: "#99FF4D", fg: "dark" },
+    SD: { bg: "#FF4D4D", fg: "light" },
+    PF: { bg: "#FF4D4D", fg: "light" },
+    RX: { bg: "#4DC3FF", fg: "light" },
+    AP: { bg: "#4DC3FF", fg: "light" },
+    SO: { bg: "#EC4899", fg: "light" },
+    NF: { bg: "#3B82F6", fg: "light" },
+    CL: { bg: "#555A64", fg: "light" },
+    MR: { bg: "#8C5CFF", fg: "light" },
+    V2: { bg: "#8C5CFF", fg: "light" },
 };
 
 function formatScoreNumber(val: string | number): string {
@@ -235,25 +238,37 @@ export function ShowcaseIntroWidget({
                                             {play.mods.slice(0, 3).map((mod) => {
                                                 const rawAsset = modAssetPath(mod);
                                                 const asset = resolveAssetUrl(rawAsset ?? undefined);
-                                                const bg = SHOWCASE_MOD_COLORS[mod.toUpperCase()] ?? "#4D5663";
+                                                const conf = CPOL_MOD_CONFIG[mod.toUpperCase()] ?? { bg: "#555A64", fg: "light" };
                                                 if (asset) {
                                                     return (
                                                         <div
                                                             key={mod}
-                                                            className="showcase-mod-icon-badge"
-                                                            style={{ backgroundColor: bg }}
+                                                            className={`showcase-mod-icon-badge ${conf.fg === "dark" ? "mod-dark" : "mod-light"}`}
+                                                            style={{ backgroundColor: conf.bg }}
                                                             title={mod}
                                                         >
                                                             <img
                                                                 src={asset}
                                                                 alt={mod}
                                                                 className="showcase-mod-svg"
+                                                                style={{
+                                                                    filter: conf.fg === "dark"
+                                                                        ? "brightness(0.12)"
+                                                                        : "drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5))",
+                                                                }}
                                                             />
                                                         </div>
                                                     );
                                                 }
                                                 return (
-                                                    <span key={mod} className={`showcase-mod-tag mod-${mod.toLowerCase()}`}>
+                                                    <span
+                                                        key={mod}
+                                                        className="showcase-mod-tag"
+                                                        style={{
+                                                            backgroundColor: conf.bg,
+                                                            color: conf.fg === "dark" ? "#1a1a1a" : "#ffffff",
+                                                        }}
+                                                    >
                                                         {mod}
                                                     </span>
                                                 );
