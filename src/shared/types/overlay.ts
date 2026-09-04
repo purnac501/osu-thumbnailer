@@ -6,6 +6,29 @@ export interface OverlayMonthlyCount {
     date: string;
     count: number;
 }
+export interface OverlayTopScore {
+    rank: string;
+    title: string;
+    mods: string[];
+    timeAgo: string;
+    pp: string;
+}
+
+export interface OverlayScoreDetails {
+    totalScore: string;
+    combo: number;
+    maxCombo: number;
+    pp: string;
+    accuracy: string;
+    rank: string;
+    count300: number;
+    count100: number;
+    count50: number;
+    countMiss: number;
+    playedAtAgo: string;
+    mods: string[];
+}
+
 export interface OverlayData {
     player: {
         username: string;
@@ -42,6 +65,8 @@ export interface OverlayData {
         hp: number;
         status?: string;
     };
+    score?: OverlayScoreDetails;
+    topScores?: OverlayTopScore[];
 }
 export const LIFELINE_USER_ID = 11367222;
 export const LIFELINE_USERNAME = "lifeline";

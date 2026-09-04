@@ -1,5 +1,6 @@
 import type { OverlayData } from "./types";
 import type { OverlayNode } from "./OverlayWidget";
+import type { ShowcaseNode } from "./ShowcaseIntroWidget";
 
 export interface OverlayNodeSource {
     get(name: OverlayNode): Element | null;
@@ -507,4 +508,123 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         clearMapSide(nodes);
     }
 }
+
+export const SHOWCASE_INTRO_TOTAL_CYCLE = 5.4;
+
+export interface ShowcaseNodeSource {
+    get(name: ShowcaseNode): Element | null;
+}
+
+export function seekShowcaseIntro(t: number, nodes: ShowcaseNodeSource): void {
+    const topBar = nodes.get("topBar") as HTMLElement | null;
+    const lensWrap = nodes.get("lensWrap") as HTMLElement | null;
+    const gradeRank = nodes.get("gradeRank") as HTMLElement | null;
+    const leftFlyout = nodes.get("leftFlyout") as HTMLElement | null;
+    const rightFlyout = nodes.get("rightFlyout") as HTMLElement | null;
+    const bottomTime = nodes.get("bottomTime") as HTMLElement | null;
+    const container = nodes.get("container") as HTMLElement | null;
+
+    // Phase 1: Top bar animation (0.0s -> 0.7s)
+    if (topBar) {
+        if (t <= 0) {
+            topBar.style.transform = "translateY(-24px)";
+            topBar.style.opacity = "0";
+        } else if (t < 0.7) {
+            const p = easeMotionDecel(t / 0.7);
+            topBar.style.transform = `translateY(${-24 * (1 - p)}px)`;
+            topBar.style.opacity = String(p);
+        } else {
+            topBar.style.transform = "translateY(0)";
+            topBar.style.opacity = "1";
+        }
+    }
+
+    // Phase 2: Center Circular Lens rises from bottom (0.15s -> 1.15s)
+    if (lensWrap) {
+        if (t < 0.15) {
+            lensWrap.style.transform = "translate(-50%, calc(-50% + 240px)) scale(0.4)";
+            lensWrap.style.opacity = "0";
+        } else if (t < 1.15) {
+            const p = easeMotionDecel((t - 0.15) / 1.0);
+            const dy = 240 * (1 - p);
+            const scale = 0.4 + 0.6 * p;
+            lensWrap.style.transform = `translate(-50%, calc(-50% + ${dy.toFixed(1)}px)) scale(${scale.toFixed(3)})`;
+            lensWrap.style.opacity = String(Math.min(1, p * 3));
+        } else {
+            lensWrap.style.transform = "translate(-50%, -50%) scale(1)";
+            lensWrap.style.opacity = "1";
+        }
+    }
+
+    // Phase 3: Big Grade Rank letter pops inside lens (0.75s -> 1.55s)
+    if (gradeRank) {
+        if (t < 0.75) {
+            gradeRank.style.transform = "translateY(-4px) scale(0.65)";
+            gradeRank.style.opacity = "0";
+        } else if (t < 1.55) {
+            const p = easeMotionDecel((t - 0.75) / 0.8);
+            const scale = 0.65 + 0.35 * p;
+            gradeRank.style.transform = `translateY(-4px) scale(${scale.toFixed(3)})`;
+            gradeRank.style.opacity = String(p);
+        } else {
+            gradeRank.style.transform = "translateY(-4px) scale(1)";
+            gradeRank.style.opacity = "1";
+        }
+    }
+
+    // Phase 4: Left flyout stats slide out to the left (1.10s -> 2.10s)
+    if (leftFlyout) {
+        if (t < 1.10) {
+            leftFlyout.style.transform = "translateY(-50%) translateX(90px)";
+            leftFlyout.style.opacity = "0";
+        } else if (t < 2.10) {
+            const p = easeMotionDecel((t - 1.10) / 1.0);
+            const dx = 90 * (1 - p);
+            leftFlyout.style.transform = `translateY(-50%) translateX(${dx.toFixed(1)}px)`;
+            leftFlyout.style.opacity = String(p);
+        } else {
+            leftFlyout.style.transform = "translateY(-50%) translateX(0)";
+            leftFlyout.style.opacity = "1";
+        }
+    }
+
+    // Phase 5: Right flyout stats slide out to the right (1.15s -> 2.15s)
+    if (rightFlyout) {
+        if (t < 1.15) {
+            rightFlyout.style.transform = "translateY(-50%) translateX(-90px)";
+            rightFlyout.style.opacity = "0";
+        } else if (t < 2.15) {
+            const p = easeMotionDecel((t - 1.15) / 1.0);
+            const dx = -90 * (1 - p);
+            rightFlyout.style.transform = `translateY(-50%) translateX(${dx.toFixed(1)}px)`;
+            rightFlyout.style.opacity = String(p);
+        } else {
+            rightFlyout.style.transform = "translateY(-50%) translateX(0)";
+            rightFlyout.style.opacity = "1";
+        }
+    }
+
+    // Phase 6: Bottom relative time fades in (1.80s -> 2.50s)
+    if (bottomTime) {
+        if (t < 1.80) {
+            bottomTime.style.opacity = "0";
+        } else if (t < 2.50) {
+            const p = (t - 1.80) / 0.70;
+            bottomTime.style.opacity = String(Math.min(1, Math.max(0, p)));
+        } else {
+            bottomTime.style.opacity = "1";
+        }
+    }
+
+    // Outro fade / loop reset (5.10s -> 5.40s)
+    if (container) {
+        if (t >= 5.10) {
+            const pOut = (t - 5.10) / 0.30;
+            container.style.opacity = String(Math.max(0, 1 - pOut));
+        } else {
+            container.style.opacity = "1";
+        }
+    }
+}
+
 

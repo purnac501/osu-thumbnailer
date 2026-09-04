@@ -4,11 +4,18 @@ import { DownloadIcon, PlayIcon } from "@radix-ui/react-icons";
 import "./overlay.css";
 import "./animation-tab.css";
 import { DEFAULT_OVERLAY_DATA, type OverlayData } from "./types";
-import { animationExportFileName, buildAnimationExportStartPath, type AnimationExportFormat, type AnimationExportPreset, } from "../../shared/animation-export";
+import {
+    animationExportFileName,
+    buildAnimationExportStartPath,
+    type AnimationExportFormat,
+    type AnimationExportPreset,
+    type AnimationStyle,
+} from "../../shared/animation-export";
 import { OVERLAY_THEMES, applyOverlayPalette, customAccentPalette, type OverlayThemeId } from "./themes";
 import { buildPlaycountSpline } from "./spline";
-import { OVERLAY_TOTAL_CYCLE, seekOverlay } from "./timeline";
+import { OVERLAY_TOTAL_CYCLE, SHOWCASE_INTRO_TOTAL_CYCLE, seekOverlay, seekShowcaseIntro } from "./timeline";
 import { OverlayWidget, type OverlayNode, type OverlayRefSetter } from "./OverlayWidget";
+import { ShowcaseIntroWidget, type ShowcaseNode, type ShowcaseRefSetter } from "./ShowcaseIntroWidget";
 import { AccentPicker } from "../AccentPicker";
 import { ZoomableStage } from "../CanvasView";
 import { parseScoreUrl } from "../../shared/score-url/parseScoreUrl";
@@ -56,7 +63,20 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         : null);
     const exportFormat = exportQuery?.get("format") ?? null;
     const exportTransparent = (exportQuery?.get("bg") ?? "transparent") !== "dark";
+
+    const [animStyle, setAnimStyle] = useState<AnimationStyle>(() => {
+        if (typeof window !== "undefined") {
+            const q = new URLSearchParams(window.location.search);
+            const s = q.get("style");
+            if (s === "showcase") return "showcase";
+        }
+        return "card";
+    });
+    const animStyleRef = useRef(animStyle);
+    animStyleRef.current = animStyle;
+
     const nodes = useRef(new Map<OverlayNode, Element>());
+    const showcaseNodes = useRef(new Map<ShowcaseNode, HTMLElement>());
     const dataRef = useRef(data);
     dataRef.current = data;
     const loopRef = useRef(loop);
@@ -70,7 +90,14 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         else
             nodes.current.delete(name);
     }, []);
+    const setShowcaseRef: ShowcaseRefSetter = useCallback((name) => (el) => {
+        if (el)
+            showcaseNodes.current.set(name, el as HTMLElement);
+        else
+            showcaseNodes.current.delete(name);
+    }, []);
     const source = useMemo(() => ({ get: (name: OverlayNode) => nodes.current.get(name) ?? null }), []);
+    const showcaseSource = useMemo(() => ({ get: (name: ShowcaseNode) => showcaseNodes.current.get(name) ?? null }), []);
     const spline = useMemo(() => buildPlaycountSpline(data.player.monthlyPlaycounts), [data.player.monthlyPlaycounts]);
     const stopLiveLoop = useCallback(() => {
         if (raf.current !== null) {
@@ -83,8 +110,36 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
     const phaseRef = useRef(phase);
     phaseRef.current = phase;
     const range = useRef({ start: 0, end: OVERLAY_TOTAL_CYCLE });
+
     const replay = useCallback(() => {
         stopLiveLoop();
+        if (animStyleRef.current === "showcase") {
+            range.current = {
+                start: 0,
+                end: SHOWCASE_INTRO_TOTAL_CYCLE,
+            };
+            start.current = performance.now();
+            const step = (now: number) => {
+                const t = range.current.start + (now - (start.current ?? now)) / 1000;
+                if (t >= range.current.end) {
+                    if (loopRef.current) {
+                        range.current = { start: 0, end: SHOWCASE_INTRO_TOTAL_CYCLE };
+                        start.current = now;
+                        seekShowcaseIntro(0, showcaseSource);
+                        raf.current = requestAnimationFrame(step);
+                    } else {
+                        seekShowcaseIntro(range.current.end, showcaseSource);
+                        stopLiveLoop();
+                    }
+                    return;
+                }
+                seekShowcaseIntro(t, showcaseSource);
+                raf.current = requestAnimationFrame(step);
+            };
+            raf.current = requestAnimationFrame(step);
+            return;
+        }
+
         const selected = phaseRef.current;
         range.current = {
             start: selected === "map" ? 2.88 : 0,
@@ -110,7 +165,16 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
             raf.current = requestAnimationFrame(step);
         };
         raf.current = requestAnimationFrame(step);
-    }, [source, stopLiveLoop]);
+    }, [source, showcaseSource, stopLiveLoop]);
+
+    const handleStyleChange = (nextStyle: AnimationStyle) => {
+        setAnimStyle(nextStyle);
+        animStyleRef.current = nextStyle;
+        stopLiveLoop();
+        setTimeout(() => {
+            replay();
+        }, 50);
+    };
     const selectPhase = useCallback((next: "player" | "map") => {
         setPhase(next);
         stopLiveLoop();
@@ -207,8 +271,13 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
                 })));
             await document.fonts.ready;
         };
-        window.seekAnimation = (t: number) =>
-            seekOverlay(t, source, dataRef.current);
+        window.seekAnimation = (t: number) => {
+            if (animStyleRef.current === "showcase") {
+                seekShowcaseIntro(t, showcaseSource);
+            } else {
+                seekOverlay(t, source, dataRef.current);
+            }
+        };
         window.triggerSequence = replay;
         window.switchPhase = (index: number) => selectPhase(index === 1 ? "map" : "player");
         window.stopLiveLoop = stopLiveLoop;
@@ -221,6 +290,9 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         }
         else if (!q.get("exportMode") && scoreUrl.trim() && parseScoreUrl(scoreUrl.trim())) {
             void fetchData(scoreUrl.trim());
+        }
+        else if (!q.get("exportMode")) {
+            setTimeout(replay, 100);
         }
         return () => {
             stopLiveLoop();
@@ -243,12 +315,13 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
                 ? cleanUrl
                 : "https://osu.ppy.sh/scores/2026000001";
             setRenderProgress(0);
-            const label = format.toUpperCase() + (preset === "compact" ? " (Small)" : " (HD)");
+            const label = format.toUpperCase() + (preset === "compact" ? " (Small)" : " (HD)") + (animStyle === "showcase" ? " Showcase" : "");
             setFetchMsg(`Rendering ${label}...`);
             try {
                 const started = await (await fetch(buildAnimationExportStartPath({
                     format,
                     preset,
+                    style: animStyle,
                     score: effectiveScore,
                     theme,
                     accent,
@@ -272,7 +345,7 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
                         break;
                 }
                 const downloadUrl = `/api/export-animation/file?id=${started.id}`;
-                const filename = animationExportFileName(format, preset);
+                const filename = animationExportFileName(format, preset, animStyle);
                 setDownloadReady({ url: downloadUrl, filename, label });
                 setFetchMsg("Render ready! Tap below or check your downloads.");
 
@@ -304,6 +377,13 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         const stageStyle = exportTransparent ? { backgroundColor: "transparent" } : undefined;
         if (!hasData) {
             return <div className={stageClass} ref={stageRef} style={stageStyle}/>;
+        }
+        if (animStyle === "showcase") {
+            return (
+                <div className={stageClass} ref={stageRef} style={{ ...stageStyle, width: 960, height: 540 }}>
+                    <ShowcaseIntroWidget data={data} setRef={setShowcaseRef} />
+                </div>
+            );
         }
         return (<div className={stageClass} ref={stageRef} style={stageStyle}>
         <OverlayWidget data={data} spline={spline} setRef={setRef}/>
@@ -348,39 +428,136 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
           ) : null}
         </section>
 
+        <section className="sidebar-section animation-group" aria-label="Animation Style">
+          <span className="field-label">Animation Style</span>
+          <SegmentedControl.Root
+            size="2"
+            className="segmented-control"
+            value={animStyle}
+            onValueChange={(v) => handleStyleChange(v as AnimationStyle)}
+          >
+            <SegmentedControl.Item value="card">Card Overlay</SegmentedControl.Item>
+            <SegmentedControl.Item value="showcase">Showcase Intro</SegmentedControl.Item>
+          </SegmentedControl.Root>
+        </section>
+
         <section className="sidebar-section animation-group" aria-label="Playback">
           <Button type="button" size="2" color="gray" highContrast onClick={replay} disabled={!hasData} className="fetch-button">
             <PlayIcon /> Replay
           </Button>
-          <SegmentedControl.Root size="2" className="segmented-control" aria-label="Replay from" value={phase} onValueChange={(v) => selectPhase(v as "player" | "map")}>
-            <SegmentedControl.Item value="player">Player</SegmentedControl.Item>
-            <SegmentedControl.Item value="map">Map</SegmentedControl.Item>
-          </SegmentedControl.Root>
+          {animStyle === "card" ? (
+            <SegmentedControl.Root size="2" className="segmented-control" aria-label="Replay from" value={phase} onValueChange={(v) => selectPhase(v as "player" | "map")}>
+              <SegmentedControl.Item value="player">Player</SegmentedControl.Item>
+              <SegmentedControl.Item value="map">Map</SegmentedControl.Item>
+            </SegmentedControl.Root>
+          ) : null}
           <div className="setting-row">
             <span className="setting-label">Loop</span>
             <Switch size="2" radius="full" checked={loop} onCheckedChange={onLoopChange} aria-label="Loop"/>
           </div>
         </section>
 
-        <section className="sidebar-section animation-group" aria-label="Style">
-          <div className="setting-row">
-            <div className="setting-copy">
-              <span className="setting-label">Accent color</span>
-              <span className="setting-value">{accent.toUpperCase()}</span>
+        {animStyle === "card" ? (
+          <section className="sidebar-section animation-group" aria-label="Style">
+            <div className="setting-row">
+              <div className="setting-copy">
+                <span className="setting-label">Accent color</span>
+                <span className="setting-value">{accent.toUpperCase()}</span>
+              </div>
+              <AccentPicker color={accent} onChange={onAccentInput} align="right"/>
             </div>
-            <AccentPicker color={accent} onChange={onAccentInput} align="right"/>
+            <div className="setting-row" style={{ marginTop: "8px", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
+              <div className="setting-copy">
+                <span className="setting-label">Beatmap status</span>
+                <span className="setting-value" style={{ textTransform: "capitalize" }}>{data.map.status || "ranked"}</span>
+              </div>
+              <SegmentedControl.Root
+                size="1"
+                className="segmented-control"
+                style={{ width: "100%" }}
+                value={data.map.status || "ranked"}
+                onValueChange={(status) => setData((prev) => ({ ...prev, map: { ...prev.map, status } }))}
+              >
+                <SegmentedControl.Item value="ranked">Ranked</SegmentedControl.Item>
+                <SegmentedControl.Item value="loved">Loved</SegmentedControl.Item>
+                <SegmentedControl.Item value="qualified">Qualified</SegmentedControl.Item>
+                <SegmentedControl.Item value="graveyard">Graveyard</SegmentedControl.Item>
+              </SegmentedControl.Root>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="sidebar-section animation-group" aria-label="Export">
+          <span className="field-label">Export & Download</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <Button
+              type="button"
+              size="2"
+              color="gray"
+              highContrast
+              disabled={!hasData || renderProgress !== null}
+              onClick={() => download("gif", "compact")}
+              title="Compact ~1MB GIF optimized for Discord and web"
+            >
+              ⚡ Download GIF (Small ~1MB)
+            </Button>
+            <Button
+              type="button"
+              size="2"
+              color="gray"
+              variant="soft"
+              disabled={!hasData || renderProgress !== null}
+              onClick={() => download("gif", "hq")}
+              title="Full 60fps high quality master GIF"
+            >
+              🎨 Download GIF (HQ 60fps)
+            </Button>
+            <Button
+              type="button"
+              size="2"
+              color="gray"
+              variant="soft"
+              disabled={!hasData || renderProgress !== null}
+              onClick={() => download("mov", "compact")}
+              title="Compressed small transparent video"
+            >
+              🎥 Download Video (Small)
+            </Button>
+            <Button
+              type="button"
+              size="2"
+              color="gray"
+              variant="soft"
+              disabled={!hasData || renderProgress !== null}
+              onClick={() => download("mov", "hq")}
+              title="Lossless ProRes 4444 master video for editors"
+            >
+              🎬 Download Video (ProRes Master)
+            </Button>
           </div>
         </section>
       </aside>
 
       <main className="app-preview" aria-label="Animation canvas">
-        {hasData ? (<ZoomableStage width={470} height={340} maxFitZoom={1} fitLabel="Fit animation to screen" background="transparent">
-            <div ref={stageRef}>
-              <OverlayWidget data={data} spline={spline} setRef={setRef}/>
-            </div>
-          </ZoomableStage>) : (<div className="empty-state">
+        {hasData ? (
+          animStyle === "showcase" ? (
+            <ZoomableStage key="showcase" width={960} height={540} maxFitZoom={1} fitLabel="Fit showcase to screen" background="transparent">
+              <div ref={stageRef}>
+                <ShowcaseIntroWidget data={data} setRef={setShowcaseRef} />
+              </div>
+            </ZoomableStage>
+          ) : (
+            <ZoomableStage key="card" width={470} height={340} maxFitZoom={1} fitLabel="Fit animation to screen" background="transparent">
+              <div ref={stageRef}>
+                <OverlayWidget data={data} spline={spline} setRef={setRef}/>
+              </div>
+            </ZoomableStage>
+          )
+        ) : (
+          <div className="empty-state">
             <p>Paste a score URL and fetch it to see the animation.</p>
-          </div>)}
+          </div>
+        )}
       </main>
     </>);
 }

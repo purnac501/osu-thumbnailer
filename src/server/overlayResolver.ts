@@ -10,6 +10,8 @@ import {
     isLifelineUser,
     type OverlayBadge,
     type OverlayData,
+    type OverlayScoreDetails,
+    type OverlayTopScore,
 } from "../shared/types/overlay";
 function getFlagEmoji(countryCode: string): string {
     if (!countryCode || countryCode.length !== 2)
@@ -19,6 +21,28 @@ function getFlagEmoji(countryCode: string): string {
         .split("")
         .map((char) => 127397 + char.charCodeAt(0));
     return String.fromCodePoint(...codePoints);
+}
+function formatShortAgo(isoDate?: string): string {
+    if (!isoDate) return "1y";
+    const diff = Math.max(0, Date.now() - new Date(isoDate).getTime());
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days < 30) return `${Math.max(1, days)}d`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}m`;
+    return `${Math.floor(months / 12)}y`;
+}
+function formatLongAgo(isoDate?: string): string {
+    if (!isoDate) return "26 minutes ago";
+    const diff = Math.max(0, Date.now() - new Date(isoDate).getTime());
+    const minutes = Math.floor(diff / (1000 * 60));
+    if (minutes < 60) return `${Math.max(1, minutes)} minutes ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hours ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days} days ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} months ago`;
+    return `${Math.floor(months / 12)} years ago`;
 }
 function computeMs(ar: number, od: number): {
     arMs: string;
@@ -36,10 +60,12 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
     let targetUserId: string | number = LIFELINE_USER_ID;
     let targetBeatmapId: string | number = 5610489;
     let targetMods: unknown[] = ["DT"];
+    let fetchedScore: any = null;
     const parsedScore = parseScoreUrl(clean);
     if (parsedScore) {
         try {
             const score = await client.fetchScore(parsedScore.scoreId, parsedScore.ruleset);
+            fetchedScore = score;
             if (score.user?.id)
                 targetUserId = score.user.id;
             if (score.beatmap?.id)
@@ -139,6 +165,84 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
     const effOd = hasDt ? Math.min(11, Number((baseOd * 1.5 > 10 ? (80 - (80 - 6 * baseOd) * (2 / 3)) / 6 : baseOd).toFixed(2))) : baseOd;
     const effSr = hasDt ? (baseSr * 1.45).toFixed(2) : baseSr.toFixed(2);
     const { arMs, odMs } = computeMs(hasDt ? 10.67 : effAr, hasDt ? 10.58 : effOd);
+    let topScores: OverlayTopScore[] = [];
+    try {
+        const bestScores = (await client.apiGet(`/users/${u.id || targetUserId}/scores/best?limit=6&mode=osu`)) as any[];
+        if (Array.isArray(bestScores) && bestScores.length > 0) {
+            topScores = bestScores.map((item) => {
+                const bms = item.beatmapset || {};
+                const modsArr: string[] = (item.mods || [])
+                    .map((m: any) => (typeof m === "string" ? m : m?.acronym))
+                    .filter(Boolean);
+                return {
+                    rank: String(item.rank || "S").replace(/H$/, ""),
+                    title: bms.title || item.beatmap?.version || "Beatmap",
+                    mods: modsArr,
+                    timeAgo: formatShortAgo(item.created_at),
+                    pp: item.pp ? `${Math.round(item.pp)}pp` : "0pp",
+                };
+            });
+        }
+    } catch (e) {
+        console.warn("Could not fetch best scores:", e);
+    }
+    if (topScores.length === 0) {
+        topScores = [
+            { rank: "S", title: "Song That Might Play When You Fight Sans", mods: ["HD", "HR"], timeAgo: "1y", pp: "1146pp" },
+            { rank: "X", title: "Bike Chase", mods: ["HD", "HR"], timeAgo: "1y", pp: "1120pp" },
+            { rank: "S", title: "ANTIDOTE", mods: ["HD", "HR"], timeAgo: "1y", pp: "1108pp" },
+            { rank: "S", title: "Bass Slut (Original Mix)", mods: ["HD", "DT"], timeAgo: "2y", pp: "1100pp" },
+            { rank: "S", title: "Last Goodbye", mods: ["HD", "HR"], timeAgo: "1y", pp: "1064pp" },
+            { rank: "A", title: "ChuChu Lovely MuniMuni MuraMura", mods: ["HD", "DT"], timeAgo: "1y", pp: "1058pp" },
+        ];
+    }
+
+    let resolvedScore: OverlayScoreDetails;
+    if (fetchedScore) {
+        const statsObj = fetchedScore.statistics || {};
+        const count300 = Number(statsObj.count_300 ?? statsObj.great ?? 0);
+        const count100 = Number(statsObj.count_100 ?? statsObj.ok ?? 0);
+        const count50 = Number(statsObj.count_50 ?? statsObj.meh ?? 0);
+        const countMiss = Number(statsObj.count_miss ?? statsObj.miss ?? 0);
+        const maxCombo = Number(fetchedScore.max_combo || 0);
+        const bmMaxCombo = Number(bm.max_combo || fetchedScore.beatmap?.max_combo || maxCombo);
+        const ppVal = fetchedScore.pp ? `${Math.round(fetchedScore.pp)}PP` : (stats.pp ? `${Math.round(stats.pp)}PP` : "880PP");
+        const accuracy = fetchedScore.accuracy !== undefined ? `${(fetchedScore.accuracy * 100).toFixed(2)}%` : "99.63%";
+        const rank = String(fetchedScore.rank || "S").replace(/H$/, "");
+        const modsArr = (fetchedScore.mods || []).map((m: any) => (typeof m === "string" ? m : m?.acronym)).filter(Boolean);
+        const rawScore = Number(fetchedScore.total_score ?? fetchedScore.score ?? 0);
+
+        resolvedScore = {
+            totalScore: rawScore > 0 ? rawScore.toLocaleString("en-US").replace(/,/g, " ") : "80 109 230",
+            combo: maxCombo,
+            maxCombo: bmMaxCombo,
+            pp: ppVal,
+            accuracy,
+            rank,
+            count300,
+            count100,
+            count50,
+            countMiss,
+            playedAtAgo: formatLongAgo(fetchedScore.created_at),
+            mods: modsArr,
+        };
+    } else {
+        resolvedScore = {
+            totalScore: "80 109 230",
+            combo: 1869,
+            maxCombo: 1870,
+            pp: "880PP",
+            accuracy: "99.63%",
+            rank: "S",
+            count300: 8,
+            count100: 0,
+            count50: 0,
+            countMiss: 0,
+            playedAtAgo: "26 minutes ago",
+            mods: ["HD", "HR"],
+        };
+    }
+
     return {
         player: {
             username: u.username || "Player",
@@ -175,5 +279,7 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
             hp: baseHp,
             status: String(bm.status || set.status || "ranked").toLowerCase(),
         },
+        score: resolvedScore,
+        topScores,
     };
 }
