@@ -456,76 +456,11 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
               </div>
               <AccentPicker color={accent} onChange={onAccentInput} align="right"/>
             </div>
-            <div className="setting-row" style={{ marginTop: "8px", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
-              <div className="setting-copy">
-                <span className="setting-label">Beatmap status</span>
-                <span className="setting-value" style={{ textTransform: "capitalize" }}>{data.map.status || "ranked"}</span>
-              </div>
-              <SegmentedControl.Root
-                size="1"
-                className="segmented-control"
-                style={{ width: "100%" }}
-                value={data.map.status || "ranked"}
-                onValueChange={(status) => setData((prev) => ({ ...prev, map: { ...prev.map, status } }))}
-              >
-                <SegmentedControl.Item value="ranked">Ranked</SegmentedControl.Item>
-                <SegmentedControl.Item value="loved">Loved</SegmentedControl.Item>
-                <SegmentedControl.Item value="qualified">Qualified</SegmentedControl.Item>
-                <SegmentedControl.Item value="graveyard">Graveyard</SegmentedControl.Item>
-              </SegmentedControl.Root>
-            </div>
+
           </section>
         ) : null}
 
-        <section className="sidebar-section animation-group" aria-label="Export">
-          <span className="field-label">Export & Download</span>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <Button
-              type="button"
-              size="2"
-              color="gray"
-              highContrast
-              disabled={!hasData || renderProgress !== null}
-              onClick={() => download("gif", "compact")}
-              title="Compact ~1MB GIF optimized for Discord and web"
-            >
-              ⚡ Download GIF (Small ~1MB)
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              color="gray"
-              variant="soft"
-              disabled={!hasData || renderProgress !== null}
-              onClick={() => download("gif", "hq")}
-              title="Full 60fps high quality master GIF"
-            >
-              🎨 Download GIF (HQ 60fps)
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              color="gray"
-              variant="soft"
-              disabled={!hasData || renderProgress !== null}
-              onClick={() => download("mov", "compact")}
-              title="Compressed small transparent video"
-            >
-              🎥 Download Video (Small)
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              color="gray"
-              variant="soft"
-              disabled={!hasData || renderProgress !== null}
-              onClick={() => download("mov", "hq")}
-              title="Lossless ProRes 4444 master video for editors"
-            >
-              🎬 Download Video (ProRes Master)
-            </Button>
-          </div>
-        </section>
+        
       </aside>
 
       <main className="app-preview" aria-label="Animation canvas">
