@@ -2,6 +2,11 @@
    Showcase Intro Animation Styles (Center Lens & Flyout Stats)
    ========================================================================== */
 
+:root,
+.showcase-intro-container {
+  --font-main: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
 .showcase-intro-container {
   width: 960px;
   height: 540px;
@@ -9,7 +14,7 @@
   overflow: hidden;
   background: transparent;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-main);
   user-select: none;
   box-sizing: border-box;
 }
@@ -88,21 +93,26 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  font-size: 13.5px;
-  font-weight: 700;
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 600;
   letter-spacing: 0.2px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 8px rgba(0, 0, 0, 0.85);
 }
 
 .showcase-gauge-name {
   color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 8px rgba(0, 0, 0, 0.85);
 }
 
 .showcase-gauge-val {
   color: #fff;
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-family: var(--font-main);
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 8px rgba(0, 0, 0, 0.85);
 }
 
 /* Center Golden Star Rating Badge */
@@ -134,12 +144,13 @@
 }
 
 .showcase-sr-value {
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 26px;
-  font-weight: 700;
+  font-family: var(--font-main);
+  font-size: 24px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
   color: #F8D153;
-  margin-top: 1px;
-  letter-spacing: 0.5px;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
   text-shadow: 0 0 16px rgba(248, 209, 83, 0.7), 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
@@ -231,14 +242,14 @@
 /* Player Card tucked behind circle rim */
 .showcase-player-card {
   position: absolute;
-  top: 146px;
-  left: 130px;
-  width: 216px;
-  height: 36px;
+  top: 144px;
+  left: 95px;
+  width: 275px;
+  height: 38px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 8px;
   background: linear-gradient(180deg, #d38290 0%, #c3707f 100%);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
@@ -261,10 +272,12 @@
   flex-direction: column;
   gap: 1px;
   overflow: hidden;
+  font-family: var(--font-main);
 }
 
 .showcase-player-name {
-  font-size: 13px;
+  font-family: var(--font-main);
+  font-size: 12.5px;
   font-weight: 700;
   color: #fff;
   white-space: nowrap;
@@ -284,6 +297,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  font-family: var(--font-main);
   font-size: 11px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
@@ -318,38 +332,38 @@
 
 .showcase-play-row-1 {
   top: 190px;
-  left: 74px;
-  width: 226px;
+  left: 54px;
+  width: 228px;
 }
 
 .showcase-play-row-2 {
   top: 228px;
-  left: 66px;
-  width: 226px;
+  left: 42px;
+  width: 228px;
 }
 
 .showcase-play-row-3 {
   top: 266px;
-  left: 59px;
+  left: 34px;
   width: 226px;
 }
 
 .showcase-play-row-4 {
   top: 304px;
-  left: 59px;
+  left: 34px;
   width: 226px;
 }
 
 .showcase-play-row-5 {
   top: 342px;
-  left: 66px;
-  width: 226px;
+  left: 42px;
+  width: 228px;
 }
 
 .showcase-play-row-6 {
   top: 380px;
-  left: 74px;
-  width: 226px;
+  left: 54px;
+  width: 228px;
 }
 
 /* Thumbnail with artwork and rank letter */
@@ -428,9 +442,11 @@
   gap: 2px;
   overflow: hidden;
   min-width: 0;
+  font-family: var(--font-main);
 }
 
 .showcase-play-title {
+  font-family: var(--font-main);
   font-size: 11px;
   font-weight: 600;
   color: #fff;
@@ -446,26 +462,27 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  font-family: var(--font-main);
 }
 
 /* Connected Mod Badges Pill */
 .showcase-mod-combo {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 1.5px;
   line-height: 1;
   flex-shrink: 0;
 }
 
 .showcase-mod-icon-badge {
-  width: 17px;
+  width: 15px;
   height: 13px;
   border-radius: 2.5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  padding: 1px 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  padding: 1px;
   box-sizing: border-box;
   overflow: hidden;
   flex-shrink: 0;
@@ -475,43 +492,34 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+  display: block;
 }
 
 .showcase-mod-tag {
+  font-family: var(--font-main);
   font-size: 8.5px;
   font-weight: 800;
-  padding: 1.5px 3.5px;
+  padding: 1px 3.5px;
   border-radius: 2.5px;
-  color: #fff;
   letter-spacing: 0.2px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-.showcase-mod-tag.mod-hd { background: #2080E0; }
-.showcase-mod-tag.mod-hr { background: #E08510; }
-.showcase-mod-tag.mod-dt { background: #9640D8; }
-.showcase-mod-tag.mod-nc { background: #7C2AB8; }
-.showcase-mod-tag.mod-fl { background: #E59819; }
-.showcase-mod-tag.mod-ez { background: #22A855; }
-.showcase-mod-tag.mod-ht { background: #1C8C8C; }
-.showcase-mod-tag.mod-cl { background: #4D5663; }
-.showcase-mod-tag.mod-nf { background: #3B82F6; }
-.showcase-mod-tag.mod-so { background: #EC4899; }
-
 .showcase-play-time {
+  font-family: var(--font-main);
   font-size: 10px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.65);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   flex-shrink: 0;
 }
 
 .showcase-play-pp {
   margin-left: auto;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 12.5px;
+  font-family: var(--font-main);
+  font-size: 12px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: #ffffff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   padding-right: 2px;
@@ -538,8 +546,8 @@
 
 /* 1. Score Row */
 .showcase-score-row {
-  top: 190px;
-  left: 668px;
+  top: 184px;
+  left: 684px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -547,22 +555,24 @@
 
 .showcase-score-label {
   align-self: flex-start;
+  font-family: var(--font-main);
   font-size: 9.5px;
   font-weight: 800;
   text-transform: uppercase;
   padding: 1px 6px;
   border-radius: 3px;
-  background: #E06277;
+  background: #D86A7D;
   color: #fff;
   letter-spacing: 0.4px;
   transform: skewX(-14deg);
 }
 
 .showcase-score-val {
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
+  font-family: var(--font-main);
+  font-size: 25px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
   color: #fff;
   line-height: 1;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
@@ -570,57 +580,58 @@
 
 /* 2. Combo Row */
 .showcase-combo-row {
-  top: 242px;
-  left: 680px;
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 26px;
+  top: 238px;
+  left: 684px;
+  font-family: var(--font-main);
+  font-size: 18px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.95);
-  letter-spacing: 0.8px;
+  font-variant-numeric: tabular-nums;
+  color: #8C96A0;
+  letter-spacing: 0.3px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
   line-height: 1;
 }
 
 /* 3. Chevron PP Badge */
 .showcase-pp-badge {
-  top: 284px;
-  left: 662px;
+  top: 278px;
+  left: 660px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   background: linear-gradient(180deg, #d88192 0%, #c4697a 100%);
-  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%, 13px 50%);
-  padding: 4px 22px 4px 26px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+  padding: 4px 18px 4px 24px;
   box-shadow: 0 3px 12px rgba(216, 129, 146, 0.45);
 }
 
 .showcase-pp-text {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 20px;
+  font-family: var(--font-main);
+  font-size: 18px;
   font-weight: 800;
   color: #fff;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   line-height: 1;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* 4. Accuracy Row */
 .showcase-acc-row {
-  top: 330px;
-  left: 680px;
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 25px;
+  top: 324px;
+  left: 684px;
+  font-family: var(--font-main);
+  font-size: 18px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.92);
-  letter-spacing: 0.6px;
+  font-variant-numeric: tabular-nums;
+  color: #8C96A0;
+  letter-spacing: 0.3px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
   line-height: 1;
 }
 
 /* 5. Hit Counts Slanted Strip */
 .showcase-hits-strip {
-  top: 374px;
-  left: 644px;
+  top: 368px;
+  left: 638px;
   display: flex;
   align-items: center;
   transform: skewX(-18deg);
@@ -630,7 +641,7 @@
 }
 
 .showcase-hit-box {
-  padding: 2.5px 14px;
+  padding: 3px 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -638,23 +649,24 @@
 
 .showcase-hit-box span {
   transform: skewX(18deg);
-  font-family: "Teko", -apple-system, sans-serif;
-  font-size: 19px;
+  font-family: var(--font-main);
+  font-size: 15.5px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: #fff;
   line-height: 1;
 }
 
 .showcase-hit-box.h300 {
-  background: #55c777;
+  background: #68CE82;
 }
 
 .showcase-hit-box.h100 {
-  background: #b5d153;
+  background: #BCD75A;
 }
 
 .showcase-hit-box.h0 {
-  background: #d86a7d;
+  background: #DC6D82;
 }
 
 /* Bottom relative time */
@@ -664,9 +676,11 @@
   left: 0;
   right: 0;
   text-align: center;
+  font-family: var(--font-main);
   font-size: 12px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 0.2px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.3px;
   z-index: 20;
 }
