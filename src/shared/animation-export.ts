@@ -10,21 +10,12 @@ export const ANIMATION_EXPORT_MIME: Record<AnimationExportFormat, string> = {
 export type AnimationStyle = "card" | "showcase";
 export function animationExportFileName(format: AnimationExportFormat, preset?: AnimationExportPreset, style?: AnimationStyle): string {
     const prefix = style === "showcase" ? "osu-showcase-intro" : "osu-score-card";
-    if (preset === "compact") {
-        return `${prefix}-compact.${format}`;
-    }
-    if (preset === "1080p") {
-        return `${prefix}-1080p.${format}`;
-    }
-    if (preset === "1440p") {
-        return `${prefix}-1440p.${format}`;
-    }
-    if (preset === "4k") {
-        return `${prefix}-4k.${format}`;
-    }
-    return `${prefix}.${format}`;
+    const suffix = preset === "compact" || preset === "1080p" || preset === "1440p" || preset === "4k"
+        ? `-${preset}`
+        : "";
+    return `${prefix}${suffix}.${format}`;
 }
-export function animationExportBackground(format: AnimationExportFormat): string {
+export function animationExportBackground(_format: AnimationExportFormat): string {
     return "transparent";
 }
 export interface AnimationExportParams {

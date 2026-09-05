@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express, { type Express } from "express";
+import { type Express } from "express";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
 import { createServer } from "./index";
 export async function bootRenderServer(): Promise<{

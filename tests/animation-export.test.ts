@@ -9,6 +9,7 @@ describe("animation export constants", () => {
     it("names files and mime types per format", () => {
         expect(animationExportFileName("gif")).toBe("osu-score-card.gif");
         expect(animationExportFileName("mov")).toBe("osu-score-card.mov");
+        expect(animationExportFileName("mov", "hq")).toBe("osu-score-card.mov");
         expect(ANIMATION_EXPORT_MIME.gif).toBe("image/gif");
         expect(ANIMATION_EXPORT_MIME.mov).toBe("video/quicktime");
     });
