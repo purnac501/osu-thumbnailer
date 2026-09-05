@@ -1,6 +1,7 @@
 import type { OsuClient } from "../shared/osu/client";
 import { parseScoreUrl } from "../shared/score-url/parseScoreUrl";
 import {
+    DEFAULT_OVERLAY_DATA,
     LIFELINE_AVATAR,
     LIFELINE_BADGES,
     LIFELINE_BANNER,
@@ -31,18 +32,19 @@ function formatShortAgo(isoDate?: string): string {
     if (months < 12) return `${months}m`;
     return `${Math.floor(months / 12)}y`;
 }
+const relativeTime = new Intl.RelativeTimeFormat("en", { numeric: "always" });
 function formatLongAgo(isoDate?: string): string {
     if (!isoDate) return "26 minutes ago";
     const diff = Math.max(0, Date.now() - new Date(isoDate).getTime());
     const minutes = Math.floor(diff / (1000 * 60));
-    if (minutes < 60) return `${Math.max(1, minutes)} minutes ago`;
+    if (minutes < 60) return relativeTime.format(-Math.max(1, minutes), "minute");
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hours ago`;
+    if (hours < 24) return relativeTime.format(-hours, "hour");
     const days = Math.floor(hours / 24);
-    if (days < 30) return `${days} days ago`;
+    if (days < 30) return relativeTime.format(-days, "day");
     const months = Math.floor(days / 30);
-    if (months < 12) return `${months} months ago`;
-    return `${Math.floor(months / 12)} years ago`;
+    if (months < 12) return relativeTime.format(-months, "month");
+    return relativeTime.format(-Math.floor(months / 12), "year");
 }
 function computeMs(ar: number, od: number): {
     arMs: string;
@@ -180,22 +182,16 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
     const userPath = isNumericUser
         ? `/users/${targetUserId}/osu`
         : `/users/${encodeURIComponent(String(targetUserId))}/osu?key=username`;
-    let u: any;
-    try {
-        u = await client.apiGet(userPath);
-    }
-    catch (err) {
-        console.error("Failed to fetch user, fallbacking to lifeline:", err);
-        u = await client.apiGet(`/users/${LIFELINE_USER_ID}/osu`);
-    }
-    let bm: any;
-    try {
-        bm = await client.apiGet(`/beatmaps/${targetBeatmapId}`);
-    }
-    catch (err) {
-        console.error("Failed to fetch beatmap, fallbacking to 5610489:", err);
-        bm = await client.apiGet(`/beatmaps/5610489`);
-    }
+    const [u, bm] = await Promise.all([
+        client.apiGet(userPath).catch((err) => {
+            console.error("Failed to fetch user, fallbacking to lifeline:", err);
+            return client.apiGet(`/users/${LIFELINE_USER_ID}/osu`);
+        }),
+        client.apiGet(`/beatmaps/${targetBeatmapId}`).catch((err) => {
+            console.error("Failed to fetch beatmap, fallbacking to 5610489:", err);
+            return client.apiGet("/beatmaps/5610489");
+        }),
+    ]);
     const stats = u.statistics || {};
     const monthlyPlaycounts = (u.monthly_playcounts || [])
         .filter((m: any) => m.start_date >= "2018-01-01")
@@ -215,17 +211,11 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
         }
         catch { }
     }
-    let badges: OverlayBadge[] = [];
     const lifeline = isLifelineUser(u.id, u.username);
-    if (lifeline) {
-        badges = LIFELINE_BADGES;
-    }
-    else {
-        badges = (u.badges || []).map((b: any) => ({
-            url: b.image_url,
-            title: b.description || "Tournament Badge",
-        }));
-    }
+    const badges: OverlayBadge[] = lifeline ? LIFELINE_BADGES : (u.badges || []).map((b: any) => ({
+        url: b.image_url,
+        title: b.description || "Tournament Badge",
+    }));
     const userBanner = lifeline
         ? LIFELINE_BANNER
         : (proxiedAsset(u.cover_url || u.cover?.url) || LIFELINE_BANNER);
@@ -291,14 +281,7 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
         console.warn("Could not fetch best scores:", e);
     }
     if (topScores.length === 0) {
-        topScores = [
-            { rank: "S", title: "Song That Might Play When You Fight Sans", mods: ["HD", "HR"], timeAgo: "1y", pp: "1146pp", cover: "https://assets.ppy.sh/beatmaps/1031435/covers/cover.jpg" },
-            { rank: "X", title: "Bike Chase", mods: ["HD", "HR"], timeAgo: "1y", pp: "1120pp", cover: "https://assets.ppy.sh/beatmaps/1449830/covers/cover.jpg" },
-            { rank: "S", title: "ANTIDOTE", mods: ["HD", "HR"], timeAgo: "1y", pp: "1108pp", cover: "https://assets.ppy.sh/beatmaps/1271616/covers/cover.jpg" },
-            { rank: "S", title: "Bass Slut (Original Mix)", mods: ["HD", "DT"], timeAgo: "2y", pp: "1100pp", cover: "https://assets.ppy.sh/beatmaps/399358/covers/cover.jpg" },
-            { rank: "S", title: "Last Goodbye", mods: ["HD", "HR"], timeAgo: "1y", pp: "1064pp", cover: "https://assets.ppy.sh/beatmaps/744372/covers/cover.jpg" },
-            { rank: "A", title: "ChuChu Lovely MuniMuni MuraMura", mods: ["HD", "DT"], timeAgo: "1y", pp: "1058pp", cover: "https://assets.ppy.sh/beatmaps/847323/covers/cover.jpg" },
-        ];
+        topScores = structuredClone(DEFAULT_OVERLAY_DATA.topScores!);
     }
 
     let resolvedScore: OverlayScoreDetails;
@@ -333,20 +316,7 @@ export async function resolveOverlayData(input: string, client: OsuClient, proxi
             mods: modsArr,
         };
     } else {
-        resolvedScore = {
-            totalScore: "80 109 230",
-            combo: 1869,
-            maxCombo: 1870,
-            pp: "880PP",
-            accuracy: "99.63%",
-            rank: "S",
-            count300: 8,
-            count100: 0,
-            count50: 0,
-            countMiss: 0,
-            playedAtAgo: "26 minutes ago",
-            mods: ["HD", "HR"],
-        };
+        resolvedScore = structuredClone(DEFAULT_OVERLAY_DATA.score!);
     }
 
     return {

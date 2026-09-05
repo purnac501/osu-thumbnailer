@@ -96,7 +96,7 @@ describe("overlay timeline", () => {
         player: { ...DEFAULT_OVERLAY_DATA.player, hours: 3664, playcount: 301395 },
         map: { ...DEFAULT_OVERLAY_DATA.map, favs: "138", plays: "17 632" },
     };
-    it("spans a 4.5s loop", () => {
+    it("spans a 5.4s loop", () => {
         expect(OVERLAY_TOTAL_CYCLE).toBe(5.4);
     });
     it("opens from nothing into the player view", () => {
@@ -108,20 +108,23 @@ describe("overlay timeline", () => {
         expect(els.get("topPlayer")!.classList.contains("visible")).toBe(true);
         expect(els.get("topMap")!.classList.contains("visible")).toBe(false);
     });
-    it("seeks layer fades without browser transition state", () => {
+    it("switches card content only while the wipe fully covers both cards", () => {
         const { els, source } = makeSource();
-        seekOverlay(0.16, source, data);
-        const openingOpacity = Number(els.get("topPlayer")!.style.opacity);
-        expect(openingOpacity).toBeGreaterThan(0);
-        expect(openingOpacity).toBeLessThan(1);
-        seekOverlay(2.58, source, data);
-        const closingOpacity = Number(els.get("topPlayer")!.style.opacity);
-        expect(closingOpacity).toBeGreaterThan(0);
-        expect(closingOpacity).toBeLessThan(1);
-        seekOverlay(3, source, data);
-        const mapOpacity = Number(els.get("topMap")!.style.opacity);
-        expect(mapOpacity).toBeGreaterThan(0);
-        expect(mapOpacity).toBeLessThan(1);
+        seekOverlay(2.65, source, data);
+        expect(els.get("topPlayer")!.style.opacity).toBe("1");
+        for (const name of ["topWipe", "bottomWipe"]) {
+            const offset = Number(els.get(name)!.style.transform!.match(/-?[\d.]+/)![0]);
+            expect(offset).toBeGreaterThanOrEqual(-37.5);
+            expect(offset).toBeLessThanOrEqual(0);
+        }
+        seekOverlay(2.70, source, data);
+        expect(els.get("topPlayer")!.style.opacity).toBe("0");
+        expect(els.get("topMap")!.style.opacity).toBe("1");
+        for (const name of ["topWipe", "bottomWipe"]) {
+            const offset = Number(els.get(name)!.style.transform!.match(/-?[\d.]+/)![0]);
+            expect(offset).toBeGreaterThanOrEqual(-37.5);
+            expect(offset).toBeLessThanOrEqual(0);
+        }
     });
     it("keeps player and map banners on their own layers after data changes", () => {
         const { els, source } = makeSource();
@@ -136,15 +139,25 @@ describe("overlay timeline", () => {
         seekOverlay(3.8, source, next);
         expect(els.get("topBannerMap")!.style.backgroundImage).toBe('url("https://example.com/new-map.jpg")');
     });
-    it("sweeps a highlight across the map card lip during the transition", () => {
+    it("moves the wipe continuously through the content swap", () => {
         const { els, source } = makeSource();
-        seekOverlay(2.3, source, data);
-        expect(els.get("lipShine")!.style.opacity).toBe("0");
-        seekOverlay(2.68, source, data);
-        expect(Number(els.get("lipShine")!.style.opacity)).toBeGreaterThan(0.8);
-        expect(els.get("lipShine")!.style.transform).toContain("translateX(140.0%)");
-        seekOverlay(3.2, source, data);
-        expect(els.get("lipShine")!.style.opacity).toBe("0");
+        let previous = -100;
+        for (let frame = 1; frame <= 43; frame++) {
+            seekOverlay(2.30 + frame / 60, source, data);
+            const offset = Number(els.get("bottomWipe")!.style.transform!.match(/-?[\d.]+/)![0]);
+            expect(offset).toBeGreaterThan(previous);
+            expect(offset - previous).toBeLessThan(6);
+            previous = offset;
+        }
+    });
+    it("clears the wipe when seeking out of the transition", () => {
+        const { els, source } = makeSource();
+        for (const time of [0, 1.2, 3.2, 5]) {
+            seekOverlay(2.68, source, data);
+            seekOverlay(time, source, data);
+            for (const name of ["topWipe", "bottomWipe"])
+                expect(els.get(name)!.style.transform).toBe("translateY(-100%)");
+        }
     });
     it("counts player numbers up and draws the line", () => {
         const { els, source } = makeSource();
@@ -182,11 +195,27 @@ describe("overlay timeline", () => {
         expect(digits(els.get("mFavs")!.textContent)).toBe(138);
         expect(digits(els.get("mPlays")!.textContent)).toBe(17632);
     });
+    it("animates map stats and graph during the reveal without restarting after the wipe", () => {
+        const { els, source } = makeSource();
+        let previousWidth = 0;
+        let previousOffset = 1200;
+        for (const time of [2.86, 3.05, 3.06, 3.2]) {
+            seekOverlay(time, source, data);
+            for (const name of ["fillAr", "fillCs", "fillOd", "fillHp"])
+                expect(parseFloat(els.get(name)!.style.width!)).toBeGreaterThan(0);
+            const width = parseFloat(els.get("fillAr")!.style.width!);
+            const offset = Number(els.get("svgMapPath")!.style.strokeDashoffset);
+            expect(width).toBeGreaterThan(previousWidth);
+            expect(offset).toBeLessThan(previousOffset);
+            previousWidth = width;
+            previousOffset = offset;
+        }
+    });
     it("shows the star rating with the map details", () => {
         const { els, source } = makeSource();
         seekOverlay(3.18, source, data);
         expect(Number(els.get("starFooter")!.style.opacity)).toBeGreaterThan(0);
-        expect(els.get("bottomMap")!.style.opacity).toBe(els.get("starFooter")!.style.opacity);
+        expect(els.get("bottomMap")!.style.opacity).toBe("1");
     });
     it("fades the widget out at the end of the loop", () => {
         const { els, source } = makeSource();
