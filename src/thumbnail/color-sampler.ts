@@ -7,32 +7,6 @@ type Rgb = [
     number,
     number
 ];
-function rgbToHsv(r: number, g: number, b: number): Rgb {
-    r /= 255;
-    g /= 255;
-    b /= 255;
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const d = max - min;
-    let h = 0;
-    const s = max === 0 ? 0 : d / max;
-    const v = max;
-    if (max !== min) {
-        switch (max) {
-            case r:
-                h = (g - b) / d + (g < b ? 6 : 0);
-                break;
-            case g:
-                h = (b - r) / d + 2;
-                break;
-            case b:
-                h = (r - g) / d + 4;
-                break;
-        }
-        h /= 6;
-    }
-    return [h, s, v];
-}
 function toHex(r: number, g: number, b: number): string {
     const h = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
     return `#${h(r)}${h(g)}${h(b)}`;
@@ -52,7 +26,6 @@ export function sampleImagePalette(img: HTMLImageElement | HTMLCanvasElement): E
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
     const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const totalPixels = canvas.width * canvas.height;
     let bestVibrantScore = -1;
     let bestVibrantRgb: Rgb = [0, 240, 255];
     const shadowBuckets: Rgb[] = [];
@@ -63,7 +36,10 @@ export function sampleImagePalette(img: HTMLImageElement | HTMLCanvasElement): E
         const a = data[i + 3]!;
         if (a < 128)
             continue;
-        const [, s, v] = rgbToHsv(r, g, b);
+        const max = Math.max(r / 255, g / 255, b / 255);
+        const min = Math.min(r / 255, g / 255, b / 255);
+        const s = max === 0 ? 0 : (max - min) / max;
+        const v = max;
         const vibrantScore = Math.pow(s, 1.4) * Math.pow(v, 1.1);
         if (vibrantScore > bestVibrantScore && s > 0.45 && v > 0.4) {
             bestVibrantScore = vibrantScore;

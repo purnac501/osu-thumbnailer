@@ -126,26 +126,8 @@ export function StarNotch({ config, beatmapStatus, }: {
       </svg>
     </div>);
 }
-function NotchChevrons({ width, height, color }: {
-    width: number;
-    height: number;
-    color: string;
-}) {
-    const cx = width * 0.5;
-    const cy = height * 0.58;
-    const bottomHalf = width * 0.225;
-    const topHalf = width * 0.205;
-    const stroke = width * 0.05;
-    return (<svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ position: "absolute", inset: 0 }}>
-      <g stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" fill="none" transform={`translate(${cx}, ${cy})`}>
-
-        <polyline points={`${-bottomHalf},${height * 0.05} 0,${-height * 0.09} ${bottomHalf},${height * 0.05}`}/>
-        <polyline points={`${-topHalf},${-height * 0.11} 0,${-height * 0.25} ${topHalf},${-height * 0.11}`}/>
-      </g>
-    </svg>);
-}
 export function PanelLayer({ config, backgroundSrc, }: {
-    config: import("../../types").PanelLayerConfig;
+    config: PanelLayerConfig;
     backgroundSrc?: string;
 }) {
     if (!config.visible)

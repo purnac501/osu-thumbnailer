@@ -1,7 +1,8 @@
-import type { CustomTextLayerConfig, ThumbnailTemplate } from "./types";
+import type { ReferenceTemplateComponents, ThumbnailTemplate } from "./types";
 import type { ThumbnailData } from "../shared/types/thumbnail";
 import { mixColors, withAlpha } from "../shared/formatting/color";
-export interface EditorState {
+export interface EditorState extends Pick<ThumbnailTemplate,
+    "textOverrides" | "positionOverrides" | "sizeOverrides" | "colorOverrides" | "fontSizeOverrides" | "customTexts"> {
     accent?: string;
     twitchVisible?: boolean;
     classicVisible?: boolean;
@@ -10,15 +11,7 @@ export interface EditorState {
     statusKind?: "fc" | "miss" | "unknown";
     bottomText?: string;
     bottomAccent?: string;
-    textOverrides?: Record<string, string>;
-    positionOverrides?: Record<string, {
-        x: number;
-        y: number;
-    }>;
-    sizeOverrides?: Record<string, Record<string, number>>;
-    colorOverrides?: Record<string, string>;
-    fontSizeOverrides?: Record<string, number>;
-    customTexts?: CustomTextLayerConfig[];
+
 }
 export function applyDataOverrides(data: ThumbnailData, state: EditorState | undefined): ThumbnailData {
     if (!state)
@@ -60,7 +53,7 @@ export function applyDataOverrides(data: ThumbnailData, state: EditorState | und
         isFullCombo,
     };
 }
-export const COMPONENT_BY_LAYER: Record<string, string> = {
+export const COMPONENT_BY_LAYER: Record<string, keyof ReferenceTemplateComponents> = {
     "top-panel": "topPanel",
     "star-notch": "starNotch",
     status: "status",
@@ -150,13 +143,9 @@ export function applyOverrides(template: ThumbnailTemplate, state: EditorState |
         next.colorOverrides = { ...next.colorOverrides, ...colorOverrides };
     }
     if (positionOverrides) {
-        const configs = next.components as unknown as Record<string, {
-            x: number;
-            y: number;
-        }>;
         for (const [layer, pos] of Object.entries(positionOverrides)) {
             const key = COMPONENT_BY_LAYER[layer];
-            const conf = key ? configs[key] : next.customTexts?.find((item) => item.id === layer);
+            const conf = key ? next.components[key] : next.customTexts.find((item) => item.id === layer);
             if (conf) {
                 conf.x = Math.round(pos.x);
                 conf.y = Math.round(pos.y);
@@ -164,64 +153,46 @@ export function applyOverrides(template: ThumbnailTemplate, state: EditorState |
         }
     }
     if (sizeOverrides) {
-        const configs = next.components as unknown as Record<string, Record<string, number>>;
         for (const [layer, patch] of Object.entries(sizeOverrides)) {
             const key = COMPONENT_BY_LAYER[layer];
-            const conf = key ? configs[key] : next.customTexts?.find((item) => item.id === layer);
+            const conf = key ? next.components[key] : next.customTexts.find((item) => item.id === layer);
             if (conf)
                 Object.assign(conf, patch);
         }
     }
-    if (fontSizeOverrides) {
-        for (const [layer, size] of Object.entries(fontSizeOverrides)) {
-            if (layer.startsWith("custom-")) {
-                const item = next.customTexts?.find((c) => c.id === layer);
-                if (item)
-                    item.fontSize = size;
-            }
-            else {
-                const key = COMPONENT_BY_LAYER[layer];
-                if (key && key in next.components) {
-                    const conf = (next.components as unknown as Record<string, any>)[key];
-                    if (conf && typeof conf.fontSize === "number") {
-                        conf.fontSize = size;
-                        if (typeof conf.maxWidth === "number") {
-                            conf.maxWidth = Math.max(conf.maxWidth, size * 8);
-                        }
-                    }
-                    if (layer === "status") {
-                        next.components.statusMiss.fontSize = size;
-                        if (typeof next.components.statusMiss.maxWidth === "number") {
-                            next.components.statusMiss.maxWidth = Math.max(next.components.statusMiss.maxWidth, size * 8);
-                        }
-                    }
-                }
+    for (const [layer, size] of Object.entries(fontSizeOverrides ?? {})) {
+        if (layer.startsWith("custom-")) {
+            const item = next.customTexts.find((c) => c.id === layer);
+            if (item) item.fontSize = size;
+            continue;
+        }
+        const key = COMPONENT_BY_LAYER[layer];
+        if (!key || !(key in next.components)) continue;
+        const configs = layer === "status"
+            ? [next.components[key], next.components.statusMiss]
+            : [next.components[key]];
+        for (const conf of configs) {
+            if (conf && "fontSize" in conf && typeof conf.fontSize === "number") {
+                conf.fontSize = size;
+                if ("maxWidth" in conf && typeof conf.maxWidth === "number")
+                    conf.maxWidth = Math.max(conf.maxWidth, size * 8);
             }
         }
     }
-    if (colorOverrides) {
-        for (const [layer, color] of Object.entries(colorOverrides)) {
-            if (layer.startsWith("custom-")) {
-                const item = next.customTexts?.find((c) => c.id === layer);
-                if (item)
-                    item.color = color;
-            }
-            else {
-                const key = COMPONENT_BY_LAYER[layer];
-                if (key && key in next.components) {
-                    const conf = (next.components as unknown as Record<string, any>)[key];
-                    if (conf) {
-                        if ("color" in conf)
-                            conf.color = color;
-                        if ("prefixColor" in conf)
-                            conf.prefixColor = color;
-                    }
-                    if (layer === "status") {
-                        next.components.statusMiss.color = color;
-                    }
-                }
-            }
+    for (const [layer, color] of Object.entries(colorOverrides ?? {})) {
+        if (layer.startsWith("custom-")) {
+            const item = next.customTexts.find((c) => c.id === layer);
+            if (item) item.color = color;
+            continue;
         }
+        const key = COMPONENT_BY_LAYER[layer];
+        if (!key || !(key in next.components)) continue;
+        const conf = next.components[key];
+        if (conf) {
+            if ("color" in conf) conf.color = color;
+            if ("prefixColor" in conf) conf.prefixColor = color;
+        }
+        if (layer === "status") next.components.statusMiss.color = color;
     }
     return next;
 }

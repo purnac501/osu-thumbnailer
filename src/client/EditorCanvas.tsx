@@ -245,37 +245,19 @@ export function EditorCanvas({ template, data, scale, selected, editing, onSelec
         const origin = geometryStart.current;
         const x = bounds.x + (origin ? origin.layer.left - origin.hitbox.left : 0);
         const y = bounds.y + (origin ? origin.layer.top - origin.hitbox.top : 0);
-        if (SIZE_FIELDS[layer]) {
-            onResize(layer, {
-                [SIZE_FIELDS[layer]!]: Math.max(10, Math.round(bounds.width)),
-                x: Math.round(x), y: Math.round(y),
-            });
+        const sizeField = SIZE_FIELDS[layer];
+        const patch: Record<string, number> = sizeField
+            ? { [sizeField]: Math.max(10, Math.round(bounds.width)) }
+            : { width: Math.round(bounds.width), height: Math.round(bounds.height) };
+        if (!sizeField && isTextLayer(layer) && origin && origin.hitbox.height > 0 && origin.fontSize) {
+            patch.fontSize = Math.max(10, Math.min(500, Math.round(origin.fontSize * (bounds.height / origin.hitbox.height))));
         }
-        else if (isTextLayer(layer) && origin && origin.hitbox.height > 0 && origin.fontSize) {
-            const scaleRatio = bounds.height / origin.hitbox.height;
-            const newFontSize = Math.max(10, Math.min(500, Math.round(origin.fontSize * scaleRatio)));
-            onResize(layer, {
-                fontSize: newFontSize,
-                width: Math.round(bounds.width),
-                height: Math.round(bounds.height),
-                x: Math.round(x),
-                y: Math.round(y),
-            });
-        }
-        else {
-            onResize(layer, {
-                width: Math.round(bounds.width), height: Math.round(bounds.height),
-                x: Math.round(x), y: Math.round(y),
-            });
-        }
+        onResize(layer, { ...patch, x: Math.round(x), y: Math.round(y) });
     };
     const finishTextEdit = () => {
         if (contextAvailable.current)
             return;
         onEditEnd();
-    };
-    const beginInteraction = () => {
-        onInteractStart();
     };
     return (<div ref={viewportRef} className="canvas-viewport" style={{ cursor: panning ? "grabbing" : undefined }} onPointerDown={(event) => {
             if (event.button === 0 && event.target === event.currentTarget) {
@@ -287,10 +269,8 @@ export function EditorCanvas({ template, data, scale, selected, editing, onSelec
             if (event.button === 1 || (isBg && (event.pointerType === "touch" || event.button === 0))) {
                 if (event.button === 1)
                     event.preventDefault();
-                if (event.button === 1 || isBg) {
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                    beginPan(event.clientX, event.clientY);
-                }
+                event.currentTarget.setPointerCapture(event.pointerId);
+                beginPan(event.clientX, event.clientY);
             }
         }} onPointerMove={(event) => movePan(event.clientX, event.clientY)} onPointerUp={(event) => {
             endPan();
@@ -360,7 +340,7 @@ export function EditorCanvas({ template, data, scale, selected, editing, onSelec
                 onEditStart(selected);
             }} onDragStart={() => {
                 geometryStart.current = { hitbox: selection, layer: rectOf(selected, true) ?? selection };
-                beginInteraction();
+                onInteractStart();
             }} onDrag={(_event, position) => {
                 const origin = geometryStart.current;
                 onMove(selected, position.x + (origin ? origin.layer.left - origin.hitbox.left : 0), position.y + (origin ? origin.layer.top - origin.hitbox.top : 0));
@@ -370,7 +350,7 @@ export function EditorCanvas({ template, data, scale, selected, editing, onSelec
                     layer: rectOf(selected, true) ?? selection,
                     fontSize: getLayerTextStyle(selected, template, data).fontSize,
                 };
-                beginInteraction();
+                onInteractStart();
             }} onResize={(_event, _direction, ref, _delta, position) => applyGeometry(selected, {
                 x: position.x, y: position.y, width: ref.offsetWidth, height: ref.offsetHeight,
             })} onResizeStop={() => { geometryStart.current = null; }}/>) : null}
