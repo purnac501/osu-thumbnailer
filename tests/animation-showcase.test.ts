@@ -1,3 +1,7 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ShowcaseIntroWidget } from "../src/client/animation/ShowcaseIntroWidget";
+import { DEFAULT_OVERLAY_DATA } from "../src/client/animation/types";
 import { describe, expect, it } from "vitest";
 import {
     animationExportFileName,
@@ -140,4 +144,15 @@ describe("seekShowcaseIntro timeline", () => {
 
         expect(Number(elements.container.style.opacity)).toBeLessThan(0.7);
     });
+});
+
+it("shows every mod on a leaderboard score", () => {
+    const data = {
+        ...DEFAULT_OVERLAY_DATA,
+        topScores: [{ rank: "S", title: "Natsukoi Hanabi (Sped Up Ver.)", timeAgo: "1y", pp: "100pp", mods: ["NC", "HR", "HD", "CL"] }],
+    };
+    const html = renderToStaticMarkup(createElement(ShowcaseIntroWidget, { data, setRef: () => () => {} }));
+    expect(html).toContain('title="Natsukoi Hanabi (Sped Up Ver.)">Natsukoi Hanabi (S...<');
+    for (const mod of data.topScores[0]!.mods)
+        expect(html).toContain(`alt="${mod}"`);
 });

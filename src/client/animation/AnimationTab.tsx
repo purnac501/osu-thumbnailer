@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Flex, SegmentedControl, Switch, TextField } from "@radix-ui/themes";
-import { DownloadIcon, PlayIcon } from "@radix-ui/react-icons";
+import { Button, SegmentedControl, Switch, TextField } from "@radix-ui/themes";
+import { PlayIcon } from "@radix-ui/react-icons";
 import "./overlay.css";
 import "./animation-tab.css";
 import { DEFAULT_OVERLAY_DATA, type OverlayData } from "./types";
@@ -58,7 +58,6 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
     const [loop, setLoop] = useState(true);
     const [busy, setBusy] = useState(false);
     const [fetchMsg, setFetchMsg] = useState<string | null>(null);
-    const [hasData, setHasData] = useState(true);
     const [downloadReady, setDownloadReady] = useState<{ url: string; filename: string; label: string } | null>(null);
     const [exportQuery] = useState(() => exportMode && typeof window !== "undefined"
         ? new URLSearchParams(window.location.search)
@@ -116,55 +115,33 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
 
     const replay = useCallback(() => {
         stopLiveLoop();
-        if (animStyleRef.current === "showcase") {
-            range.current = {
-                start: 0,
-                end: SHOWCASE_INTRO_TOTAL_CYCLE,
-            };
-            start.current = performance.now();
-            const step = (now: number) => {
-                const t = range.current.start + (now - (start.current ?? now)) / 1000;
-                if (t >= range.current.end) {
-                    if (loopRef.current) {
-                        range.current = { start: 0, end: SHOWCASE_INTRO_TOTAL_CYCLE };
-                        start.current = now;
-                        seekShowcaseIntro(0, showcaseSource);
-                        raf.current = requestAnimationFrame(step);
-                    } else {
-                        seekShowcaseIntro(range.current.end, showcaseSource);
-                        stopLiveLoop();
-                    }
-                    return;
-                }
-                seekShowcaseIntro(t, showcaseSource);
-                raf.current = requestAnimationFrame(step);
-            };
-            raf.current = requestAnimationFrame(step);
-            return;
-        }
-
+        const showcase = animStyleRef.current === "showcase";
+        const cycle = showcase ? SHOWCASE_INTRO_TOTAL_CYCLE : OVERLAY_TOTAL_CYCLE;
+        const seek = showcase
+            ? (t: number) => seekShowcaseIntro(t, showcaseSource)
+            : (t: number) => seekOverlay(t, source, dataRef.current);
         const selected = phaseRef.current;
         range.current = {
-            start: selected === "map" ? 2.88 : 0,
-            end: loopRef.current ? OVERLAY_TOTAL_CYCLE : selected === "map" ? 4.74 : 2.28,
+            start: !showcase && selected === "map" ? 2.88 : 0,
+            end: showcase || loopRef.current ? cycle : selected === "map" ? 4.74 : 2.28,
         };
         start.current = performance.now();
         const step = (now: number) => {
             const t = range.current.start + (now - (start.current ?? now)) / 1000;
             if (t >= range.current.end) {
                 if (loopRef.current) {
-                    range.current = { start: 0, end: OVERLAY_TOTAL_CYCLE };
+                    range.current = { start: 0, end: cycle };
                     start.current = now;
-                    seekOverlay(0, source, dataRef.current);
+                    seek(0);
                     raf.current = requestAnimationFrame(step);
                 }
                 else {
-                    seekOverlay(range.current.end, source, dataRef.current);
+                    seek(range.current.end);
                     stopLiveLoop();
                 }
                 return;
             }
-            seekOverlay(t, source, dataRef.current);
+            seek(t);
             raf.current = requestAnimationFrame(step);
         };
         raf.current = requestAnimationFrame(step);
@@ -207,7 +184,6 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         if (cached) {
             dataRef.current = cached;
             setData(cached);
-            setHasData(true);
             setFetchMsg("Synced!");
             replay();
             return;
@@ -227,7 +203,6 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
             cacheOverlay(clean, json.data);
             dataRef.current = json.data;
             setData(json.data);
-            setHasData(true);
             await window.waitForAllAssetsReady?.();
             setFetchMsg("Synced!");
             replay();
@@ -387,17 +362,14 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         })();
     };
     useEffect(() => {
-        onReady?.({ download, canDownload: hasData && renderProgress === null, renderProgress, downloadReady });
-    }, [onReady, download, hasData, renderProgress, downloadReady]);
+        onReady?.({ download, canDownload: renderProgress === null, renderProgress, downloadReady });
+    }, [onReady, download, renderProgress, downloadReady]);
     if (exportMode) {
         const stageClass = exportFormat === "gif" ? "animation-stage gif-export" : "animation-stage";
         const stageStyle = exportTransparent ? { backgroundColor: "transparent" } : undefined;
-        if (!hasData) {
-            return <div className={stageClass} ref={stageRef} style={stageStyle}/>;
-        }
         if (animStyle === "showcase") {
             return (
-                <div className={stageClass} ref={stageRef} style={{ ...stageStyle, width: 960, height: 540 }}>
+                <div className={`${stageClass} showcase-export`} ref={stageRef} style={stageStyle}>
                     <ShowcaseIntroWidget data={data} setRef={setShowcaseRef} />
                 </div>
             );
@@ -433,7 +405,7 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
         </section>
 
         <section className="sidebar-section animation-group" aria-label="Playback">
-          <Button type="button" size="2" color="gray" highContrast onClick={replay} disabled={!hasData} className="fetch-button">
+          <Button type="button" size="2" color="gray" highContrast onClick={replay} className="fetch-button">
             <PlayIcon /> Replay
           </Button>
           {animStyle === "card" ? (
@@ -465,8 +437,7 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
       </aside>
 
       <main className="app-preview" aria-label="Animation canvas">
-        {hasData ? (
-          animStyle === "showcase" ? (
+        {animStyle === "showcase" ? (
             <ZoomableStage key="showcase" width={960} height={540} maxFitZoom={1} fitLabel="Fit showcase to screen" background="transparent">
               <div ref={stageRef}>
                 <ShowcaseIntroWidget data={data} setRef={setShowcaseRef} />
@@ -479,11 +450,7 @@ export function AnimationTab({ exportMode = false, theme, onThemeChange, scoreUr
               </div>
             </ZoomableStage>
           )
-        ) : (
-          <div className="empty-state">
-            <p>Paste a score URL and fetch it to see the animation.</p>
-          </div>
-        )}
+        }
       </main>
     </>);
 }

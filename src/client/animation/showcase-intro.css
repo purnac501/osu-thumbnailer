@@ -10,6 +10,7 @@
 .showcase-intro-container {
   width: 960px;
   height: 540px;
+  flex: none;
   position: relative;
   overflow: hidden;
   background: transparent;
@@ -19,11 +20,17 @@
   box-sizing: border-box;
 }
 
-/* Background wallpaper is transparent for video overlay compositing */
-.showcase-bg-layer,
-.showcase-bg-vignette {
-  display: none;
+/* Export the same fixed canvas used by the preview, without stage padding. */
+.animation-stage.showcase-export {
+  width: 960px;
+  height: 540px;
+  min-height: 540px;
+  padding: 0;
+  overflow: hidden;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
+
 
 /* ==========================================================================
    Top Bar: Star Rating Ribbon & Difficulty Gauge Bars
@@ -242,16 +249,16 @@
 /* Player Card tucked behind circle rim */
 .showcase-player-card {
   position: absolute;
-  top: 144px;
-  left: 95px;
-  width: 275px;
+  top: 128px;
+  left: 180px;
+  width: 210px;
   height: 38px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 4px 12px;
   border-radius: 8px;
-  background: linear-gradient(180deg, #d38290 0%, #c3707f 100%);
+  background: linear-gradient(180deg, #929696 0%, #747979 100%);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
   box-sizing: border-box;
   overflow: hidden;
@@ -322,6 +329,7 @@
 .showcase-play-item {
   position: absolute;
   height: 32px;
+  width: 200px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -332,38 +340,32 @@
 
 .showcase-play-row-1 {
   top: 190px;
-  left: 54px;
-  width: 228px;
+  left: 96px;
 }
 
 .showcase-play-row-2 {
   top: 228px;
-  left: 42px;
-  width: 228px;
+  left: 87px;
 }
 
 .showcase-play-row-3 {
   top: 266px;
-  left: 34px;
-  width: 226px;
+  left: 82px;
 }
 
 .showcase-play-row-4 {
   top: 304px;
-  left: 34px;
-  width: 226px;
+  left: 84px;
 }
 
 .showcase-play-row-5 {
   top: 342px;
-  left: 42px;
-  width: 228px;
+  left: 92px;
 }
 
 .showcase-play-row-6 {
   top: 380px;
-  left: 54px;
-  width: 228px;
+  left: 109px;
 }
 
 /* Thumbnail with artwork and rank letter */
@@ -474,37 +476,6 @@
   flex-shrink: 0;
 }
 
-.showcase-mod-icon-badge {
-  width: 15px;
-  height: 13px;
-  border-radius: 2.5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-  padding: 1px;
-  box-sizing: border-box;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.showcase-mod-svg {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
-
-.showcase-mod-tag {
-  font-family: var(--font-main);
-  font-size: 8.5px;
-  font-weight: 800;
-  padding: 1px 3.5px;
-  border-radius: 2.5px;
-  letter-spacing: 0.2px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-}
-
 .showcase-play-time {
   font-family: var(--font-main);
   font-size: 10px;
@@ -547,7 +518,7 @@
 /* 1. Score Row */
 .showcase-score-row {
   top: 184px;
-  left: 684px;
+  left: 658px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -556,12 +527,11 @@
 .showcase-score-label {
   align-self: flex-start;
   font-family: var(--font-main);
-  font-size: 9.5px;
-  font-weight: 800;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
   padding: 1px 6px;
   border-radius: 3px;
-  background: #D86A7D;
+  background: #858b8d;
   color: #fff;
   letter-spacing: 0.4px;
   transform: skewX(-14deg);
@@ -569,8 +539,8 @@
 
 .showcase-score-val {
   font-family: var(--font-main);
-  font-size: 25px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.5px;
   color: #fff;
@@ -581,12 +551,12 @@
 /* 2. Combo Row */
 .showcase-combo-row {
   top: 238px;
-  left: 684px;
+  left: 672px;
   font-family: var(--font-main);
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
-  color: #8C96A0;
+  color: #a6a6a2;
   letter-spacing: 0.3px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
   line-height: 1;
@@ -594,20 +564,20 @@
 
 /* 3. Chevron PP Badge */
 .showcase-pp-badge {
-  top: 278px;
-  left: 660px;
+  top: 276px;
+  left: 672px;
   display: inline-flex;
   align-items: center;
-  background: linear-gradient(180deg, #d88192 0%, #c4697a 100%);
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
-  padding: 4px 18px 4px 24px;
+  background: linear-gradient(180deg, #969b9d 0%, #747a7d 100%);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 10px 50%);
+  padding: 5px 18px;
   box-shadow: 0 3px 12px rgba(216, 129, 146, 0.45);
 }
 
 .showcase-pp-text {
   font-family: var(--font-main);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 500;
   color: #fff;
   letter-spacing: 0.4px;
   line-height: 1;
@@ -617,12 +587,12 @@
 /* 4. Accuracy Row */
 .showcase-acc-row {
   top: 324px;
-  left: 684px;
+  left: 672px;
   font-family: var(--font-main);
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
-  color: #8C96A0;
+  color: #a6a6a2;
   letter-spacing: 0.3px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
   line-height: 1;
@@ -630,8 +600,8 @@
 
 /* 5. Hit Counts Slanted Strip */
 .showcase-hits-strip {
-  top: 368px;
-  left: 638px;
+  top: 358px;
+  left: 660px;
   display: flex;
   align-items: center;
   transform: skewX(-18deg);
@@ -641,7 +611,7 @@
 }
 
 .showcase-hit-box {
-  padding: 3px 14px;
+  padding: 5px 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -650,8 +620,8 @@
 .showcase-hit-box span {
   transform: skewX(18deg);
   font-family: var(--font-main);
-  font-size: 15.5px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: #fff;
   line-height: 1;
@@ -683,4 +653,14 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   letter-spacing: 0.3px;
   z-index: 20;
+}
+
+.showcase-score-mods {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  z-index: 3;
 }

@@ -1,8 +1,8 @@
 import type { RefCallback } from "react";
 import { Star } from "lucide-react";
 import { DEFAULT_OVERLAY_DATA, type OverlayData } from "./types";
-import { modAssetPath } from "../../shared/mods/mods";
-import { resolveAssetUrl } from "../../shared/assets/assetUrl";
+import { ModIcon } from "../../thumbnail/components/Mods/ModList";
+import { referenceLayout } from "../../thumbnail/templates/reference/layout";
 import "./showcase-intro.css";
 
 export type ShowcaseNode =
@@ -16,35 +16,9 @@ export type ShowcaseNode =
 
 export type ShowcaseRefSetter = (name: ShowcaseNode) => RefCallback<Element>;
 
-const CPOL_MOD_CONFIG: Record<string, { bg: string; fg: "dark" | "light" }> = {
-    HD: { bg: "#FFCC22", fg: "dark" },
-    HR: { bg: "#FF4D4D", fg: "light" },
-    DT: { bg: "#7A5CFF", fg: "light" },
-    NC: { bg: "#7A5CFF", fg: "light" },
-    FL: { bg: "#FF8822", fg: "light" },
-    EZ: { bg: "#99FF4D", fg: "dark" },
-    HT: { bg: "#99FF4D", fg: "dark" },
-    DC: { bg: "#99FF4D", fg: "dark" },
-    SD: { bg: "#FF4D4D", fg: "light" },
-    PF: { bg: "#FF4D4D", fg: "light" },
-    RX: { bg: "#4DC3FF", fg: "light" },
-    AP: { bg: "#4DC3FF", fg: "light" },
-    SO: { bg: "#EC4899", fg: "light" },
-    NF: { bg: "#3B82F6", fg: "light" },
-    CL: { bg: "#555A64", fg: "light" },
-    MR: { bg: "#8C5CFF", fg: "light" },
-    V2: { bg: "#8C5CFF", fg: "light" },
-};
-
 function formatScoreNumber(val: string | number): string {
     const raw = String(val).replace(/\s+/g, "");
     if (!/^\d+$/.test(raw)) return String(val);
-    return raw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-}
-
-function formatComboNumber(n: number | string): string {
-    const raw = String(n).replace(/\s+/g, "");
-    if (!/^\d+$/.test(raw)) return String(n);
     return raw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
@@ -71,29 +45,11 @@ export function ShowcaseIntroWidget({
     data: OverlayData;
     setRef: ShowcaseRefSetter;
 }) {
-    const score = data.score ?? {
-        totalScore: "80 109 230",
-        combo: 1869,
-        maxCombo: 1870,
-        pp: "880PP",
-        accuracy: "99.63%",
-        rank: "S",
-        count300: 8,
-        count100: 0,
-        count50: 0,
-        countMiss: 0,
-        playedAtAgo: "26 minutes ago",
-        mods: ["HD", "HR"],
-    };
+    const score = data.score ?? DEFAULT_OVERLAY_DATA.score!;
 
     const topScores = (data.topScores && data.topScores.length > 0)
         ? data.topScores.slice(0, 6)
         : (DEFAULT_OVERLAY_DATA.topScores ?? []);
-
-    const csPct = Math.min(100, Math.max(0, (data.map.cs / 10) * 100));
-    const arPct = Math.min(100, Math.max(0, (data.map.ar / 11) * 100));
-    const odPct = Math.min(100, Math.max(0, (data.map.od / 11) * 100));
-    const hpPct = Math.min(100, Math.max(0, (data.map.hp / 10) * 100));
 
     const rankLetter = (score.rank || "S").toUpperCase().replace(/H$/, "");
     const rankClass = rankLetter === "SS" || rankLetter === "X"
@@ -105,30 +61,21 @@ export function ShowcaseIntroWidget({
         : "";
 
     return (
-        <div className="showcase-intro-container" ref={setRef("container") as RefCallback<HTMLDivElement>}>
+        <div className="showcase-intro-container" ref={setRef("container")}>
             {/* Top Map Attributes & Star Rating Bar */}
-            <header className="showcase-top-bar" ref={setRef("topBar") as RefCallback<HTMLElement>}>
-                {/* Left Gauges: CS & AR */}
+            <header className="showcase-top-bar" ref={setRef("topBar")}>
                 <div className="showcase-gauge-group">
-                    <div className="showcase-gauge-item">
-                        <div className="showcase-gauge-track">
-                            <div className="showcase-gauge-fill cs" style={{ width: `${csPct}%` }} />
+                    {(["cs", "ar"] as const).map((stat) => (
+                        <div className="showcase-gauge-item" key={stat}>
+                            <div className="showcase-gauge-track">
+                                <div className={`showcase-gauge-fill ${stat}`} style={{ width: `${Math.min(100, Math.max(0, (data.map[stat] / (stat === "cs" ? 10 : 11)) * 100))}%` }} />
+                            </div>
+                            <div className="showcase-gauge-labels">
+                                <span className="showcase-gauge-name">{`${stat.toUpperCase()}:`}</span>
+                                <span className="showcase-gauge-val">{data.map[stat].toFixed(2)}</span>
+                            </div>
                         </div>
-                        <div className="showcase-gauge-labels">
-                            <span className="showcase-gauge-name">CS:</span>
-                            <span className="showcase-gauge-val">{data.map.cs.toFixed(2)}</span>
-                        </div>
-                    </div>
-
-                    <div className="showcase-gauge-item">
-                        <div className="showcase-gauge-track">
-                            <div className="showcase-gauge-fill ar" style={{ width: `${arPct}%` }} />
-                        </div>
-                        <div className="showcase-gauge-labels">
-                            <span className="showcase-gauge-name">AR:</span>
-                            <span className="showcase-gauge-val">{data.map.ar.toFixed(2)}</span>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
                 {/* Center Star Ribbon & Star Rating Value */}
@@ -139,32 +86,24 @@ export function ShowcaseIntroWidget({
                     <div className="showcase-sr-value">{data.map.sr}</div>
                 </div>
 
-                {/* Right Gauges: OD & HP */}
                 <div className="showcase-gauge-group">
-                    <div className="showcase-gauge-item">
-                        <div className="showcase-gauge-track">
-                            <div className="showcase-gauge-fill od" style={{ width: `${odPct}%` }} />
+                    {(["od", "hp"] as const).map((stat) => (
+                        <div className="showcase-gauge-item" key={stat}>
+                            <div className="showcase-gauge-track">
+                                <div className={`showcase-gauge-fill ${stat}`} style={{ width: `${Math.min(100, Math.max(0, (data.map[stat] / (stat === "hp" ? 10 : 11)) * 100))}%` }} />
+                            </div>
+                            <div className="showcase-gauge-labels">
+                                <span className="showcase-gauge-name">{`${stat.toUpperCase()}:`}</span>
+                                <span className="showcase-gauge-val">{data.map[stat].toFixed(2)}</span>
+                            </div>
                         </div>
-                        <div className="showcase-gauge-labels">
-                            <span className="showcase-gauge-name">OD:</span>
-                            <span className="showcase-gauge-val">{data.map.od.toFixed(2)}</span>
-                        </div>
-                    </div>
-
-                    <div className="showcase-gauge-item">
-                        <div className="showcase-gauge-track">
-                            <div className="showcase-gauge-fill hp" style={{ width: `${hpPct}%` }} />
-                        </div>
-                        <div className="showcase-gauge-labels">
-                            <span className="showcase-gauge-name">HP:</span>
-                            <span className="showcase-gauge-val">{data.map.hp.toFixed(2)}</span>
-                        </div>
-                    </div>
+                    ))}
                 </div>
+
             </header>
 
             {/* Center Circular Lens */}
-            <div className="showcase-lens-wrap" ref={setRef("lensWrap") as RefCallback<HTMLDivElement>}>
+            <div className="showcase-lens-wrap" ref={setRef("lensWrap")}>
                 <div
                     className="showcase-lens-artwork"
                     style={{ backgroundImage: `url(${data.map.cover})` }}
@@ -172,14 +111,21 @@ export function ShowcaseIntroWidget({
                 <div className="showcase-lens-dim" />
                 <div
                     className={`showcase-grade-rank ${rankClass}`}
-                    ref={setRef("gradeRank") as RefCallback<HTMLDivElement>}
+                    ref={setRef("gradeRank")}
                 >
                     {rankLetter}
+                </div>
+                <div className="showcase-score-mods">
+                    {score.mods.map((mod, index) => (
+                        <ModIcon key={`${mod}-${index}`} mod={{ acronym: mod }} size={32} radius={5.3}
+                            allowFallback={referenceLayout.modList.fallbackAcronyms}
+                            colorOverrides={referenceLayout.modList.modColors} />
+                    ))}
                 </div>
             </div>
 
             {/* Left Flyout: Player Card & Top Plays Stack Curved Along Lens */}
-            <aside className="showcase-left-flyout" ref={setRef("leftFlyout") as RefCallback<HTMLElement>}>
+            <aside className="showcase-left-flyout" ref={setRef("leftFlyout")}>
                 <div className="showcase-player-card">
                     <img
                         className="showcase-player-avatar"
@@ -206,93 +152,63 @@ export function ShowcaseIntroWidget({
                 </div>
 
                 <div className="showcase-top-plays-list">
-                    {topScores.map((play, idx) => (
-                        <div key={`${play.title}-${idx}`} className={`showcase-play-item showcase-play-row-${idx + 1}`}>
-                            <div className="showcase-play-thumb-wrap">
-                                <img
-                                    className="showcase-play-thumb"
-                                    src={play.cover || data.map.cover}
-                                    alt={play.title}
-                                    loading="eager"
-                                    onError={(e) => {
-                                        const el = e.target as HTMLImageElement;
-                                        if (!el.dataset.fallback) {
-                                            el.dataset.fallback = "1";
-                                            el.src = data.map.cover;
-                                        }
-                                    }}
-                                />
-                                <div className="showcase-play-thumb-dim" />
-                                <div className={`showcase-play-rank-badge ${getPlayRankClass(play.rank)}`}>
-                                    {play.rank.toUpperCase().replace(/H$/, "")}
+                    {topScores.map((play, idx) => {
+                        const title = Array.from(play.title);
+                        return (
+                            <div key={`${play.title}-${idx}`} className={`showcase-play-item showcase-play-row-${idx + 1}`}>
+                                <div className="showcase-play-thumb-wrap">
+                                    <img
+                                        className="showcase-play-thumb"
+                                        src={play.cover || data.map.cover}
+                                        alt={play.title}
+                                        loading="eager"
+                                        onError={(e) => {
+                                            const el = e.target as HTMLImageElement;
+                                            if (!el.dataset.fallback) {
+                                                el.dataset.fallback = "1";
+                                                el.src = data.map.cover;
+                                            }
+                                        }}
+                                    />
+                                    <div className="showcase-play-thumb-dim" />
+                                    <div className={`showcase-play-rank-badge ${getPlayRankClass(play.rank)}`}>
+                                        {play.rank.toUpperCase().replace(/H$/, "")}
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="showcase-play-body">
-                                <div className="showcase-play-title" title={play.title}>
-                                    {play.title}
-                                </div>
-                                <div className="showcase-play-meta">
-                                    {play.mods && play.mods.length > 0 && (
-                                        <div className="showcase-mod-combo">
-                                            {play.mods.slice(0, 3).map((mod) => {
-                                                const rawAsset = modAssetPath(mod);
-                                                const asset = resolveAssetUrl(rawAsset ?? undefined);
-                                                const conf = CPOL_MOD_CONFIG[mod.toUpperCase()] ?? { bg: "#555A64", fg: "light" };
-                                                if (asset) {
-                                                    return (
-                                                        <div
-                                                            key={mod}
-                                                            className={`showcase-mod-icon-badge ${conf.fg === "dark" ? "mod-dark" : "mod-light"}`}
-                                                            style={{ backgroundColor: conf.bg }}
-                                                            title={mod}
-                                                        >
-                                                            <img
-                                                                src={asset}
-                                                                alt={mod}
-                                                                className="showcase-mod-svg"
-                                                                style={{
-                                                                    filter: conf.fg === "dark"
-                                                                        ? "brightness(0.12)"
-                                                                        : "drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5))",
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    );
-                                                }
-                                                return (
-                                                    <span
-                                                        key={mod}
-                                                        className="showcase-mod-tag"
-                                                        style={{
-                                                            backgroundColor: conf.bg,
-                                                            color: conf.fg === "dark" ? "#1a1a1a" : "#ffffff",
-                                                        }}
-                                                    >
-                                                        {mod}
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                    <span className="showcase-play-time">{play.timeAgo}</span>
-                                    <span className="showcase-play-pp">{play.pp}</span>
+                                <div className="showcase-play-body">
+                                    <div className="showcase-play-title" title={play.title}>
+                                        {title.length > 18 ? `${title.slice(0, 18).join("").trimEnd()}...` : play.title}
+                                    </div>
+                                    <div className="showcase-play-meta">
+                                        {play.mods && play.mods.length > 0 && (
+                                            <div className="showcase-mod-combo">
+                                                {play.mods.map((mod, index) => (
+                                                    <ModIcon key={`${mod}-${index}`} mod={{ acronym: mod }} size={14} radius={2.3}
+                                                        allowFallback={referenceLayout.modList.fallbackAcronyms}
+                                                        colorOverrides={referenceLayout.modList.modColors} />
+                                                ))}
+                                            </div>
+                                        )}
+                                        <span className="showcase-play-time">{play.timeAgo}</span>
+                                        <span className="showcase-play-pp">{play.pp}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </aside>
 
             {/* Right Flyout: Score, Combo, PP Badge, Accuracy, Hit Judgments Curved Along Lens */}
-            <aside className="showcase-right-flyout" ref={setRef("rightFlyout") as RefCallback<HTMLElement>}>
+            <aside className="showcase-right-flyout" ref={setRef("rightFlyout")}>
                 <div className="showcase-right-item showcase-score-row">
                     <span className="showcase-score-label">Score</span>
                     <span className="showcase-score-val">{formatScoreNumber(score.totalScore)}</span>
                 </div>
 
                 <div className="showcase-right-item showcase-combo-row">
-                    {formatComboNumber(score.combo)}/{formatComboNumber(score.maxCombo)}x
+                    {formatScoreNumber(score.combo)}/{formatScoreNumber(score.maxCombo)}x
                 </div>
 
                 <div className="showcase-right-item showcase-pp-badge">
@@ -317,7 +233,7 @@ export function ShowcaseIntroWidget({
             </aside>
 
             {/* Bottom Timestamp */}
-            <footer className="showcase-bottom-time" ref={setRef("bottomTime") as RefCallback<HTMLElement>}>
+            <footer className="showcase-bottom-time" ref={setRef("bottomTime")}>
                 {score.playedAtAgo}
             </footer>
         </div>
