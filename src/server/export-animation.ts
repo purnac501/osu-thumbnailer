@@ -35,19 +35,7 @@ export const EXPORT_DEVICE_SCALE = 1.5;
 export const EXPORT_CLIP_PADDING = 56;
 export const EXPORT_SHARD_COUNT = 4;
 export const EXPORT_CACHE_TTL_MS = 30 * 60 * 1000;
-export function gifFfmpegArgs(framePattern: string, outFile: string, preset?: AnimationExportPreset): string[] {
-    if (preset === "compact") {
-        return [
-            "-y",
-            "-framerate",
-            String(ANIMATION_EXPORT_FPS),
-            "-i",
-            framePattern,
-            "-vf",
-            "fps=30,split[s0][s1];[s0]palettegen=max_colors=256:reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle:alpha_threshold=128",
-            outFile,
-        ];
-    }
+export function gifFfmpegArgs(framePattern: string, outFile: string, _preset?: AnimationExportPreset): string[] {
     return [
         "-y",
         "-framerate",
@@ -60,26 +48,7 @@ export function gifFfmpegArgs(framePattern: string, outFile: string, preset?: An
     ];
 }
 export function movFfmpegArgs(framePattern: string, outFile: string, preset?: AnimationExportPreset): string[] {
-    if (preset === "compact") {
-        return [
-            "-y",
-            "-framerate",
-            String(ANIMATION_EXPORT_FPS),
-            "-i",
-            framePattern,
-            "-vf",
-            "fps=30,scale=420:-1:flags=lanczos,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuva444p10le",
-            "-c:v",
-            "prores_ks",
-            "-profile:v",
-            "4444",
-            "-qscale:v",
-            "34",
-            "-movflags",
-            "+faststart",
-            outFile,
-        ];
-    }
+    const compact = preset === "compact";
     return [
         "-y",
         "-framerate",
@@ -87,13 +56,13 @@ export function movFfmpegArgs(framePattern: string, outFile: string, preset?: An
         "-i",
         framePattern,
         "-vf",
-        "pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuva444p10le",
+        `${compact ? "fps=30,scale=420:-1:flags=lanczos," : ""}pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuva444p10le`,
         "-c:v",
         "prores_ks",
         "-profile:v",
         "4444",
         "-qscale:v",
-        "25",
+        compact ? "34" : "25",
         "-movflags",
         "+faststart",
         outFile,
@@ -116,7 +85,7 @@ export function gifsicleArgs(inFile: string, outFile: string, preset?: Animation
     return ["--optimize=3", "--colors", "256", "-o", outFile, inFile];
 }
 export function exportCacheKey(options: Pick<RenderAnimationOptions, "format" | "score" | "theme" | "accent"> & { preset?: string; style?: string }): string {
-    return createHash("sha1").update(JSON.stringify(["v31", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.style ?? "card", options.score, options.theme, options.accent])).digest("hex");
+    return createHash("sha1").update(JSON.stringify(["v37", ANIMATION_EXPORT_FRAMES, options.format, options.preset ?? "hq", options.style ?? "card", options.score, options.theme, options.accent])).digest("hex");
 }
 export function exportCacheDir(): string {
     return path.join(os.tmpdir(), "osu-overlay-cache");
@@ -228,7 +197,7 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
                 height: viewport.height,
             };
             let done = 0;
-            await Promise.all(pages.map((page, shard) => (async () => {
+            await Promise.all(pages.map(async (page, shard) => {
                 for (let i = shard; i < ANIMATION_EXPORT_FRAMES; i += EXPORT_SHARD_COUNT) {
                     const t = (i / (ANIMATION_EXPORT_FRAMES - 1)) * ANIMATION_EXPORT_DURATION;
                     await page.evaluate((time) => {
@@ -244,7 +213,7 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
                     done += 1;
                     onProgress?.(done, ANIMATION_EXPORT_FRAMES);
                 }
-            })()));
+            }));
         }
         finally {
             await browser.close();
@@ -272,7 +241,7 @@ export async function renderAnimationExport(options: RenderAnimationOptions, onP
         return {
             bytes,
             contentType: ANIMATION_EXPORT_MIME[options.format],
-            fileName: animationExportFileName(options.format, options.preset),
+            fileName: animationExportFileName(options.format, options.preset, options.style),
         };
     }
     finally {

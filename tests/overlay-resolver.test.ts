@@ -68,6 +68,40 @@ function clientWith(scoreMods: unknown, scoreThrows = false, moddedAttributes: a
 }
 const identity = (url?: string) => url;
 describe("resolveOverlayData", () => {
+    it("uses singular and plural units for score timestamps", async () => {
+        const now = Date.UTC(2026, 8, 5);
+        const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+        try {
+            const client = clientWith([]);
+            const score = await client.fetchScore("1", null);
+            for (const [unit, minutes] of [["minute", 1], ["hour", 60], ["day", 1440], ["month", 43200], ["year", 518400]] as const) {
+                for (const count of [1, 2]) {
+                    vi.mocked(client.fetchScore).mockResolvedValue({
+                        ...score, created_at: new Date(now - count * minutes * 60000).toISOString(),
+                    });
+                    const data = await resolveOverlayData("https://osu.ppy.sh/scores/1", client, identity);
+                    expect(data.score?.playedAtAgo).toBe(`${count} ${unit}${count === 1 ? "" : "s"} ago`);
+                }
+            }
+        } finally {
+            clock.mockRestore();
+        }
+    });
+    it("loads the beatmap while the user request is pending", async () => {
+        const client = clientWith([]);
+        const apiGet = client.apiGet;
+        let releaseUser!: (value: typeof user) => void;
+        const pendingUser = new Promise<typeof user>((resolve) => { releaseUser = resolve; });
+        client.apiGet = vi.fn((path: string) => path === "/users/12345/osu" ? pendingUser : apiGet(path));
+        const pending = resolveOverlayData("https://osu.ppy.sh/scores/5500357550", client, identity);
+        try {
+            await vi.waitFor(() => expect(client.apiGet).toHaveBeenCalledWith("/beatmaps/999"));
+        }
+        finally {
+            releaseUser(user);
+        }
+        expect((await pending).player.username).toBe("TestPlayer");
+    });
     it("resolves player, map, peak, and badges from a score", async () => {
         const data = await resolveOverlayData("https://osu.ppy.sh/scores/5500357550", clientWith([]), identity);
         expect(data.player.username).toBe("TestPlayer");

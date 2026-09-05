@@ -315,15 +315,21 @@
       z-index: 1;
       overflow: hidden;
     }
-    .bottom-card-lip-shine {
+    .card-wipe {
       position: absolute;
-      inset: 0 auto 0 0;
-      width: 28%;
-      opacity: 0;
-      transform: translateX(-120%) skewX(-18deg);
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.32), transparent);
-      will-change: transform, opacity;
+      inset: 0 0 auto;
+      height: 160%;
+      z-index: 5;
+      pointer-events: none;
+      transform: translateY(-100%);
+      will-change: transform;
+      background:
+        linear-gradient(180deg, rgba(225, 234, 239, 0.55), transparent 2%, transparent 98%, rgba(225, 234, 239, 0.55)),
+        linear-gradient(115deg, transparent 20%, rgba(225, 234, 239, 0.08) 44%, transparent 65%),
+        repeating-linear-gradient(0deg, transparent 0 2px, rgba(255, 255, 255, 0.025) 2px 3px),
+        linear-gradient(180deg, #81898d, #454b4e 12%, #34393c 48%, #454b4e 88%, #81898d);
     }
+
 
 
 

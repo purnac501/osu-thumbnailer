@@ -17,9 +17,9 @@ export interface FitSpec {
 export function fitFontSize(text: string, spec: FitSpec, maxWidth: number, minSize = 20): number {
     if (maxWidth <= 0 || typeof document === "undefined" || text === "")
         return spec.fontSize;
-    const width = (size: number) => measureWidth(text, `${spec.fontWeight} ${size}px ${spec.fontFamily}`, spec.letterSpacing ?? 0);
-    if (width(spec.fontSize) <= maxWidth)
+    const width = measureWidth(text, `${spec.fontWeight} ${spec.fontSize}px ${spec.fontFamily}`, spec.letterSpacing ?? 0);
+    if (width <= maxWidth)
         return spec.fontSize;
-    const scaled = Math.floor((spec.fontSize * maxWidth) / Math.max(1, width(spec.fontSize)));
+    const scaled = Math.floor((spec.fontSize * maxWidth) / Math.max(1, width));
     return Math.max(minSize, scaled);
 }

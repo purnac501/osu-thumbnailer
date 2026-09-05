@@ -125,7 +125,7 @@ export function GeneratorPage() {
                 .catch(() => { });
         }
     }, [templateId]);
-    const [history, setHistory] = useState<{
+    const [, setHistory] = useState<{
         past: EditorState[];
         future: EditorState[];
     }>({
@@ -137,10 +137,9 @@ export function GeneratorPage() {
         editorRef.current = editor;
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ url, resolution, editor, templateId }));
     }, [url, resolution, editor, templateId]);
-    const replaceEditor = (next: EditorState) => setEditor(next);
-    const mutate = (patch: Partial<EditorState>, push = false) => {
+    const set = (patch: Partial<EditorState>, push = false) => {
         if (push) {
-            setHistory((h) => ({ past: [...h.past.slice(-59), editorRef.current], future: [] }));
+            pushHistorySnapshot();
         }
         setEditor((prev) => ({ ...prev, ...patch }));
     };
@@ -148,14 +147,14 @@ export function GeneratorPage() {
         if (past.length === 0)
             return { past, future };
         const prev = past[past.length - 1]!;
-        queueMicrotask(() => replaceEditor(prev));
+        queueMicrotask(() => setEditor(prev));
         return { past: past.slice(0, -1), future: [editorRef.current, ...future].slice(0, 60) };
     });
     const redo = () => setHistory(({ past, future }) => {
         if (future.length === 0)
             return { past, future };
         const next = future[0]!;
-        queueMicrotask(() => replaceEditor(next));
+        queueMicrotask(() => setEditor(next));
         return { past: [...past, editorRef.current], future: future.slice(1) };
     });
     useEffect(() => {
@@ -191,7 +190,6 @@ export function GeneratorPage() {
         setSliderBreakDraft(String(editor.sliderBreakCount ?? result?.data.sbCount ?? 0));
         setMissDraft(String(editor.missCount ?? result?.data.missCount ?? 0));
     }, [result, editor.sliderBreakCount, editor.missCount]);
-    const set = (patch: Partial<EditorState>, push = false) => mutate(patch, push);
     async function generate() {
         setBusy(true);
         setError(null);
@@ -204,7 +202,7 @@ export function GeneratorPage() {
                 throw new Error(body?.error ?? `Score request failed (${res.status})`);
             }
             setResult((await res.json()) as ThumbnailResult);
-            replaceEditor({ ...EMPTY_EDITOR, accent: editorRef.current.accent });
+            setEditor({ ...EMPTY_EDITOR, accent: editorRef.current.accent });
             setHistory({ past: [], future: [] });
             setSelected(null);
             setEditingLayer(null);
@@ -298,10 +296,7 @@ export function GeneratorPage() {
         else if (key === "pp") {
             set({ textOverrides: { ...editor.textOverrides, pp: value.match(/\d+(?:\.\d+)?/)?.[0] ?? "" } });
         }
-        else if (key === "__bottom__") {
-            set({ bottomText: value });
-        }
-        else if (key === "bottom-text") {
+        else if (key === "__bottom__" || key === "bottom-text") {
             set({ bottomText: value });
         }
         else {
@@ -346,38 +341,16 @@ export function GeneratorPage() {
         const text = { ...editor.textOverrides };
         const colors = { ...editor.colorOverrides };
         const fontSizes = { ...editor.fontSizeOverrides };
-        delete pos[layer];
-        delete size[layer];
-        delete colors[layer];
-        delete fontSizes[layer];
-        if (layer === "status-miss" || layer === "status") {
-            delete pos["status"];
-            delete pos["status-miss"];
-            delete size["status"];
-            delete size["status-miss"];
-            delete text["status"];
-            delete text["status-miss"];
-            delete colors["status"];
-            delete colors["status-miss"];
-            delete fontSizes["status"];
-            delete fontSizes["status-miss"];
+        const layers = layer === "status-miss" || layer === "status"
+            ? ["status", "status-miss"]
+            : layer === "bottom-message" || layer === "bottom-text"
+                ? ["bottom-message", "bottom-text"]
+                : [layer];
+        for (const overrides of [pos, size, text, colors, fontSizes]) {
+            for (const id of layers)
+                delete overrides[id];
         }
-        else if (layer === "bottom-message" || layer === "bottom-text") {
-            delete pos["bottom-message"];
-            delete pos["bottom-text"];
-            delete size["bottom-message"];
-            delete size["bottom-text"];
-            delete text["bottom-message"];
-            delete text["bottom-text"];
-            delete colors["bottom-message"];
-            delete colors["bottom-text"];
-            delete fontSizes["bottom-message"];
-            delete fontSizes["bottom-text"];
-        }
-        else {
-            delete text[layer];
-        }
-        replaceEditor({
+        setEditor({
             ...editor,
             ...(layer === "bottom-message" || layer === "bottom-text" ? { bottomText: undefined, bottomAccent: undefined } : {}),
             positionOverrides: pos,
@@ -481,7 +454,7 @@ export function GeneratorPage() {
         </SegmentedControl.Root>
         <Flex className="toolbar-actions" align="center" gap="2">
           {activeTab === "thumbnails" ? (<Select.Root size="2" value={templateId} onValueChange={(val) => {
-                mutate({ accent: undefined }, true);
+                set({ accent: undefined }, true);
                 setTemplateId(val);
             }}>
             <Select.Trigger className="toolbar-select" aria-label="Template selector"/>
@@ -656,7 +629,7 @@ export function GeneratorPage() {
         {result ? <div className="sidebar-footer">
           <Button type="button" onClick={() => {
                     pushHistorySnapshot();
-                    replaceEditor(EMPTY_EDITOR);
+                    setEditor(EMPTY_EDITOR);
                     setSliderBreakDraft(String(result?.data.sbCount ?? 0));
                     setSelected(null);
                     setEditingLayer(null);

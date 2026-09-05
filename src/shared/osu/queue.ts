@@ -10,10 +10,7 @@ export interface QueueRunStats {
     queuePosition: number;
 }
 export class OsuRequestQueue {
-    private queue: Array<{
-        enqueuedAt: number;
-        resolve: () => void;
-    }> = [];
+    private queue: Array<() => void> = [];
     private activeCount = 0;
     private timer: ReturnType<typeof setTimeout> | null = null;
     private lastStartTime = 0;
@@ -39,7 +36,7 @@ export class OsuRequestQueue {
         const enqueuedAt = Date.now();
         const queuePosition = this.queue.length + 1;
         await new Promise<void>((resolve) => {
-            this.queue.push({ enqueuedAt, resolve });
+            this.queue.push(resolve);
             this.processNext();
         });
         const startedAt = Date.now();
@@ -72,7 +69,7 @@ export class OsuRequestQueue {
             return;
         this.activeCount++;
         this.lastStartTime = Date.now();
-        next.resolve();
+        next();
         this.processNext();
     }
 }

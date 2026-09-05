@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { NormalizedMod } from "../../../shared/types/thumbnail";
 import { modAssetPath } from "../../../shared/mods/mods";
 import { resolveAssetUrl } from "../../../shared/assets/assetUrl";
@@ -49,39 +48,27 @@ export function ModIcon({ mod, size, radius, glow, allowFallback, colorOverrides
     const color = resolveColor(mod.acronym, colorOverrides);
     const imgFilter = color.fg === "dark" ? "brightness(0.15)" : undefined;
     const tileFilter = glow ? `drop-shadow(0 0 ${glow.blur}px ${glow.color})` : undefined;
-    if (asset) {
-        return (<div style={{
-                width: size,
-                height: size,
-                borderRadius: radius,
-                background: color.bg,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-                filter: tileFilter,
-            }} title={mod.name ?? mod.acronym}>
-
-        <img src={asset} alt={mod.acronym} style={{ width: "100%", height: "100%", objectFit: "cover", filter: imgFilter }}/>
-      </div>);
-    }
-    if (!allowFallback)
+    if (!asset && !allowFallback)
         return null;
     return (<div style={{
             width: size,
             height: size,
             borderRadius: radius,
             background: color.bg,
-            color: color.fg === "dark" ? "#221510" : "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: "sans-serif",
-            fontWeight: 700,
-            fontSize: size * 0.34,
             filter: tileFilter,
-        }} title={mod.acronym}>
-      {mod.acronym}
+            ...(asset ? { overflow: "hidden" } : {
+                color: color.fg === "dark" ? "#221510" : "#fff",
+                fontFamily: "sans-serif",
+                fontWeight: 700,
+                fontSize: size * 0.34,
+            }),
+        }} title={asset ? mod.name ?? mod.acronym : mod.acronym}>
+      {asset
+          ? <img src={asset} alt={mod.acronym} style={{ width: "100%", height: "100%", objectFit: "cover", filter: imgFilter }}/>
+          : mod.acronym}
     </div>);
 }
 export function ModList({ mods, config, }: {

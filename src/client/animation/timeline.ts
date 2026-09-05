@@ -8,10 +8,7 @@ export interface OverlayNodeSource {
 
 export const OVERLAY_TOTAL_CYCLE = 5.4;
 
-/**
- * Snappy decelerating cubic bezier easing: cubic-bezier(0.16, 1, 0.3, 1)
- * Fast responsive launch with clean elegant deceleration.
- */
+// Evaluate cubic-bezier(0.16, 1, 0.3, 1).
 export function easeMotionDecel(t: number): number {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
@@ -24,17 +21,14 @@ export function easeMotionDecel(t: number): number {
         const dx = 3 * oneMinus * oneMinus * 0.16 + 6 * oneMinus * s * (0.3 - 0.16) + 3 * s2 * (1 - 0.3);
         if (Math.abs(dx) < 1e-6) break;
         s -= (currentX - t) / dx;
-        s = Math.min(1, Math.max(0, s));
+        s = clampProgress(s);
     }
     const oneMinusS = 1 - s;
     return 1 - oneMinusS * oneMinusS * oneMinusS;
 }
 
+const clampProgress = (value: number): number => Math.min(1, Math.max(0, value));
 const easeOutCubic = (x: number): number => 1 - Math.pow(1 - x, 3);
-const smoothstep = (x: number): number => {
-    const t = Math.min(1, Math.max(0, x));
-    return t * t * (3 - 2 * t);
-};
 
 function styled(nodes: OverlayNodeSource, name: OverlayNode): HTMLElement | SVGElement | null {
     return nodes.get(name) as HTMLElement | SVGElement | null;
@@ -49,7 +43,7 @@ function paintLayer(
 ): void {
     const el = styled(nodes, name);
     if (!el) return;
-    const clamped = Math.min(1, Math.max(0, progress));
+    const clamped = clampProgress(progress);
     el.classList.toggle("visible", clamped > 0);
     el.style.opacity = String(clamped);
     if (translateX !== 0 || translateY !== 0) {
@@ -107,7 +101,7 @@ function drawPath(nodes: OverlayNodeSource, name: OverlayNode, progress: number)
     if (!el) return;
     const length = measuredDash(el);
     el.style.strokeDasharray = String(length);
-    el.style.strokeDashoffset = String(Math.round(length * (1 - Math.min(1, Math.max(0, progress)))));
+    el.style.strokeDashoffset = String(Math.round(length * (1 - clampProgress(progress))));
 }
 
 function clearMapSide(nodes: OverlayNodeSource): void {
@@ -153,7 +147,7 @@ function paintPeak(nodes: OverlayNodeSource, progress: number): void {
             line.style.opacity = "0";
         }
     } else {
-        const p = Math.min(1, Math.max(0, (progress - peakThreshold) / 0.15));
+        const p = clampProgress((progress - peakThreshold) / 0.15);
         const pEase = easeMotionDecel(p);
         if (dot) {
             dot.style.opacity = String(pEase);
@@ -184,7 +178,7 @@ function setYearsOpacity(nodes: OverlayNodeSource, progress: number): void {
     const labels = group.querySelectorAll(".chart-label-x");
     labels.forEach((node, idx) => {
         const threshold = idx * 0.08;
-        const p = Math.min(1, Math.max(0, (progress - threshold) / 0.35));
+        const p = clampProgress((progress - threshold) / 0.35);
         (node as HTMLElement).style.opacity = String(p);
     });
 }
@@ -195,7 +189,6 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
     const widget = styled(nodes, "widget");
     const topCard = styled(nodes, "topCard");
     const bottomCard = styled(nodes, "bottomCard");
-    const lipShine = styled(nodes, "lipShine");
     const playerHeaderLeft = styled(nodes, "playerHeaderLeft");
     const playerHeaderRight = styled(nodes, "playerHeaderRight");
     const pHours = nodes.get("pHours");
@@ -204,27 +197,47 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
     const fillCs = styled(nodes, "fillCs");
     const fillOd = styled(nodes, "fillOd");
     const fillHp = styled(nodes, "fillHp");
-    if (lipShine) lipShine.style.opacity = "0";
+    // Reset every seek so scrubbing and exported frames use the same state.
+    for (const name of ["topWipe", "bottomWipe"] as const) {
+        const wipe = styled(nodes, name);
+        if (wipe) wipe.style.transform = "translateY(-100%)";
+    }
+    for (const card of [topCard, bottomCard]) {
+        if (!card) continue;
+        card.style.opacity = "1";
+        card.style.transform = "translateY(0)";
+        card.style.clipPath = "";
+    }
 
-    // =========================================================================
-    // 1. OPENING SEQUENCE (0.0s - 0.50s)
-    // Container A enters first (0.0s - 0.35s): subtle scale 97% -> 100%, fade-in,
-    // outward slide (left elements -5px -> 0px, right elements +5px -> 0px).
-    // Container B enters with +100ms delay (0.10s - 0.45s): vertical clip-path reveal downwards,
-    // line draws quickly along x-axis, year labels fade in sequentially.
-    // =========================================================================
+    if (t >= 0.50 && t < 4.70 && widget) {
+        widget.style.opacity = "1";
+        widget.style.transform = "scale(1)";
+    }
+    if ((t >= 0.50 && t < 2.30) || (t >= 3.06 && t < 4.70)) {
+        for (const card of [topCard, bottomCard]) {
+            if (!card) continue;
+            card.style.opacity = "1";
+            card.style.transform = "scale(1)";
+            card.style.boxShadow = "";
+        }
+        if (bottomCard) bottomCard.style.clipPath = "";
+        if (playerHeaderLeft) playerHeaderLeft.style.transform = "translateX(0)";
+        if (playerHeaderRight) playerHeaderRight.style.transform = "translateX(0)";
+    }
+
+    // Opening, 0.00-0.50s.
     if (t < 0.50) {
-        const stageOpacity = Math.min(1, Math.max(0, t / 0.08));
+        const stageOpacity = clampProgress(t / 0.08);
         if (widget) {
             widget.style.opacity = String(stageOpacity);
             widget.style.transform = "scale(1)";
         }
 
         // Container A (Profile Header) - 350ms duration
-        const pA = easeMotionDecel(Math.min(1, Math.max(0, t / 0.35)));
+        const pA = easeMotionDecel(clampProgress(t / 0.35));
         if (topCard) {
             topCard.style.opacity = String(pA);
-            topCard.style.transform = `scale(${(0.97 + 0.03 * pA).toFixed(4)})`;
+            topCard.style.transform = `translateY(${(40 * (1 - pA)).toFixed(2)}px)`;
         }
         if (playerHeaderLeft) {
             playerHeaderLeft.style.transform = `translateX(${(-5 * (1 - pA)).toFixed(2)}px)`;
@@ -250,12 +263,12 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
             setCounter(pHours, 0);
             setCounter(pPlaycount, 0);
         } else {
-            const pB = easeMotionDecel(Math.min(1, Math.max(0, (t - 0.10) / 0.35)));
+            const pB = easeMotionDecel(clampProgress((t - 0.10) / 0.35));
             const curtainPercent = Math.max(0, (1 - pB) * 100).toFixed(1);
             if (bottomCard) {
                 bottomCard.style.clipPath = `inset(0 0 ${curtainPercent}% 0 round 14px)`;
                 bottomCard.style.opacity = String(pB);
-                bottomCard.style.transform = "scale(1)";
+                bottomCard.style.transform = `translateY(${(28 * (1 - pB)).toFixed(2)}px)`;
             }
             paintLayer(nodes, "bottomPlayer", pB);
 
@@ -268,16 +281,16 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
                 setCounter(pHours, 0);
                 setCounter(pPlaycount, 0);
             } else {
-                const lineProgress = easeMotionDecel(Math.min(1, Math.max(0, (t - 0.25) / 1.35)));
+                const lineProgress = easeMotionDecel(clampProgress((t - 0.25) / 1.35));
                 drawPath(nodes, "svgPlayerPath", lineProgress);
                 paintPeak(nodes, lineProgress);
 
                 // Year labels fade in sequentially along bottom
-                const yearProgress = Math.min(1, Math.max(0, (t - 0.20) / 0.35));
+                const yearProgress = clampProgress((t - 0.20) / 0.35);
                 setYearsOpacity(nodes, yearProgress);
 
                 // Numbers count up in tandem
-                const countProgress = easeMotionDecel(Math.min(1, Math.max(0, (t - 0.25) / 1.20)));
+                const countProgress = easeMotionDecel(clampProgress((t - 0.25) / 1.20));
                 setCounter(pHours, Math.round(data.player.hours * countProgress));
                 setCounter(pPlaycount, Math.round(data.player.playcount * countProgress));
             }
@@ -287,28 +300,8 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         paintLayer(nodes, "starFooter", 0);
         clearMapSide(nodes);
     }
-    // =========================================================================
-    // 2. SCREEN A ACTIVE & STABLE DISPLAY (0.50s - 2.30s)
-    // Stable presentation with completed counters, full spline, and visible badges.
-    // =========================================================================
+    // Player view, 0.50-2.30s.
     else if (t < 2.30) {
-        if (widget) {
-            widget.style.opacity = "1";
-            widget.style.transform = "scale(1)";
-        }
-        if (topCard) {
-            topCard.style.opacity = "1";
-            topCard.style.transform = "scale(1)";
-            topCard.style.boxShadow = "";
-        }
-        if (bottomCard) {
-            bottomCard.style.clipPath = "";
-            bottomCard.style.opacity = "1";
-            bottomCard.style.transform = "scale(1)";
-            bottomCard.style.boxShadow = "";
-        }
-        if (playerHeaderLeft) playerHeaderLeft.style.transform = "translateX(0)";
-        if (playerHeaderRight) playerHeaderRight.style.transform = "translateX(0)";
 
         paintLayer(nodes, "topPlayer", 1);
         paintLayer(nodes, "bottomPlayer", 1);
@@ -319,112 +312,45 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         setBanners(nodes, data, 0.55, 0);
 
         // Graph line smoothly completes the full graph line from 0% to 100%
-        const lineDrawP = Math.min(1, Math.max(0, (t - 0.25) / 1.35));
+        const lineDrawP = clampProgress((t - 0.25) / 1.35);
         const lineEase = easeMotionDecel(lineDrawP);
         drawPath(nodes, "svgPlayerPath", lineEase);
         paintPeak(nodes, lineEase);
         setYearsOpacity(nodes, 1);
 
-        const countProgress = Math.min(1, Math.max(0, (t - 0.25) / 1.20));
+        const countProgress = clampProgress((t - 0.25) / 1.20);
         const countEase = easeMotionDecel(countProgress);
         setCounter(pHours, Math.round(data.player.hours * countEase));
         setCounter(pPlaycount, Math.round(data.player.playcount * countEase));
         clearMapSide(nodes);
     }
-    // =========================================================================
-    // 3. SCREEN-TO-SCREEN DYNAMIC TRANSITION (2.30s - 3.06s)
-    // Broadcast-grade transition sequence:
-    // - Kinetic depth pulse (elastic micro-compression 1.0 -> 0.988 -> 1.0)
-    // - Holographic light blade sweeps across both cards (headerShine, bottomShine & lipShine)
-    // - Radiant accent border glow pulse
-    // - Screen A slides left and fades out (t = 2.30s - 2.72s)
-    // - Screen B slides in from right smoothly (t = 2.65s - 3.12s)
-    // - Seamless dual-banner crossfade with ZERO black flash or blinking
-    // =========================================================================
+    // Player-to-map transition, 2.30-3.06s.
     else if (t < 3.06) {
-        if (widget) {
-            widget.style.opacity = "1";
-            widget.style.transform = "scale(1)";
-        }
 
-        // Kinetic depth pulse: subtle elastic micro-compression (1.0 -> 0.988 -> 1.0)
-        const squeezeP = Math.sin(Math.min(1, Math.max(0, (t - 2.30) / 0.65)) * Math.PI);
-        const cardScale = (1 - 0.012 * easeMotionDecel(squeezeP)).toFixed(4);
-        const glowP = Math.sin(Math.min(1, Math.max(0, (t - 2.35) / 0.50)) * Math.PI);
-        const innerGlow = (0.35 + 0.35 * glowP).toFixed(2);
-        const shineP = Math.min(1, Math.max(0, (t - 2.30) / 0.76));
-        if (lipShine) {
-            lipShine.style.opacity = String(Math.sin(Math.PI * shineP) * 0.9);
-            lipShine.style.transform = `translateX(${(-120 + shineP * 520).toFixed(1)}%) skewX(-18deg)`;
+        // The oversized wipe keeps moving while it fully covers the content swap.
+        const showMap = t >= 2.68;
+        for (const [name, delay] of [["topWipe", 0.04], ["bottomWipe", 0]] as const) {
+            const wipe = styled(nodes, name);
+            if (!wipe) continue;
+            const progress = clampProgress((t - 2.30 - delay) / 0.72);
+            const eased = (1 - Math.cos(Math.PI * progress)) / 2;
+            // A 160%-height wipe travels from above the card to below it.
+            wipe.style.transform = `translateY(${(-100 + 162.5 * eased).toFixed(3)}%)`;
         }
-        if (topCard) {
-            topCard.style.opacity = "1";
-            topCard.style.transform = `scale(${cardScale})`;
-            topCard.style.boxShadow = `0 12px 18px -8px rgba(0, 0, 0, 0.88), inset 0 1px 1.5px rgba(255, 255, 255, ${innerGlow})`;
-        }
-        if (bottomCard) {
-            bottomCard.style.clipPath = "";
-            bottomCard.style.opacity = "1";
-            bottomCard.style.transform = `scale(${cardScale})`;
-            bottomCard.style.boxShadow = `0 12px 18px -8px rgba(0, 0, 0, 0.88), inset 0 1px 1.5px rgba(255, 255, 255, ${innerGlow})`;
-        }
-
-        // Screen A exits: slides left (-22px) and fades out smoothly
-        const outP = Math.min(1, Math.max(0, (t - 2.30) / 0.42));
-        const outDecel = easeMotionDecel(outP);
-        const screenAOpacity = Math.max(0, 1 - outP);
-        const slideLeft = -22 * outDecel;
-        paintLayer(nodes, "topPlayer", screenAOpacity, slideLeft);
-        paintLayer(nodes, "bottomPlayer", screenAOpacity, slideLeft);
-
-        // Screen B enters: slides in from right (+22px -> 0) with snappy deceleration
-        let screenBOpacity = 0;
-        let slideInRight = 22;
-        if (t >= 2.65) {
-            const inP = Math.min(1, Math.max(0, (t - 2.65) / 0.47));
-            const inDecel = easeMotionDecel(inP);
-            screenBOpacity = inDecel;
-            slideInRight = 22 * (1 - inDecel);
-        }
-        paintLayer(nodes, "topMap", screenBOpacity, slideInRight);
-        paintLayer(nodes, "bottomMap", 0);
+        paintLayer(nodes, "topPlayer", showMap ? 0 : 1);
+        paintLayer(nodes, "bottomPlayer", showMap ? 0 : 1);
+        paintLayer(nodes, "topMap", showMap ? 1 : 0);
+        paintLayer(nodes, "bottomMap", showMap ? 1 : 0);
         paintLayer(nodes, "starFooter", 0);
-
-        // Smooth continuous dual-banner crossfade (no "none" flash)
-        const bannerCrossP = Math.min(1, Math.max(0, (t - 2.45) / 0.35));
-        const bannerCrossDecel = easeMotionDecel(bannerCrossP);
-        const playerBannerOpacity = 0.55 * (1 - bannerCrossDecel);
-        const mapBannerOpacity = 0.55 * bannerCrossDecel;
-        setBanners(nodes, data, playerBannerOpacity, mapBannerOpacity);
+        setBanners(nodes, data, showMap ? 0 : 0.55, showMap ? 0.55 : 0);
+        drawPath(nodes, "svgPlayerPath", 1);
+        setCounter(pHours, data.player.hours);
+        setCounter(pPlaycount, data.player.playcount);
 
         clearMapSide(nodes);
     }
-    // =========================================================================
-    // 4. SCREEN B ACTIVE & STABLE DISPLAY (3.06s - 4.70s)
-    // Screen B elements settle and animate:
-    // - topMap remains 100% visible and stable with ZERO blinking
-    // - bottomMap and starFooter glide in simultaneously (t = 3.06s - 3.34s)
-    // - Stat bars fill sequentially (AR -> CS -> OD -> HP)
-    // - 30-day activity wave curve draws smoothly
-    // =========================================================================
+    // Map view, 3.06-4.70s.
     else if (t < 4.70) {
-        if (widget) {
-            widget.style.opacity = "1";
-            widget.style.transform = "scale(1)";
-        }
-        if (topCard) {
-            topCard.style.opacity = "1";
-            topCard.style.transform = "scale(1)";
-            topCard.style.boxShadow = "";
-        }
-        if (bottomCard) {
-            bottomCard.style.clipPath = "";
-            bottomCard.style.opacity = "1";
-            bottomCard.style.transform = "scale(1)";
-            bottomCard.style.boxShadow = "";
-        }
-        if (playerHeaderLeft) playerHeaderLeft.style.transform = "translateX(0)";
-        if (playerHeaderRight) playerHeaderRight.style.transform = "translateX(0)";
 
         paintLayer(nodes, "topPlayer", 0);
         paintLayer(nodes, "bottomPlayer", 0);
@@ -433,56 +359,30 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         paintLayer(nodes, "topMap", 1, 0);
 
         // bottomMap and starFooter glide in together
-        const detailsP = Math.min(1, Math.max(0, (t - 3.06) / 0.28));
+        const detailsP = clampProgress((t - 3.06) / 0.28);
         const detailsEase = easeMotionDecel(detailsP);
-        paintLayer(nodes, "bottomMap", detailsEase);
+        paintLayer(nodes, "bottomMap", 1);
         paintLayer(nodes, "starFooter", detailsEase, 0, (1 - detailsEase) * 6);
 
         setBanners(nodes, data, 0, 0.55);
 
-        // Stat bars fill sequentially with clean stagger: AR -> CS -> OD -> HP
-        const arP = easeOutCubic(Math.min(1, Math.max(0, (t - 2.94) / 0.85)));
-        const csP = easeOutCubic(Math.min(1, Math.max(0, (t - 3.00) / 0.85)));
-        const odP = easeOutCubic(Math.min(1, Math.max(0, (t - 3.06) / 0.85)));
-        const hpP = easeOutCubic(Math.min(1, Math.max(0, (t - 3.12) / 0.85)));
 
-        if (fillAr) fillAr.style.width = `${arP * Math.min(100, (data.map.ar / 11) * 100)}%`;
-        if (fillCs) fillCs.style.width = `${csP * Math.min(100, (data.map.cs / 10) * 100)}%`;
-        if (fillOd) fillOd.style.width = `${odP * Math.min(100, (data.map.od / 11) * 100)}%`;
-        if (fillHp) fillHp.style.width = `${hpP * Math.min(100, (data.map.hp / 10) * 100)}%`;
-
-        const mapLineP = easeOutCubic(Math.min(1, Math.max(0, (t - 3.06) / 0.90)));
-        drawPath(nodes, "svgMapPath", mapLineP);
-
-        const countP = easeOutCubic(Math.min(1, Math.max(0, (t - 2.94) / 0.85)));
-        setCounter(nodes.get("mFavs"), Math.round(parseCount(data.map.favs) * countP));
-        setCounter(nodes.get("mPlays"), Math.round(parseCount(data.map.plays) * countP));
     }
-    // =========================================================================
-    // 5. CLOSING ANIMATION SEQUENCE (4.70s - 5.40s)
-    // Reverse staggered entry: elements collapse inward toward origin,
-    // internal elements fade out slightly faster than containers,
-    // final subtle scale down (100% to 98%) combined with a 200ms fade-out (5.20s - 5.40s)
-    // for the entire display group.
-    // =========================================================================
+    // Closing, 4.70-5.40s.
     else {
         const pClose = (t - 4.70) / 0.70;
-        const pCloseDecel = easeMotionDecel(Math.min(1, Math.max(0, pClose)));
+        const pCloseDecel = easeMotionDecel(clampProgress(pClose));
 
         // Internal elements fade out slightly faster than main containers
         const internalFade = Math.max(0, 1 - pClose * 1.5);
         // Elements collapse inward toward their origin
         const collapseInwardLeft = 6 * pCloseDecel;
-        const collapseInwardRight = -6 * pCloseDecel;
 
         paintLayer(nodes, "topPlayer", 0);
         paintLayer(nodes, "bottomPlayer", 0);
         paintLayer(nodes, "topMap", internalFade, collapseInwardLeft);
         paintLayer(nodes, "bottomMap", internalFade, 0, 4 * pCloseDecel);
         paintLayer(nodes, "starFooter", Math.max(0, 1 - pClose * 1.4), 0, 8 * pCloseDecel);
-
-        // Final subtle scale down (100% to 98%)
-        const currentScale = (1 - 0.02 * pCloseDecel).toFixed(4);
 
         // 200ms fade-out for entire display group at the end (from 5.20s to 5.40s)
         let groupOpacity = 1;
@@ -493,18 +393,25 @@ export function seekOverlay(t: number, nodes: OverlayNodeSource, data: OverlayDa
         }
 
         if (widget) {
-            widget.style.transform = `scale(${currentScale})`;
+            widget.style.transform = `translateY(${(70 * pClose * pClose).toFixed(2)}px)`;
             widget.style.opacity = String(groupOpacity);
         }
 
-        if (fillAr) fillAr.style.width = `${Math.min(100, (data.map.ar / 11) * 100)}%`;
-        if (fillCs) fillCs.style.width = `${Math.min(100, (data.map.cs / 10) * 100)}%`;
-        if (fillOd) fillOd.style.width = `${Math.min(100, (data.map.od / 11) * 100)}%`;
-        if (fillHp) fillHp.style.width = `${Math.min(100, (data.map.hp / 10) * 100)}%`;
-        drawPath(nodes, "svgMapPath", 1);
-        setCounter(nodes.get("mFavs"), parseCount(data.map.favs));
-        setCounter(nodes.get("mPlays"), parseCount(data.map.plays));
+
     }
+    // Start each animation as the downward wipe exposes that part of the map card.
+    if (t >= 2.68) {
+        const statsProgress = easeOutCubic(clampProgress((t - 2.72) / 0.85));
+        if (fillAr) fillAr.style.width = `${statsProgress * Math.min(100, (data.map.ar / 11) * 100)}%`;
+        if (fillCs) fillCs.style.width = `${statsProgress * Math.min(100, (data.map.cs / 10) * 100)}%`;
+        if (fillOd) fillOd.style.width = `${statsProgress * Math.min(100, (data.map.od / 11) * 100)}%`;
+        if (fillHp) fillHp.style.width = `${statsProgress * Math.min(100, (data.map.hp / 10) * 100)}%`;
+        drawPath(nodes, "svgMapPath", easeOutCubic(clampProgress((t - 2.80) / 0.90)));
+        const countProgress = easeOutCubic(clampProgress((t - 2.94) / 0.85));
+        setCounter(nodes.get("mFavs"), Math.round(parseCount(data.map.favs) * countProgress));
+        setCounter(nodes.get("mPlays"), Math.round(parseCount(data.map.plays) * countProgress));
+    }
+
 }
 
 export const SHOWCASE_INTRO_TOTAL_CYCLE = 5.4;
@@ -570,35 +477,22 @@ export function seekShowcaseIntro(t: number, nodes: ShowcaseNodeSource): void {
         }
     }
 
-    // Phase 4: Left flyout stats slide out to the left (1.10s -> 2.10s)
-    if (leftFlyout) {
-        if (t < 1.10) {
-            leftFlyout.style.transform = "translateX(90px)";
-            leftFlyout.style.opacity = "0";
-        } else if (t < 2.10) {
-            const p = easeMotionDecel((t - 1.10) / 1.0);
-            const dx = 90 * (1 - p);
-            leftFlyout.style.transform = `translateX(${dx.toFixed(1)}px)`;
-            leftFlyout.style.opacity = String(p);
+    // Flyouts enter from opposite sides with a 50ms stagger.
+    for (const [element, begin, end, offset] of [
+        [leftFlyout, 1.10, 2.10, 90],
+        [rightFlyout, 1.15, 2.15, -90],
+    ] as const) {
+        if (!element) continue;
+        if (t < begin) {
+            element.style.transform = `translateX(${offset}px)`;
+            element.style.opacity = "0";
+        } else if (t < end) {
+            const p = easeMotionDecel(t - begin);
+            element.style.transform = `translateX(${(offset * (1 - p)).toFixed(1)}px)`;
+            element.style.opacity = String(p);
         } else {
-            leftFlyout.style.transform = "translateX(0)";
-            leftFlyout.style.opacity = "1";
-        }
-    }
-
-    // Phase 5: Right flyout stats slide out to the right (1.15s -> 2.15s)
-    if (rightFlyout) {
-        if (t < 1.15) {
-            rightFlyout.style.transform = "translateX(-90px)";
-            rightFlyout.style.opacity = "0";
-        } else if (t < 2.15) {
-            const p = easeMotionDecel((t - 1.15) / 1.0);
-            const dx = -90 * (1 - p);
-            rightFlyout.style.transform = `translateX(${dx.toFixed(1)}px)`;
-            rightFlyout.style.opacity = String(p);
-        } else {
-            rightFlyout.style.transform = "translateX(0)";
-            rightFlyout.style.opacity = "1";
+            element.style.transform = "translateX(0)";
+            element.style.opacity = "1";
         }
     }
 
@@ -608,7 +502,7 @@ export function seekShowcaseIntro(t: number, nodes: ShowcaseNodeSource): void {
             bottomTime.style.opacity = "0";
         } else if (t < 2.50) {
             const p = (t - 1.80) / 0.70;
-            bottomTime.style.opacity = String(Math.min(1, Math.max(0, p)));
+            bottomTime.style.opacity = String(clampProgress(p));
         } else {
             bottomTime.style.opacity = "1";
         }

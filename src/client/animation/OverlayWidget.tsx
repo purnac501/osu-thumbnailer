@@ -16,7 +16,7 @@ function MapStatusIcon({ status }: { status?: string }) {
     }
     return <ChevronsUp size={17} strokeWidth={2.4} />;
 }
-export type OverlayNode = "widget" | "topCard" | "bottomCard" | "topBanner" | "topBannerMap" | "topPlayer" | "playerHeaderLeft" | "playerHeaderRight" | "topMap" | "mapHeaderLeft" | "bottomPlayer" | "bottomMap" | "starFooter" | "starIcon" | "mapChevron" | "lipShine" | "svgPlayerPath" | "pPeakDot" | "pPeakLine" | "pHours" | "pPlaycount" | "fillAr" | "fillCs" | "fillOd" | "fillHp" | "mFavs" | "mPlays" | "svgMapPath" | "chartYearsGroup";
+export type OverlayNode = "widget" | "topCard" | "bottomCard" | "topBanner" | "topBannerMap" | "topPlayer" | "playerHeaderLeft" | "playerHeaderRight" | "topMap" | "mapHeaderLeft" | "bottomPlayer" | "bottomMap" | "starFooter" | "starIcon" | "mapChevron" | "topWipe" | "bottomWipe" | "svgPlayerPath" | "pPeakDot" | "pPeakLine" | "pHours" | "pPlaycount" | "fillAr" | "fillCs" | "fillOd" | "fillHp" | "mFavs" | "mPlays" | "svgMapPath" | "chartYearsGroup";
 export type OverlayRefSetter = (name: OverlayNode) => RefCallback<Element>;
 const MAX_BADGES = 5;
 function StatPill({ code, fill, fillId, node, left, right, setRef, }: {
@@ -49,6 +49,7 @@ export function OverlayWidget({ data, spline, setRef, }: {
         <div className="top-banner-bg player-banner-bg" id="top-banner" ref={setRef("topBanner") as RefCallback<HTMLDivElement>}/>
         <div className="top-banner-bg map-banner-bg" id="top-banner-map" ref={setRef("topBannerMap") as RefCallback<HTMLDivElement>}/>
         <div className="top-banner-overlay"/>
+        <div className="card-wipe" ref={setRef("topWipe")} />
 
         <div className="top-view-layer" id="layer-top-player" ref={setRef("topPlayer") as RefCallback<HTMLDivElement>}>
           <div className="player-header-left" id="player-header-left" ref={setRef("playerHeaderLeft") as RefCallback<HTMLDivElement>}>
@@ -87,9 +88,8 @@ export function OverlayWidget({ data, spline, setRef, }: {
       </div>
 
       <div className="beveled-card bottom-details-card" id="bottom-card" ref={setRef("bottomCard") as RefCallback<HTMLDivElement>}>
-        <div className="bottom-card-top-lip">
-          <div className="bottom-card-lip-shine" ref={setRef("lipShine") as RefCallback<HTMLDivElement>} />
-        </div>
+        <div className="bottom-card-top-lip" />
+        <div className="card-wipe" ref={setRef("bottomWipe")} />
 
         <div className="bottom-view-layer" id="layer-bottom-player" ref={setRef("bottomPlayer") as RefCallback<HTMLDivElement>}>
           <div className="player-badges-strip">
